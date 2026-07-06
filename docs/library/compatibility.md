@@ -3,26 +3,37 @@
 Status: Draft
 Repository Type: library
 
-## Repository Type Contract
-
-This repository type owns public API surface, package compatibility, semantic versioning, migration guidance, distribution artifacts, and consumer-facing deprecation policy.
-
 ## Source of Truth
 
-- Product decision: UNDECIDED
+- Product decision: `docs/product/02-spec.md`
+- Public API: `docs/library/public-api.md`
+- Semantic versioning: `docs/library/semver.md`
 - Technical owner: UNASSIGNED
 - Related ADR: UNDECIDED
 
-## Required Decisions
+## Compatibility Goals
 
-- Public API ownership: UNDECIDED
-- Semantic versioning policy: UNDECIDED
-- Runtime and platform compatibility: UNDECIDED
-- Package artifact and export surface: UNDECIDED
-- Deprecation and migration policy: UNDECIDED
+Universal Config Engine should be usable by CLIs, server-side tools, build tools,
+and libraries that need local config resolution. The core should avoid coupling to
+one parser, one validator, one framework, or one remote service.
+
+## Compatibility Boundaries
+
+- Parser compatibility is owned by loader adapters.
+- Validator compatibility is owned by validator adapters.
+- Runtime compatibility floor is UNDECIDED.
+- Package module format is UNDECIDED.
+- CLI JSON output compatibility is governed by `docs/cli/output-and-exit-codes.md`.
+
+## Compatibility Risks
+
+- Changing merge order can change runtime behavior for consumers.
+- Changing redaction defaults can leak or hide data unexpectedly.
+- Changing adapter interfaces can break third-party parser or validator integrations.
+- Claiming support for a parser dialect without fixtures can create false compatibility.
 
 ## Review Blockers
 
-- Public exports change without semver and migration notes.
-- Compatibility claims lack runtime or consumer evidence.
+- Compatibility claims lack runtime, fixture, or consumer evidence.
+- A required parser or validator dependency is introduced without an ADR.
 - Package artifacts drift from documented public API.

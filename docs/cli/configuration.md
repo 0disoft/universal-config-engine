@@ -3,26 +3,42 @@
 Status: Draft
 Repository Type: cli-tool
 
-## Repository Type Contract
-
-This repository type owns command behavior, arguments, flags, config loading, exit codes, terminal output, JSON output, runtime compatibility, and shell integration contracts.
-
 ## Source of Truth
 
-- Product decision: UNDECIDED
+- Product decision: `docs/product/02-spec.md`
+- Command contract: `docs/cli/command-contract.md`
 - Technical owner: UNASSIGNED
 - Related ADR: UNDECIDED
 
-## Required Decisions
+## CLI Configuration Model
 
-- Command list and flag ownership: UNDECIDED
-- Exit-code taxonomy: UNDECIDED
-- Machine-readable output contract: UNDECIDED
-- Config precedence and default behavior: UNDECIDED
-- Runtime compatibility floor: UNDECIDED
+The CLI should inspect the same pipeline model used by the library. It must not
+invent a second config resolution path.
 
-## Review Blockers
+Candidate CLI inputs:
 
-- A command changes without updating help, examples, output, and exit-code expectations.
-- JSON output exposes generated or existing file contents.
-- Runtime compatibility changes without smoke validation.
+- a pipeline declaration file;
+- default source entries;
+- JSON config file paths;
+- simple `.env` file paths;
+- env var prefix or explicit env mapping;
+- CLI override mapping;
+- validator adapter selection;
+- output mode selection.
+
+## Precedence Rules
+
+The CLI must print or export the source order used for a run. A CLI flag may select
+or override sources, but it must not silently change source priority.
+
+## Secret Handling
+
+Secret values are redacted by default. A command may report that a value came from
+an environment variable, secret source, or redacted path, but it must not print the
+raw value unless a future ADR explicitly defines a safe debug mode.
+
+## Open Decisions
+
+- Pipeline declaration file format: UNDECIDED.
+- CLI flag names: UNDECIDED.
+- Runtime compatibility floor: UNDECIDED.

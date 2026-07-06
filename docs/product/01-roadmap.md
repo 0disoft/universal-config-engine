@@ -3,26 +3,43 @@
 Status: Draft
 Owner: UNASSIGNED
 
-## Purpose
+## Phase 0: Contract
 
-This document captures the durable design contract for Roadmap.
-It is intentionally a scaffold and should be filled with project-specific decisions as they become known.
+- Finalize the normalized config object model.
+- Define source provenance metadata.
+- Define redaction metadata and diagnostic output rules.
+- Decide implementation language, package name, and runtime floor.
+- Record the first ADR for package and runtime choices.
 
-## Source of Truth
+## Phase 1: Library MVP
 
-- Product decision: UNDECIDED
-- Technical owner: UNASSIGNED
-- Related ADR: UNDECIDED
+- Implement JSON object pipeline.
+- Add JSON file loader.
+- Add simple `.env` loader.
+- Add explicit source priority and nested merge policy.
+- Add env var and CLI override mappers.
+- Add validator adapter interface.
+- Add secret redaction helper.
+- Add examples and fixtures for precedence, coercion, validation, and redaction.
 
-## Required Decisions
+## Phase 2: CLI MVP
 
-- Boundary: UNDECIDED
-- Data ownership: UNDECIDED
-- Failure and recovery behavior: UNDECIDED
-- Validation needed before merge: VALIDATION.md
+- Add command to explain final resolved config.
+- Add command to validate config through a configured validator adapter.
+- Add JSON output for CI and agent usage.
+- Add exit-code taxonomy for parse, merge, validation, and redaction-policy failures.
 
-## Review Blockers
+## Phase 3: Adapter Ecosystem
 
-- The change invents a product domain without a source.
-- The change weakens validation or skips required evidence.
-- The change relies on generated, cache, or build output as source truth.
+- Publish adapter examples for YAML, TOML, and JSON5 without moving dialect parsing
+  into core.
+- Add compatibility fixtures for adapter provenance.
+- Document how third-party validators attach error paths to normalized config objects.
+
+## Explicitly Deferred
+
+- Remote config service.
+- Secret manager integrations.
+- Feature flag rollout engine.
+- Template rendering.
+- Multi-language ports.

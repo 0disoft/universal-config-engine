@@ -4,14 +4,23 @@
 
 Scope: backend
 
-This repository owns API server behavior, server-side domain rules, authentication,
-authorization, persistence, migrations, observability, and backend security.
+This repository owns a stack-neutral configuration loading and merge pipeline for
+backend, CLI, and developer-tool projects. Its core product surface is a library API
+for loading config sources, applying deterministic precedence, preserving provenance,
+validating normalized config objects, and redacting secret values from diagnostics.
+
+The CLI addon owns local inspection commands for config resolution, validation,
+and provenance reporting. CLI commands must stay thin wrappers around the library
+contracts and must not become a remote config service.
 
 This repository does not own frontend routing, visual design, component hierarchy,
-design tokens, or browser interaction policy.
+hosted API server behavior, authentication, authorization, database persistence,
+migrations, secret management, remote config delivery, or feature flag rollout
+platform behavior.
 
-Frontend-facing behavior is contracted through `api/openapi.yaml`, `api/examples/*.json`,
-`docs/backend/04-http-api-policy.md`, and `docs/backend/05-error-response.md`.
+Backend scaffold files such as `api/` and `db/` are non-authoritative until a
+future product decision records an API or persistence surface. Do not treat them
+as implemented product contracts.
 
 ## Repository Shape
 
@@ -25,6 +34,9 @@ Addons: cli-tool
 ## Source of Truth
 
 - Product scope: docs/product/02-spec.md
+- Product brief: docs/product/00-product-brief.md
+- Public library API: docs/library/public-api.md
+- CLI command contract: docs/cli/command-contract.md
 - Architecture decisions: docs/adr/*.md
 - Validation: VALIDATION.md
 - Agent routing: .agents/context-map.md
@@ -36,6 +48,13 @@ Addons: cli-tool
 - Do not invent technology choices. Use UNDECIDED when a decision is not known.
 - Do not create fake credentials, tokens, secrets, or private values.
 - Do not rely on generated, cache, or build output as source truth.
+- Do not claim YAML, TOML, INI, JSON5, or secret-manager support until an adapter
+  contract, fixtures, and validation behavior are documented.
+- Do not log resolved secret values. Diagnostics may report source, path, redaction
+  reason, and provenance metadata, but not raw secret material.
+- Do not blur config loading with feature flags, template rendering, process env
+  injection, or remote configuration. Route those ideas to separate packages unless
+  an ADR intentionally changes scope.
 
 ## Repository Hygiene
 

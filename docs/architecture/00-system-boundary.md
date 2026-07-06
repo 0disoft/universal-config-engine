@@ -4,14 +4,46 @@ Status: Draft
 
 ## Boundary
 
-Define what this repository owns, what it consumes, and which contracts cannot drift.
+Universal Config Engine is a local configuration pipeline, not a hosted service.
+
+Owned boundaries:
+
+- config source registration;
+- loader adapter contracts;
+- normalized config object shape;
+- source priority and merge policy;
+- env var and CLI override mapping;
+- typed coercion hooks;
+- validator adapter handoff;
+- provenance and redaction diagnostics;
+- CLI inspection behavior.
+
+Consumed boundaries:
+
+- parser adapters for dialect-heavy formats;
+- validator libraries chosen by consumers;
+- file system and environment inputs supplied by the host process;
+- calling application runtime policy.
+
+Out of scope:
+
+- cloud secret managers;
+- secret rotation;
+- remote config delivery;
+- feature flag targeting or experimentation;
+- template rendering;
+- application API servers;
+- database migrations.
 
 ## Runtime Flow
 
-UNDECIDED. Add the minimal sequence needed to explain request, state, failure, and recovery behavior.
+The pipeline starts with declared sources, loads them through loaders, applies explicit
+override mappings, merges with provenance, validates normalized output, and returns a
+redacted diagnostic report alongside the resolved config.
 
 ## Quality Attributes
 
 - Maintainability: changes must preserve source-of-truth documents.
-- Security: authentication, authorization, tenant boundaries, and secrets need explicit owners.
-- Operability: logs, metrics, rollback, and incident response must be considered before release.
+- Security: diagnostics must not reveal raw secret values.
+- Operability: failures must include source identity and recovery guidance.
+- Compatibility: format-specific parser behavior must stay behind adapters.

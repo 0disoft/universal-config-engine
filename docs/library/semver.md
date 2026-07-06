@@ -3,26 +3,44 @@
 Status: Draft
 Repository Type: library
 
-## Repository Type Contract
-
-This repository type owns public API surface, package compatibility, semantic versioning, migration guidance, distribution artifacts, and consumer-facing deprecation policy.
-
 ## Source of Truth
 
-- Product decision: UNDECIDED
+- Product decision: `docs/product/02-spec.md`
+- Public API: `docs/library/public-api.md`
 - Technical owner: UNASSIGNED
 - Related ADR: UNDECIDED
 
-## Required Decisions
+## Semver-Governed Surfaces
 
-- Public API ownership: UNDECIDED
-- Semantic versioning policy: UNDECIDED
-- Runtime and platform compatibility: UNDECIDED
-- Package artifact and export surface: UNDECIDED
-- Deprecation and migration policy: UNDECIDED
+These surfaces are public once implemented and released:
 
-## Review Blockers
+- exported pipeline APIs;
+- loader adapter interfaces;
+- validator adapter interfaces;
+- override mapping shapes;
+- merge and coercion policy types;
+- provenance report shapes;
+- diagnostic and redaction report shapes;
+- CLI JSON output when shipped in the same package.
 
-- Public exports change without semver and migration notes.
-- Compatibility claims lack runtime or consumer evidence.
-- Package artifacts drift from documented public API.
+## Breaking Changes
+
+Major-version changes are required when a released API removes fields, changes
+diagnostic meaning, changes adapter call order, changes default redaction behavior,
+or changes merge/coercion semantics in a way consumers can observe.
+
+## Minor Changes
+
+Minor versions may add new optional fields, new adapter hooks, new diagnostics,
+new CLI report sections, or new loader examples when existing behavior remains
+compatible.
+
+## Patch Changes
+
+Patch versions may fix incorrect provenance, redaction, validation, or parsing
+behavior when the documented contract already required the corrected behavior.
+
+## Open Decisions
+
+- Initial package version: UNDECIDED.
+- Package ecosystem and release tooling: UNDECIDED.

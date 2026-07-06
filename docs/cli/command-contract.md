@@ -3,26 +3,58 @@
 Status: Draft
 Repository Type: cli-tool
 
-## Repository Type Contract
-
-This repository type owns command behavior, arguments, flags, config loading, exit codes, terminal output, JSON output, runtime compatibility, and shell integration contracts.
-
 ## Source of Truth
 
-- Product decision: UNDECIDED
+- Product decision: `docs/product/02-spec.md`
+- Library API: `docs/library/public-api.md`
 - Technical owner: UNASSIGNED
 - Related ADR: UNDECIDED
 
-## Required Decisions
+## Candidate Commands
 
-- Command list and flag ownership: UNDECIDED
-- Exit-code taxonomy: UNDECIDED
-- Machine-readable output contract: UNDECIDED
-- Config precedence and default behavior: UNDECIDED
-- Runtime compatibility floor: UNDECIDED
+### `explain`
 
-## Review Blockers
+Explain how a config resolves without printing secret values.
 
-- A command changes without updating help, examples, output, and exit-code expectations.
-- JSON output exposes generated or existing file contents.
-- Runtime compatibility changes without smoke validation.
+Candidate responsibilities:
+
+- read declared source list;
+- show source priority;
+- show overridden config paths;
+- show coercion decisions;
+- show provenance for final values;
+- emit redacted text and JSON reports.
+
+### `validate`
+
+Run configured validation adapters against normalized config input.
+
+Candidate responsibilities:
+
+- load sources through the same pipeline as `explain`;
+- run validator adapters;
+- report source-aware error paths;
+- emit redacted text and JSON reports.
+
+## Exit-Code Taxonomy
+
+- `0`: success.
+- `1`: validation failed.
+- `2`: source loading or parser adapter failed.
+- `3`: merge, override, or coercion policy failed.
+- `4`: CLI usage error.
+- `5`: redaction policy failure.
+
+## Output Rules
+
+- Human output may name source files, config paths, and redaction reasons.
+- JSON output must be stable enough for CI and agent usage.
+- Neither output mode may include raw secret values by default.
+- Full resolved config output requires an explicit future decision and must still honor
+  redaction metadata.
+
+## Open Decisions
+
+- Exact command names: draft only.
+- Config file used to declare the pipeline: UNDECIDED.
+- Runtime compatibility floor: UNDECIDED.

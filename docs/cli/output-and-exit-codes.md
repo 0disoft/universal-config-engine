@@ -3,26 +3,40 @@
 Status: Draft
 Repository Type: cli-tool
 
-## Repository Type Contract
-
-This repository type owns command behavior, arguments, flags, config loading, exit codes, terminal output, JSON output, runtime compatibility, and shell integration contracts.
-
 ## Source of Truth
 
-- Product decision: UNDECIDED
+- Product decision: `docs/product/02-spec.md`
+- Command contract: `docs/cli/command-contract.md`
 - Technical owner: UNASSIGNED
 - Related ADR: UNDECIDED
 
-## Required Decisions
+## Output Contract
 
-- Command list and flag ownership: UNDECIDED
-- Exit-code taxonomy: UNDECIDED
-- Machine-readable output contract: UNDECIDED
-- Config precedence and default behavior: UNDECIDED
-- Runtime compatibility floor: UNDECIDED
+Human output should explain the resolution path in a compact form:
+
+- sources loaded;
+- source priority;
+- overridden config paths;
+- validation status;
+- redaction summary;
+- failure category and source identity.
+
+JSON output should be stable enough for CI and agent usage. It may include paths,
+source names, diagnostics, and redaction reasons. It must not include raw secret
+values by default.
+
+## Exit Codes
+
+- `0`: success.
+- `1`: validation failed.
+- `2`: source loading or parser adapter failed.
+- `3`: merge, override, or coercion policy failed.
+- `4`: CLI usage error.
+- `5`: redaction policy failure.
 
 ## Review Blockers
 
-- A command changes without updating help, examples, output, and exit-code expectations.
-- JSON output exposes generated or existing file contents.
-- Runtime compatibility changes without smoke validation.
+- A command emits different JSON without a contract update.
+- A new failure category reuses an unrelated exit code.
+- Output includes raw secret values.
+- Human output cannot identify which source caused a failure.
