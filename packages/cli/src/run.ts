@@ -13,7 +13,7 @@ import { formatHumanReport, formatJsonReport } from "./output.js";
 import {
   loadDeclaredSources,
   loadPipelineDeclaration,
-  sourceLoadFailedIssue
+  sourceLoadFailedIssues
 } from "./pipeline.js";
 import { createDeclaredValidators } from "./validators.js";
 import type { CliResult, CliRuntime } from "./types.js";
@@ -53,19 +53,19 @@ export async function runCli(args: readonly string[], runtime: CliRuntime): Prom
     runtime.stdout(output);
     return { exitCode: exitCodeForResult(finalResult) };
   } catch (error) {
-    const issue = sourceLoadFailedIssue(error);
+    const issues = sourceLoadFailedIssues(error);
     const report = buildDiagnosticReport({
       ok: false,
       config: {},
       sources: [],
-      issues: [issue],
+      issues,
       provenance: [],
       resolvedPaths: [],
       limits: {
         maxDepth: 0,
         maxKeyCount: 0,
         maxPathLength: 0,
-        maxDiagnostics: 1
+        maxDiagnostics: Math.max(1, issues.length)
       }
     });
     const output =

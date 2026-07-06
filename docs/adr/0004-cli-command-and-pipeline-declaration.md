@@ -38,6 +38,10 @@ Pipeline declaration files are JSON. The declaration may include:
 - coercion rules;
 - resource limits.
 
+The CLI validates the declaration shape before source loading. Unsupported source
+kinds, missing source ids, missing file paths, and missing override mappings are
+source-loading failures. The CLI must not silently ignore unknown source kinds.
+
 CLI argv source values must appear after `--`, so CLI options do not get mixed with
 configuration override arguments.
 
@@ -70,5 +74,6 @@ library API integrations until a separate ADR defines a safe declaration format.
 - CLI implements merge, mapping, coercion, validation, or redaction logic directly.
 - CLI reads argv override values before the `--` separator.
 - CLI dynamically imports validator code from a pipeline declaration.
+- CLI silently skips an unsupported source kind.
 - JSON output omits schema version.
 - Output includes raw secret values.

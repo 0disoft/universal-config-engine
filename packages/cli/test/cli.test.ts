@@ -213,6 +213,55 @@ describe("runCli", () => {
     });
   });
 
+  it("rejects unsupported source kinds at the pipeline declaration boundary", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "yaml",
+              kind: "yaml-file",
+              priority: 0,
+              path: "config.yaml"
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly status: string;
+        readonly issues: readonly {
+          readonly category: string;
+          readonly code: string;
+          readonly sourceId: string;
+          readonly path: readonly (string | number)[];
+        }[];
+      };
+
+      expect(result.exitCode).toBe(2);
+      expect(report.status).toBe("error");
+      expect(report.issues).toContainEqual({
+        category: "source-load",
+        code: "unsupported_source_kind",
+        severity: "error",
+        sourceId: "yaml",
+        path: ["sources", 0, "kind"],
+        message: "Unsupported source kind yaml-file."
+      });
+    });
+  });
+
   it("runs declared Ajv JSON Schema validators for validate", async () => {
     await withTempDir(async (dir) => {
       await writeFile(
