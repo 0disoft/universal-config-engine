@@ -1,3 +1,4 @@
+import { applyCoercionRules } from "./coercion.js";
 import { getConfigValueAtPath, pathToKey, setConfigValueAtPath } from "./path.js";
 import { flattenConfigObject } from "./value.js";
 import type {
@@ -76,6 +77,15 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
         resolvedByPath
       });
     }
+  }
+
+  if (input.coercionRules !== undefined && input.coercionRules.length > 0) {
+    const coercionResult = applyCoercionRules({
+      config,
+      rules: input.coercionRules
+    });
+    pushBoundedIssues(issues, coercionResult.issues, limits);
+    provenance.push(...coercionResult.provenance);
   }
 
   const limitedIssues = limitDiagnostics(issues, limits);

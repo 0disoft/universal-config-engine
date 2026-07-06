@@ -149,6 +149,7 @@ export interface ResolveConfigInput {
   readonly sources: readonly LoadedSource[];
   readonly mergePolicy?: Partial<MergePolicy>;
   readonly limits?: Partial<ResourceLimitPolicy>;
+  readonly coercionRules?: readonly CoercionRule[];
 }
 
 export interface ConfigResult {

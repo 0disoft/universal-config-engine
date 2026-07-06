@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDiagnosticReport,
+  createMappedOverrideSource,
   getConfigValueAtPath,
+  runValidators,
   resolveConfig
 } from "../src/index.js";
 import type { LoadedSource } from "../src/index.js";
@@ -121,6 +123,97 @@ describe("resolveConfig", () => {
         path: ["a", "b"]
       })
     );
+  });
+
+  it("applies declared override mappings without inferring names", () => {
+    const mapped = createMappedOverrideSource({
+      descriptor: {
+        id: "env",
+        kind: "process-env",
+        priority: 10,
+        displayName: "env"
+      },
+      values: {
+        APP_PORT: "8080",
+        UNMAPPED_VALUE: "ignored"
+      },
+      mappings: [
+        {
+          externalName: "APP_PORT",
+          sourceKind: "process-env",
+          targetPath: ["server", "port"],
+          parseAs: "number"
+        }
+      ]
+    });
+
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { host: "127.0.0.1" } }), mapped]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({
+      server: {
+        host: "127.0.0.1",
+        port: 8080
+      }
+    });
+    expect(getConfigValueAtPath(result.config, ["UNMAPPED_VALUE"])).toBeUndefined();
+  });
+
+  it("applies opt-in coercion rules and records provenance", () => {
+    const result = resolveConfig({
+      sources: [source("env", 10, { server: { port: "8080" } })],
+      coercionRules: [
+        {
+          path: ["server", "port"],
+          from: "string",
+          to: "number",
+          onFailure: "issue"
+        }
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(getConfigValueAtPath(result.config, ["server", "port"])).toBe(8080);
+    expect(result.provenance).toContainEqual({
+      path: ["server", "port"],
+      action: "coerced",
+      sourceId: "core:coercion",
+      message: "Path was coerced from string to number."
+    });
+  });
+
+  it("normalizes validator failures into config issues", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "throws",
+          validate() {
+            throw new Error("validator exploded");
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "validator_threw",
+      severity: "error",
+      sourceId: "throws",
+      message: "validator exploded"
+    });
+    expect(validation.provenance).toContainEqual({
+      path: [],
+      action: "validated",
+      sourceId: "throws",
+      message: "Validator throws failed."
+    });
   });
 });
 

@@ -4,9 +4,18 @@ export {
   resolveConfig
 } from "./merge.js";
 export {
+  applyCoercionRules
+} from "./coercion.js";
+export {
+  createMappedOverrideSource
+} from "./mapping.js";
+export {
   DEFAULT_SECRET_NAME_PATTERNS,
   buildDiagnosticReport
 } from "./redaction.js";
+export {
+  runValidators
+} from "./validation.js";
 export {
   cloneConfigValue,
   formatPath,
@@ -51,3 +60,14 @@ export type {
   ValidatorResult,
   ValueLocation
 } from "./types.js";
+export type {
+  ApplyCoercionRulesInput,
+  ApplyCoercionRulesResult
+} from "./coercion.js";
+export type {
+  CreateMappedOverrideSourceInput
+} from "./mapping.js";
+export type {
+  RunValidatorsInput,
+  RunValidatorsResult
+} from "./validation.js";

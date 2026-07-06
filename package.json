@@ -12,7 +12,9 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "check": "pnpm run typecheck && pnpm run test"
+    "check:no-secret-snapshots": "node scripts/check-no-secret-snapshots.mjs",
+    "smoke:core-package": "node scripts/smoke-core-package.mjs",
+    "check": "pnpm run typecheck && pnpm run test && pnpm run check:no-secret-snapshots"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.15",
