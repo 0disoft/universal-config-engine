@@ -12,11 +12,14 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "clean:build": "node scripts/clean-build-output.mjs",
     "check:no-secret-snapshots": "node scripts/check-no-secret-snapshots.mjs",
     "smoke:core-package": "node scripts/smoke-core-package.mjs",
-    "check": "pnpm run typecheck && pnpm run test && pnpm run check:no-secret-snapshots"
+    "smoke:packages": "node scripts/smoke-packages.mjs",
+    "check": "pnpm run typecheck && pnpm run test && pnpm run check:no-secret-snapshots && pnpm run clean:build"
   },
   "devDependencies": {
+    "@types/node": "^24.10.1",
     "@vitest/coverage-v8": "^4.0.15",
     "typescript": "^5.9.3",
     "vitest": "^4.0.15"
