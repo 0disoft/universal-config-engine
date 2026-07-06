@@ -38,6 +38,25 @@ describe("runCli", () => {
     expect(stdout).not.toContain("fixture-placeholder");
   });
 
+  it("matches the coercion and validation golden report", async () => {
+    const fixtureRoot = new URL("../fixtures/coercion-validation/", import.meta.url);
+    const expected = JSON.parse(
+      await readFile(new URL("expected-validate.json", fixtureRoot), "utf8")
+    ) as unknown;
+    let stdout = "";
+    const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+      cwd: fileURLToPath(fixtureRoot),
+      env: {},
+      stdout: (text) => {
+        stdout += text;
+      },
+      stderr: () => {}
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(stdout)).toEqual(expected);
+  });
+
   it("explains a JSON file plus process env override as JSON", async () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, "config.json"), JSON.stringify({ server: { port: 3000 } }), "utf8");

@@ -71,7 +71,8 @@ Initial validator adapters are `@universal-config-engine/validator-zod` and
 `@universal-config-engine/validator-ajv`. License, npm publication scope, release
 automation, and additional validator integrations remain UNDECIDED. The first CLI
 golden fixture covers local JSON-file defaults, process env overrides, argv
-overrides, provenance, and secret-path redaction.
+overrides, provenance, and secret-path redaction. CLI fixtures also cover opt-in
+coercion with declared Ajv JSON Schema validation.
 
 ## Current Structure Warning
 

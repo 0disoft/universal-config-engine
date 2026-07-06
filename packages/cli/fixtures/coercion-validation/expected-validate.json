@@ -1,0 +1,50 @@
+{
+  "command": "validate",
+  "schemaVersion": "0.1",
+  "status": "ok",
+  "sources": [
+    {
+      "id": "defaults",
+      "kind": "object",
+      "displayName": "defaults",
+      "priority": 0,
+      "status": "loaded"
+    }
+  ],
+  "resolvedPaths": [
+    {
+      "path": ["server", "port"],
+      "status": "resolved",
+      "winningSourceId": "defaults",
+      "overriddenSourceIds": [],
+      "redacted": false
+    }
+  ],
+  "issues": [],
+  "provenance": [
+    {
+      "path": ["server", "port"],
+      "action": "defined",
+      "sourceId": "defaults",
+      "message": "Path was defined by source defaults."
+    },
+    {
+      "path": ["server", "port"],
+      "action": "coerced",
+      "sourceId": "core:coercion",
+      "message": "Path was coerced from string to number."
+    },
+    {
+      "path": [],
+      "action": "validated",
+      "sourceId": "schema:server",
+      "message": "Validator schema:server completed with status ok."
+    }
+  ],
+  "limits": {
+    "maxDepth": 32,
+    "maxKeyCount": 10000,
+    "maxPathLength": 32,
+    "maxDiagnostics": 200
+  }
+}

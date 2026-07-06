@@ -1,0 +1,44 @@
+{
+  "sources": [
+    {
+      "id": "defaults",
+      "kind": "object",
+      "priority": 0,
+      "value": {
+        "server": {
+          "port": "8080"
+        }
+      }
+    }
+  ],
+  "coercionRules": [
+    {
+      "path": ["server", "port"],
+      "from": "string",
+      "to": "number",
+      "onFailure": "issue"
+    }
+  ],
+  "validators": [
+    {
+      "id": "schema:server",
+      "kind": "json-schema-ajv",
+      "schema": {
+        "type": "object",
+        "required": ["server"],
+        "properties": {
+          "server": {
+            "type": "object",
+            "required": ["port"],
+            "properties": {
+              "port": {
+                "type": "integer",
+                "minimum": 1024
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

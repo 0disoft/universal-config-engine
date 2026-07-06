@@ -42,10 +42,12 @@ uce explain --config uce.json -- --port 9000
 
 ## Fixture Coverage
 
-`packages/cli/fixtures/local-precedence/` is the first executable golden example.
-It covers JSON-file defaults, declared process env mappings, argv overrides after
-`--`, source precedence, provenance, and secret-path redaction in JSON explain
-output.
+`packages/cli/fixtures/local-precedence/` covers JSON-file defaults, declared
+process env mappings, argv overrides after `--`, source precedence, provenance, and
+secret-path redaction in JSON explain output.
+
+`packages/cli/fixtures/coercion-validation/` covers opt-in coercion, declared Ajv
+JSON Schema validation, validation provenance, and JSON validate output.
 
 ## Validator Declarations
 
