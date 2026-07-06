@@ -262,6 +262,81 @@ describe("runCli", () => {
     });
   });
 
+  it("rejects malformed mappings, coercion rules, and validators before source loading", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "env",
+              kind: "process-env",
+              priority: 0,
+              mappings: [
+                {
+                  externalName: "APP_PORT",
+                  sourceKind: "argv",
+                  targetPath: "server.port",
+                  parseAs: "integer"
+                }
+              ]
+            }
+          ],
+          coercionRules: [
+            {
+              path: [],
+              from: "number",
+              to: "date",
+              onFailure: "throw"
+            }
+          ],
+          validators: [
+            {
+              id: "schema",
+              kind: "zod",
+              schema: "not-a-schema"
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {
+          APP_PORT: "8080"
+        },
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly status: string;
+        readonly issues: readonly { readonly code: string; readonly category: string }[];
+      };
+      const issueCodes = report.issues.map((issue) => issue.code);
+
+      expect(result.exitCode).toBe(2);
+      expect(report.status).toBe("error");
+      expect(issueCodes).toEqual(
+        expect.arrayContaining([
+          "pipeline_override_mapping_source_kind_invalid",
+          "pipeline_override_mapping_target_path_invalid",
+          "pipeline_override_mapping_parse_as_invalid",
+          "pipeline_coercion_rule_path_invalid",
+          "pipeline_coercion_rule_from_invalid",
+          "pipeline_coercion_rule_to_invalid",
+          "pipeline_coercion_rule_on_failure_invalid",
+          "pipeline_validator_kind_invalid",
+          "pipeline_validator_schema_invalid"
+        ])
+      );
+      expect(report.issues.every((issue) => issue.category === "source-load")).toBe(true);
+    });
+  });
+
   it("runs declared Ajv JSON Schema validators for validate", async () => {
     await withTempDir(async (dir) => {
       await writeFile(

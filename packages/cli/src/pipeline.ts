@@ -20,6 +20,9 @@ import type {
 } from "./types.js";
 
 const SUPPORTED_SOURCE_KINDS = new Set(["object", "json-file", "dotenv-file", "process-env", "argv"]);
+const SUPPORTED_MAPPING_PARSE_AS = new Set(["string", "number", "boolean", "json"]);
+const SUPPORTED_COERCION_TARGETS = new Set(["number", "boolean", "json"]);
+const SUPPORTED_VALIDATOR_KINDS = new Set(["json-schema-ajv"]);
 
 export class PipelineDeclarationError extends Error {
   readonly issues: readonly ConfigIssue[];
@@ -197,6 +200,10 @@ function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {
         message: "Pipeline validators must be an array when provided."
       })
     );
+  } else if (Array.isArray(value.validators)) {
+    for (const [index, validator] of value.validators.entries()) {
+      issues.push(...validateValidatorDeclaration(validator, index));
+    }
   }
 
   if (value.coercionRules !== undefined && !Array.isArray(value.coercionRules)) {
@@ -207,6 +214,10 @@ function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {
         message: "Pipeline coercionRules must be an array when provided."
       })
     );
+  } else if (Array.isArray(value.coercionRules)) {
+    for (const [index, rule] of value.coercionRules.entries()) {
+      issues.push(...validateCoercionRuleDeclaration(rule, index));
+    }
   }
 
   return issues;
@@ -306,8 +317,188 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
             message: "Override sources must include a mappings array."
           })
         );
+      } else {
+        for (const [mappingIndex, mapping] of source.mappings.entries()) {
+          issues.push(...validateOverrideMappingDeclaration(mapping, source.kind, [...sourcePath("mappings"), mappingIndex], sourceId));
+        }
       }
       break;
+  }
+
+  return issues;
+}
+
+function validateOverrideMappingDeclaration(
+  mapping: unknown,
+  expectedSourceKind: "process-env" | "argv",
+  path: ConfigPath,
+  sourceId: string | undefined
+): readonly ConfigIssue[] {
+  if (!isRecord(mapping)) {
+    return [
+      pipelineDeclarationIssue({
+        code: "pipeline_override_mapping_invalid",
+        path,
+        sourceId,
+        message: "Override mappings must be JSON objects."
+      })
+    ];
+  }
+
+  const issues: ConfigIssue[] = [];
+  const fieldPath = (field: string): ConfigPath => [...path, field];
+
+  if (typeof mapping.externalName !== "string" || mapping.externalName.length === 0) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_override_mapping_external_name_invalid",
+        path: fieldPath("externalName"),
+        sourceId,
+        message: "Override mapping externalName must be a non-empty string."
+      })
+    );
+  }
+
+  if (mapping.sourceKind !== expectedSourceKind) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_override_mapping_source_kind_invalid",
+        path: fieldPath("sourceKind"),
+        sourceId,
+        message: `Override mapping sourceKind must be ${expectedSourceKind}.`
+      })
+    );
+  }
+
+  if (!isConfigPath(mapping.targetPath)) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_override_mapping_target_path_invalid",
+        path: fieldPath("targetPath"),
+        sourceId,
+        message: "Override mapping targetPath must be a non-empty path array of strings or numbers."
+      })
+    );
+  }
+
+  if (mapping.parseAs !== undefined && (typeof mapping.parseAs !== "string" || !SUPPORTED_MAPPING_PARSE_AS.has(mapping.parseAs))) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_override_mapping_parse_as_invalid",
+        path: fieldPath("parseAs"),
+        sourceId,
+        message: "Override mapping parseAs must be string, number, boolean, or json."
+      })
+    );
+  }
+
+  return issues;
+}
+
+function validateCoercionRuleDeclaration(rule: unknown, index: number): readonly ConfigIssue[] {
+  const path: ConfigPath = ["coercionRules", index];
+  if (!isRecord(rule)) {
+    return [
+      pipelineDeclarationIssue({
+        code: "pipeline_coercion_rule_invalid",
+        path,
+        message: "Coercion rules must be JSON objects."
+      })
+    ];
+  }
+
+  const issues: ConfigIssue[] = [];
+  const fieldPath = (field: string): ConfigPath => [...path, field];
+
+  if (!isConfigPath(rule.path)) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_coercion_rule_path_invalid",
+        path: fieldPath("path"),
+        message: "Coercion rule path must be a non-empty path array of strings or numbers."
+      })
+    );
+  }
+
+  if (rule.from !== "string") {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_coercion_rule_from_invalid",
+        path: fieldPath("from"),
+        message: "Coercion rule from must be string."
+      })
+    );
+  }
+
+  if (typeof rule.to !== "string" || !SUPPORTED_COERCION_TARGETS.has(rule.to)) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_coercion_rule_to_invalid",
+        path: fieldPath("to"),
+        message: "Coercion rule to must be number, boolean, or json."
+      })
+    );
+  }
+
+  if (rule.onFailure !== "issue") {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_coercion_rule_on_failure_invalid",
+        path: fieldPath("onFailure"),
+        message: "Coercion rule onFailure must be issue."
+      })
+    );
+  }
+
+  return issues;
+}
+
+function validateValidatorDeclaration(validator: unknown, index: number): readonly ConfigIssue[] {
+  const path: ConfigPath = ["validators", index];
+  if (!isRecord(validator)) {
+    return [
+      pipelineDeclarationIssue({
+        code: "pipeline_validator_invalid",
+        path,
+        message: "Validator declarations must be JSON objects."
+      })
+    ];
+  }
+
+  const issues: ConfigIssue[] = [];
+  const validatorId = typeof validator.id === "string" && validator.id.length > 0 ? validator.id : undefined;
+  const fieldPath = (field: string): ConfigPath => [...path, field];
+
+  if (validatorId === undefined) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_validator_id_invalid",
+        path: fieldPath("id"),
+        message: "Validator id must be a non-empty string."
+      })
+    );
+  }
+
+  if (typeof validator.kind !== "string" || !SUPPORTED_VALIDATOR_KINDS.has(validator.kind)) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_validator_kind_invalid",
+        path: fieldPath("kind"),
+        sourceId: validatorId,
+        message: "Validator kind must be json-schema-ajv."
+      })
+    );
+  }
+
+  if (!(typeof validator.schema === "boolean" || isRecord(validator.schema))) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_validator_schema_invalid",
+        path: fieldPath("schema"),
+        sourceId: validatorId,
+        message: "Validator schema must be a JSON Schema object or boolean schema."
+      })
+    );
   }
 
   return issues;
@@ -355,4 +546,12 @@ function pipelineDeclarationIssue(input: {
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isConfigPath(value: unknown): value is ConfigPath {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((segment) => typeof segment === "string" || typeof segment === "number")
+  );
 }
