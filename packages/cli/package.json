@@ -1,0 +1,32 @@
+{
+  "name": "@universal-config-engine/cli",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "UNLICENSED",
+  "sideEffects": false,
+  "bin": {
+    "uce": "./dist/main.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "pnpm run build",
+    "typecheck": "pnpm --filter @universal-config-engine/core build && pnpm --filter @universal-config-engine/node build && tsc -p tsconfig.test.json",
+    "test": "pnpm --filter @universal-config-engine/core build && pnpm --filter @universal-config-engine/node build && vitest run"
+  },
+  "dependencies": {
+    "@universal-config-engine/core": "workspace:*",
+    "@universal-config-engine/node": "workspace:*"
+  }
+}

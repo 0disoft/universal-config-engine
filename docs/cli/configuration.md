@@ -8,22 +8,21 @@ Repository Type: cli-tool
 - Product decision: `docs/product/02-spec.md`
 - Command contract: `docs/cli/command-contract.md`
 - Technical owner: UNASSIGNED
-- Related ADR: UNDECIDED
+- Related ADR: `docs/adr/0004-cli-command-and-pipeline-declaration.md`
 
 ## CLI Configuration Model
 
 The CLI should inspect the same pipeline model used by the library. It must not
 invent a second config resolution path.
 
-Candidate CLI inputs:
+CLI inputs:
 
-- a pipeline declaration file;
+- a JSON pipeline declaration file;
 - default source entries;
 - JSON config file paths;
 - simple `.env` file paths;
-- env var prefix or explicit env mapping;
+- explicit env mapping;
 - CLI override mapping;
-- validator adapter selection;
 - output mode selection.
 
 ## Precedence Rules
@@ -33,6 +32,12 @@ or override sources, but it must not silently change source priority.
 
 Env var and CLI argument mapping must be declared. Automatic name-to-path inference is
 out of MVP scope because it hides typos and collisions.
+
+CLI argv source values are read only after the `--` separator. Example:
+
+```text
+uce explain --config uce.json -- --port 9000
+```
 
 ## Secret Handling
 
@@ -45,6 +50,5 @@ describing report output as safe to paste into public issues.
 
 ## Open Decisions
 
-- Pipeline declaration file format: UNDECIDED.
-- CLI flag names: UNDECIDED.
-- Runtime compatibility floor: UNDECIDED.
+- Validator adapter selection: UNDECIDED.
+- Non-JSON pipeline declaration formats: UNDECIDED.

@@ -63,9 +63,11 @@ local files, build outputs, caches, and secret files under control.
 ## Current Decision State
 
 The product direction is documented. ADR 0003 selects TypeScript, ESM output, Node
-`>=24`, a pnpm workspace, and a zero-runtime-dependency core package. License,
-npm publication scope, release automation, runtime source package names, CLI package
-name, and concrete validator integrations remain UNDECIDED.
+`>=24`, a pnpm workspace, and a zero-runtime-dependency core package. ADR 0004
+selects `@universal-config-engine/cli`, binary name `uce`, commands `explain` and
+`validate`, JSON pipeline declarations, and JSON report schema version `0.1`.
+License, npm publication scope, release automation, and concrete validator
+integrations remain UNDECIDED.
 
 ## Current Structure Warning
 

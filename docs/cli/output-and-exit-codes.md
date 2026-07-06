@@ -8,7 +8,7 @@ Repository Type: cli-tool
 - Product decision: `docs/product/02-spec.md`
 - Command contract: `docs/cli/command-contract.md`
 - Technical owner: UNASSIGNED
-- Related ADR: UNDECIDED
+- Related ADR: `docs/adr/0004-cli-command-and-pipeline-declaration.md`
 
 ## Output Contract
 
@@ -31,13 +31,14 @@ and issue templates must tell users not to paste real reports publicly without r
 
 CLI JSON output must include a report schema version before it is treated as stable.
 Schema field changes are compatibility changes for CI and agent users.
+The first schema version is `0.1`.
 
 ## Exit Codes
 
 - `0`: success.
 - `1`: validation failed.
 - `2`: source loading or parser adapter failed.
-- `3`: merge, override, or coercion policy failed.
+- `3`: merge, override, coercion, mapping, or resource-limit policy failed.
 - `4`: CLI usage error.
 - `5`: redaction policy failure.
 

@@ -103,7 +103,8 @@ of why each final value exists.
 - Runtime compatibility floor: Node.js `>=24`; see
   `docs/adr/0003-implementation-language-and-package-strategy.md`.
 - First validator adapter example: UNDECIDED.
-- CLI command names and exact flags: see `docs/cli/command-contract.md`.
+- CLI command names and exact flags: see `docs/cli/command-contract.md` and
+  `docs/adr/0004-cli-command-and-pipeline-declaration.md`.
 - Package export shape: see `docs/library/public-api.md`.
 - Repository package strategy and package manager: pnpm workspace; see
   `docs/adr/0003-implementation-language-and-package-strategy.md`.

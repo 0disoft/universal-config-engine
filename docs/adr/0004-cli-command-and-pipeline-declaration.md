@@ -1,0 +1,67 @@
+# CLI Command and Pipeline Declaration
+
+Status: Draft
+Owner: UNASSIGNED
+
+## Purpose
+
+This document records the first CLI implementation contract.
+
+## Source of Truth
+
+- Product decision: `docs/product/02-spec.md`
+- CLI command contract: `docs/cli/command-contract.md`
+- CLI configuration: `docs/cli/configuration.md`
+- CLI output and exit codes: `docs/cli/output-and-exit-codes.md`
+
+## Decision
+
+The first CLI package is `@universal-config-engine/cli` with binary name `uce`.
+
+The first commands are:
+
+- `uce explain --config <pipeline.json>`
+- `uce validate --config <pipeline.json>`
+
+Both commands execute the same local resolution pipeline. The CLI does not own merge,
+mapping, coercion, validation, redaction, or source-loading semantics. It calls
+`@universal-config-engine/core` and `@universal-config-engine/node`.
+
+Pipeline declaration files are JSON. The declaration may include:
+
+- object sources;
+- JSON file sources;
+- simple dotenv file sources;
+- process env sources with declared mappings;
+- argv sources with declared mappings;
+- coercion rules;
+- resource limits.
+
+CLI argv source values must appear after `--`, so CLI options do not get mixed with
+configuration override arguments.
+
+JSON output carries diagnostic report schema version `0.1` plus the command name.
+
+## Exit Codes
+
+- `0`: success.
+- `1`: validation failed.
+- `2`: source loading or parser adapter failed.
+- `3`: merge, override, coercion, mapping, or resource-limit policy failed.
+- `4`: CLI usage error.
+- `5`: redaction policy failure.
+
+## Deferred
+
+- Validator adapter loading from the declaration.
+- Full resolved config printing.
+- Raw secret debug output.
+- Non-JSON pipeline declaration formats.
+- Shell completions.
+
+## Review Blockers
+
+- CLI implements merge, mapping, coercion, validation, or redaction logic directly.
+- CLI reads argv override values before the `--` separator.
+- JSON output omits schema version.
+- Output includes raw secret values.

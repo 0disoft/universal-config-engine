@@ -5,6 +5,7 @@ const root = process.cwd();
 const generatedPaths = [
   join(root, "packages", "core", "dist"),
   join(root, "packages", "node", "dist"),
+  join(root, "packages", "cli", "dist"),
   join(root, ".tmp")
 ];
 

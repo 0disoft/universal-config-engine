@@ -60,6 +60,20 @@ const packages = [
         throw new Error("Node package ESM smoke import failed.");
       }
     }
+  },
+  {
+    name: "@universal-config-engine/cli",
+    distIndex: join(root, "packages", "cli", "dist", "index.js"),
+    smoke: async (module) => {
+      const parsed = module.parseCliArgs(["explain", "--config", "uce.json", "--json"]);
+      if (parsed.command !== "explain" || parsed.output !== "json") {
+        throw new Error("CLI package ESM smoke import failed.");
+      }
+      const mainPath = join(root, "packages", "cli", "dist", "main.js");
+      if (!existsSync(mainPath)) {
+        throw new Error("CLI package build did not produce dist/main.js.");
+      }
+    }
   }
 ];
 const packDir = join(root, ".tmp", "pack");
@@ -78,6 +92,7 @@ for (const packageInfo of packages) {
 
 rmSync(join(root, "packages", "core", "dist"), { force: true, recursive: true });
 rmSync(join(root, "packages", "node", "dist"), { force: true, recursive: true });
+rmSync(join(root, "packages", "cli", "dist"), { force: true, recursive: true });
 rmSync(join(root, ".tmp"), { force: true, recursive: true });
 
 function runPnpm(args) {

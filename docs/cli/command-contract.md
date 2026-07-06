@@ -8,11 +8,11 @@ Repository Type: cli-tool
 - Product decision: `docs/product/02-spec.md`
 - Library API: `docs/library/public-api.md`
 - Technical owner: UNASSIGNED
-- Related ADR: UNDECIDED
+- Related ADR: `docs/adr/0004-cli-command-and-pipeline-declaration.md`
 
-## Candidate Commands
+## Commands
 
-### `explain`
+### `uce explain --config <pipeline.json>`
 
 Explain how a config resolves without printing secret values.
 
@@ -25,7 +25,7 @@ Candidate responsibilities:
 - show provenance for final values;
 - emit redacted text and versioned JSON reports.
 
-### `validate`
+### `uce validate --config <pipeline.json>`
 
 Run configured validation adapters against normalized config input.
 
@@ -59,9 +59,16 @@ Candidate responsibilities:
   redaction metadata.
 - A raw secret display flag is out of MVP scope and requires an ADR.
 
+## Current Decisions
+
+- Exact command names: `explain`, `validate`.
+- Binary name: `uce`.
+- Config file used to declare the pipeline: JSON.
+- Runtime compatibility floor: Node.js `>=24`.
+- JSON report schema version: `0.1`.
+- CLI argv source values must appear after `--`.
+
 ## Open Decisions
 
-- Exact command names: draft only.
-- Config file used to declare the pipeline: UNDECIDED.
-- Runtime compatibility floor: UNDECIDED.
-- JSON report schema version and field contract: UNDECIDED.
+- Validator adapter loading from CLI declaration: UNDECIDED.
+- Full resolved config printing: UNDECIDED.
