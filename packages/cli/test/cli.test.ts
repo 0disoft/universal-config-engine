@@ -194,6 +194,88 @@ describe("runCli", () => {
     });
   });
 
+  it("runs declared Ajv JSON Schema validators for validate", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "defaults",
+              kind: "object",
+              priority: 0,
+              value: {
+                server: {
+                  port: 80
+                }
+              }
+            }
+          ],
+          validators: [
+            {
+              id: "schema:server",
+              kind: "json-schema-ajv",
+              schema: {
+                type: "object",
+                required: ["server"],
+                properties: {
+                  server: {
+                    type: "object",
+                    required: ["port"],
+                    properties: {
+                      port: {
+                        type: "integer",
+                        minimum: 1024
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly status: string;
+        readonly issues: readonly {
+          readonly category: string;
+          readonly code: string;
+          readonly sourceId: string;
+          readonly path: readonly (string | number)[];
+        }[];
+        readonly provenance: readonly { readonly action: string; readonly sourceId: string }[];
+      };
+
+      expect(result.exitCode).toBe(1);
+      expect(report.status).toBe("error");
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          category: "validation",
+          code: "minimum",
+          sourceId: "schema:server",
+          path: ["server", "port"]
+        })
+      );
+      expect(report.provenance).toContainEqual(
+        expect.objectContaining({
+          action: "validated",
+          sourceId: "schema:server"
+        })
+      );
+    });
+  });
+
   it("does not include raw secret values in JSON output", async () => {
     await withTempDir(async (dir) => {
       await writeFile(

@@ -23,6 +23,7 @@ CLI inputs:
 - simple `.env` file paths;
 - explicit env mapping;
 - CLI override mapping;
+- inline Ajv JSON Schema validators for `validate`;
 - output mode selection.
 
 ## Precedence Rules
@@ -46,6 +47,39 @@ It covers JSON-file defaults, declared process env mappings, argv overrides afte
 `--`, source precedence, provenance, and secret-path redaction in JSON explain
 output.
 
+## Validator Declarations
+
+`uce validate` supports first-party Ajv JSON Schema validators in the pipeline
+declaration:
+
+```json
+{
+  "validators": [
+    {
+      "id": "schema:server",
+      "kind": "json-schema-ajv",
+      "schema": {
+        "type": "object",
+        "required": ["server"],
+        "properties": {
+          "server": {
+            "type": "object",
+            "required": ["port"],
+            "properties": {
+              "port": { "type": "integer", "minimum": 1024 }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+Validator code is not loaded from declaration file paths, package names, or URLs.
+Zod and custom validators stay in the library API until a future ADR defines a safe
+declaration format.
+
 ## Secret Handling
 
 Secret values are redacted by default. A command may report that a value came from
@@ -57,5 +91,4 @@ describing report output as safe to paste into public issues.
 
 ## Open Decisions
 
-- Validator adapter selection: UNDECIDED.
 - Non-JSON pipeline declaration formats: UNDECIDED.

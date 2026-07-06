@@ -67,8 +67,9 @@ Candidate responsibilities:
 - Runtime compatibility floor: Node.js `>=24`.
 - JSON report schema version: `0.1`.
 - CLI argv source values must appear after `--`.
+- Validator declarations support first-party Ajv JSON Schema via
+  `kind: "json-schema-ajv"`.
 
 ## Open Decisions
 
-- Validator adapter loading from CLI declaration: UNDECIDED.
 - Full resolved config printing: UNDECIDED.

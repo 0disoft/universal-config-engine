@@ -29,6 +29,12 @@ importers:
       '@universal-config-engine/node':
         specifier: workspace:*
         version: link:../node
+      '@universal-config-engine/validator-ajv':
+        specifier: workspace:*
+        version: link:../validator-ajv
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
 
   packages/core: {}
 

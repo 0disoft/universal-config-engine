@@ -22,6 +22,9 @@ export {
 export {
   runCli
 } from "./run.js";
+export {
+  createDeclaredValidators
+} from "./validators.js";
 export type {
   ArgvSourceDeclaration,
   CliCommand,

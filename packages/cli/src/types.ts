@@ -4,6 +4,7 @@ import type {
   OverrideMapping,
   ResourceLimitPolicy
 } from "@universal-config-engine/core";
+import type { Schema } from "ajv/dist/ajv.js";
 
 export type CliCommand = "explain" | "validate";
 
@@ -11,6 +12,7 @@ export type CliOutputMode = "human" | "json";
 
 export interface PipelineDeclaration {
   readonly sources: readonly PipelineSourceDeclaration[];
+  readonly validators?: readonly PipelineValidatorDeclaration[];
   readonly coercionRules?: readonly CoercionRule[];
   readonly limits?: Partial<ResourceLimitPolicy>;
 }
@@ -54,6 +56,18 @@ export interface ProcessEnvSourceDeclaration extends BaseSourceDeclaration {
 export interface ArgvSourceDeclaration extends BaseSourceDeclaration {
   readonly kind: "argv";
   readonly mappings: readonly OverrideMapping[];
+}
+
+export interface AjvJsonSchemaValidatorDeclaration {
+  readonly id: string;
+  readonly kind: "json-schema-ajv";
+  readonly schema: Schema;
+}
+
+export interface PipelineValidatorDeclaration {
+  readonly id: string;
+  readonly kind: string;
+  readonly schema?: unknown;
 }
 
 export interface CliRuntime {

@@ -69,6 +69,9 @@ const packages = [
       if (parsed.command !== "explain" || parsed.output !== "json") {
         throw new Error("CLI package ESM smoke import failed.");
       }
+      if (typeof module.createDeclaredValidators !== "function") {
+        throw new Error("CLI package validator loader export smoke import failed.");
+      }
       const mainPath = join(root, "packages", "cli", "dist", "main.js");
       if (!existsSync(mainPath)) {
         throw new Error("CLI package build did not produce dist/main.js.");

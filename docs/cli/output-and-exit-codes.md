@@ -54,6 +54,10 @@ The first schema version is `0.1`.
 - `issues`: source-aware failures and warnings.
 - `limits`: resource limits applied during the run.
 
+Validation adapter issues use category `validation` and exit code `1`. Source
+loading, mapping, merge, coercion, and resource-limit failures are reported before
+validator execution and keep their more specific exit codes.
+
 ## Review Blockers
 
 - A command emits different JSON without a contract update.

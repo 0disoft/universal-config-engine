@@ -34,6 +34,7 @@ Pipeline declaration files are JSON. The declaration may include:
 - simple dotenv file sources;
 - process env sources with declared mappings;
 - argv sources with declared mappings;
+- Ajv JSON Schema validators;
 - coercion rules;
 - resource limits.
 
@@ -41,6 +42,12 @@ CLI argv source values must appear after `--`, so CLI options do not get mixed w
 configuration override arguments.
 
 JSON output carries diagnostic report schema version `0.1` plus the command name.
+
+The first CLI validator declaration kind is `json-schema-ajv`. It accepts an inline
+JSON Schema object or boolean schema and runs through
+`@universal-config-engine/validator-ajv`. The CLI does not dynamically import
+validator modules from file paths or package names. Zod and custom validators remain
+library API integrations until a separate ADR defines a safe declaration format.
 
 ## Exit Codes
 
@@ -53,7 +60,6 @@ JSON output carries diagnostic report schema version `0.1` plus the command name
 
 ## Deferred
 
-- Validator adapter loading from the declaration.
 - Full resolved config printing.
 - Raw secret debug output.
 - Non-JSON pipeline declaration formats.
@@ -63,5 +69,6 @@ JSON output carries diagnostic report schema version `0.1` plus the command name
 
 - CLI implements merge, mapping, coercion, validation, or redaction logic directly.
 - CLI reads argv override values before the `--` separator.
+- CLI dynamically imports validator code from a pipeline declaration.
 - JSON output omits schema version.
 - Output includes raw secret values.
