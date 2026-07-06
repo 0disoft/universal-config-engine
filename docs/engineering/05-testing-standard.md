@@ -8,13 +8,36 @@ Testing standard defines merge-blocking expectations for unit, integration, cont
 
 ## Required Evidence
 
-- Source of truth: UNDECIDED
+- Source of truth: `docs/product/02-spec.md`, `docs/architecture/01-domain-model.md`,
+  `docs/architecture/02-runtime-flow.md`, `docs/library/public-api.md`,
+  `docs/cli/output-and-exit-codes.md`
 - Owner: UNASSIGNED
 - Merge-blocking validation: VALIDATION.md
 - Related checklist: CHECKLIST.md
+
+## Required Test Themes
+
+- Path handling rejects or escapes unsafe keys.
+- Merge fixtures cover priority ordering, object deep merge, array replacement,
+  scalar replacement, explicit null overwrite, same-priority conflict, and source
+  ordering.
+- Provenance fixtures assert winning source, overridden sources, defaulting,
+  coercion, validation, and redaction events.
+- Redaction fixtures prove report structures and snapshots do not contain raw secret
+  values.
+- Resource-limit fixtures cover oversized files, excessive depth, excessive key
+  count, excessive path length, excessive env var count, and bounded diagnostics.
+- Validator adapter fixtures map external error paths to normalized config paths.
+- CLI fixtures verify stdout, stderr, JSON output, exit codes, and shared pipeline
+  behavior with the library.
+- Package smoke tests must eventually verify published exports from packed artifacts,
+  not only local source imports.
 
 ## Review Blockers
 
 - A change bypasses the source of truth.
 - A change weakens validation or hides skipped checks.
 - A change lacks failure, recovery, security, performance, or test evidence where relevant.
+- A final config object is tested without asserting provenance for changed paths.
+- CLI output is tested without redaction and exit-code assertions.
+- Golden reports include realistic secret prefixes or raw secret values.

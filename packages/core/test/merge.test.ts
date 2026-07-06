@@ -1,0 +1,165 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildDiagnosticReport,
+  getConfigValueAtPath,
+  resolveConfig
+} from "../src/index.js";
+import type { LoadedSource } from "../src/index.js";
+
+function source(id: string, priority: number, value: unknown): LoadedSource {
+  return {
+    descriptor: {
+      id,
+      kind: "object",
+      priority,
+      displayName: id
+    },
+    value
+  };
+}
+
+describe("resolveConfig", () => {
+  it("deep merges objects and lets higher priority values win", () => {
+    const result = resolveConfig({
+      sources: [
+        source("defaults", 0, {
+          server: {
+            host: "127.0.0.1",
+            port: 3000,
+            tags: ["default"],
+            nullable: "value"
+          }
+        }),
+        source("env", 10, {
+          server: {
+            port: 8080,
+            tags: ["env"],
+            nullable: null
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({
+      server: {
+        host: "127.0.0.1",
+        port: 8080,
+        tags: ["env"],
+        nullable: null
+      }
+    });
+    expect(getConfigValueAtPath(result.config, ["server", "port"])).toBe(8080);
+    expect(result.resolvedPaths).toContainEqual({
+      path: ["server", "port"],
+      status: "resolved",
+      winningSourceId: "env",
+      winningPriority: 10,
+      overriddenSourceIds: ["defaults"]
+    });
+    expect(result.provenance).toContainEqual({
+      path: ["server", "port"],
+      action: "overridden",
+      sourceId: "env",
+      previousSourceId: "defaults",
+      message: "Source env overrode source defaults."
+    });
+  });
+
+  it("reports same-priority conflicts without hiding the winning source", () => {
+    const result = resolveConfig({
+      sources: [
+        source("left", 1, { server: { port: 3000 } }),
+        source("right", 1, { server: { port: 4000 } })
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(getConfigValueAtPath(result.config, ["server", "port"])).toBe(4000);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        category: "merge",
+        code: "same_priority_conflict",
+        path: ["server", "port"],
+        sourceId: "right"
+      })
+    );
+  });
+
+  it("rejects unsafe keys before they can mutate object prototypes", () => {
+    const malicious = JSON.parse('{"__proto__":{"polluted":true},"safe":true}') as unknown;
+    const result = resolveConfig({
+      sources: [source("malicious", 1, malicious)]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.config).toEqual({});
+    expect(Object.prototype).not.toHaveProperty("polluted");
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        category: "merge",
+        code: "unsafe_key",
+        path: ["__proto__"],
+        sourceId: "malicious"
+      })
+    );
+  });
+
+  it("bounds resource-limit failures", () => {
+    const result = resolveConfig({
+      sources: [source("too-deep", 1, { a: { b: { c: true } } })],
+      limits: {
+        maxDepth: 1
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        category: "resource-limit",
+        code: "max_depth_exceeded",
+        path: ["a", "b"]
+      })
+    );
+  });
+});
+
+describe("buildDiagnosticReport", () => {
+  it("does not include raw secret values in diagnostic report structures", () => {
+    const result = resolveConfig({
+      sources: [
+        {
+          descriptor: {
+            id: "env",
+            kind: "object",
+            priority: 10,
+            displayName: "env",
+            redaction: {
+              secretPaths: [["database", "password"]]
+            }
+          },
+          value: {
+            database: {
+              password: "example-secret-value",
+              host: "db.internal"
+            }
+          }
+        }
+      ]
+    });
+
+    const report = buildDiagnosticReport(result);
+    const reportText = JSON.stringify(report);
+
+    expect(report.resolvedPaths).toContainEqual({
+      path: ["database", "password"],
+      status: "resolved",
+      winningSourceId: "env",
+      overriddenSourceIds: [],
+      redacted: true,
+      redactionReason: "secret-path"
+    });
+    expect(reportText).not.toContain("example-secret-value");
+    expect(reportText).not.toContain("db.internal");
+  });
+});

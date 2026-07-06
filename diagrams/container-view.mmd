@@ -1,5 +1,15 @@
 flowchart TD
-  A["container_view: input"] --> B["Review source of truth"]
-  B --> C["Change plan"]
-  C --> D["Validation"]
-  D --> E["Release or rollback decision"]
+  Core["core package: values, paths, merge, provenance, diagnostics"]
+  Node["runtime source package: JSON file, dotenv file, process env, argv"]
+  CLI["cli package: explain, validate, human output, JSON output"]
+  Zod["validator adapter package"]
+  Ajv["validator adapter package"]
+  Fixtures["fixtures and golden reports"]
+
+  Node --> Core
+  CLI --> Core
+  CLI --> Node
+  Zod --> Core
+  Ajv --> Core
+  Fixtures --> Core
+  Fixtures --> CLI

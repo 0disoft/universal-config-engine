@@ -5,10 +5,10 @@ Scope: backend
 Repository Type: library
 Addons: cli-tool
 
-Universal Config Engine is a small configuration loading and composition toolkit.
-It is designed for projects that need to explain exactly why a config value resolved
-to a final value across defaults, files, environment variables, CLI arguments, and
-validation layers.
+Universal Config Engine is a local configuration resolution engine. It is designed
+for projects that need to explain exactly why a config value resolved to a final
+value across defaults, files, environment variables, CLI arguments, and validation
+layers.
 
 The goal is not to parse every config format directly. The core owns a deterministic
 pipeline, provenance model, merge policy, validation adapter boundary, and secret
@@ -26,6 +26,8 @@ justifies built-in support.
 - docs/library/public-api.md: library API ownership
 - docs/cli/command-contract.md: CLI command behavior
 - docs/: design, operations, architecture, and engineering standards
+- archive/scaffold/: non-authoritative backend scaffold material retained only for
+  reference while the product boundary settles
 
 ## Repository Shape Notes
 
@@ -39,9 +41,9 @@ Owned:
 - Config source registration and ordered resolution.
 - Loader adapter contracts for file formats.
 - Env var and CLI override mapping.
-- Nested object merge policy with provenance metadata.
+- Nested object merge policy with value-level provenance metadata.
 - Schema validator adapter boundary.
-- Secret redaction markers for diagnostics and reports.
+- Diagnostic-first secret redaction for logs, CLI output, and reports.
 - A CLI for explaining resolved config without printing secret values.
 
 Not owned:
@@ -60,6 +62,14 @@ local files, build outputs, caches, and secret files under control.
 
 ## Current Decision State
 
-The product direction is documented, but implementation language, package manager,
-runtime support floor, and concrete schema validator integrations remain UNDECIDED.
-Do not invent those choices without an ADR or owner decision.
+The product direction is documented. ADR 0003 selects TypeScript, ESM output, Node
+`>=24`, a pnpm workspace, and a zero-runtime-dependency core package. License,
+npm publication scope, release automation, runtime source package names, CLI package
+name, and concrete validator integrations remain UNDECIDED.
+
+## Current Structure Warning
+
+Archived `api`, `db`, and backend documentation scaffold files are not product
+contracts. They do not imply an HTTP API, database schema, migration surface, auth
+model, or hosted service. Any future server or persistence surface requires a new
+ADR before it can move out of `archive/scaffold/`.

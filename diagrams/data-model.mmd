@@ -1,5 +1,11 @@
 flowchart TD
-  A["data_model: input"] --> B["Review source of truth"]
-  B --> C["Change plan"]
-  C --> D["Validation"]
-  D --> E["Release or rollback decision"]
+  Source["ConfigSourceDescriptor"] --> Loaded["LoadedSource"]
+  Loaded --> Path["ConfigPath"]
+  Loaded --> Value["ConfigValue"]
+  Path --> Provenance["ProvenanceEvent"]
+  Value --> MergePolicy["MergePolicy"]
+  MergePolicy --> Result["ConfigResult"]
+  Result --> Issue["ConfigIssue"]
+  Result --> Diagnostic["Redacted DiagnosticReport"]
+  Validator["ValidatorAdapter"] --> Issue
+  Redaction["RedactionPolicy"] --> Diagnostic

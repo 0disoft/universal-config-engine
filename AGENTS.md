@@ -4,10 +4,11 @@
 
 Scope: backend
 
-This repository owns a stack-neutral configuration loading and merge pipeline for
+This repository owns a stack-neutral local configuration resolution engine for
 backend, CLI, and developer-tool projects. Its core product surface is a library API
-for loading config sources, applying deterministic precedence, preserving provenance,
-validating normalized config objects, and redacting secret values from diagnostics.
+for loading config sources, applying deterministic precedence, preserving value-level
+provenance, validating normalized config objects, and redacting secret values from
+diagnostics.
 
 The CLI addon owns local inspection commands for config resolution, validation,
 and provenance reporting. CLI commands must stay thin wrappers around the library
@@ -18,9 +19,9 @@ hosted API server behavior, authentication, authorization, database persistence,
 migrations, secret management, remote config delivery, or feature flag rollout
 platform behavior.
 
-Backend scaffold files such as `api/` and `db/` are non-authoritative until a
-future product decision records an API or persistence surface. Do not treat them
-as implemented product contracts.
+Archived backend scaffold files under `archive/scaffold/` are non-authoritative
+reference material. Do not treat them as implemented product contracts, source of
+truth, or evidence that this repository owns an API server or database.
 
 ## Repository Shape
 
@@ -52,9 +53,14 @@ Addons: cli-tool
   contract, fixtures, and validation behavior are documented.
 - Do not log resolved secret values. Diagnostics may report source, path, redaction
   reason, and provenance metadata, but not raw secret material.
+- Do not add a raw-secret debug flag without an ADR that defines a safe mode,
+  output restrictions, and test evidence.
 - Do not blur config loading with feature flags, template rendering, process env
   injection, or remote configuration. Route those ideas to separate packages unless
   an ADR intentionally changes scope.
+- Do not let core depend on parser, validator, file-system, process, or CLI
+  libraries. Runtime and adapter dependencies belong behind package boundaries once
+  those packages are decided.
 
 ## Repository Hygiene
 
@@ -75,6 +81,8 @@ Addons: cli-tool
 - Application source scaffolding.
 - Runtime infrastructure such as Docker, Kubernetes, Terraform, or framework apps.
 - Project-specific credentials or deployment secrets.
+- HTTP API server, authentication, authorization, database schema, migrations, or
+  hosted configuration delivery.
 
 ## Final Response Requirements
 

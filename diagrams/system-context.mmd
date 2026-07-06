@@ -1,5 +1,8 @@
 flowchart TD
-  A["system_context: input"] --> B["Review source of truth"]
-  B --> C["Change plan"]
-  C --> D["Validation"]
-  D --> E["Release or rollback decision"]
+  App["Calling library, CLI, server, or devtool"] --> Engine["Universal Config Engine"]
+  Sources["Declared local config sources"] --> Engine
+  Engine --> Result["Resolved config for caller"]
+  Engine --> Report["Redacted diagnostic report"]
+  Parsers["Parser adapters"] --> Engine
+  Validators["Validator adapters"] --> Engine
+  Engine -. "does not own" .-> Remote["Remote config, feature flags, secret managers, API servers, databases"]

@@ -6,7 +6,8 @@ Owner: UNASSIGNED
 ## Purpose
 
 Universal Config Engine helps library, CLI, server, and devtool authors build
-configuration behavior that is explainable instead of accidental.
+configuration behavior that is explainable instead of accidental. The product is a
+local configuration resolution engine, not a parser collection.
 
 Most projects eventually combine defaults, JSON or `.env` files, environment
 variables, CLI flags, secret references, and schema validation. The hard part is
@@ -19,7 +20,8 @@ not reading bytes from files. The hard part is answering:
 - whether diagnostics can be printed without leaking secrets.
 
 This repository turns those questions into a reusable library contract and a small
-CLI inspection surface.
+CLI inspection surface. The durable value is explaining final values, overrides,
+validation, and secret-safe diagnostics. File parsing is an input concern.
 
 ## Target Users
 
@@ -32,7 +34,7 @@ CLI inspection surface.
 
 ## Product Decision
 
-Build a format-agnostic config pipeline first.
+Build an explanation-first, format-agnostic config pipeline first.
 
 The first product surface should favor:
 
@@ -44,6 +46,8 @@ The first product surface should favor:
 - provenance metadata for resolved values;
 - secret redaction metadata for logs and CLI output;
 - validator adapters instead of a new schema standard.
+- resource limits for untrusted or unexpectedly large inputs.
+- unsafe key rejection for prototype-pollution-sensitive paths.
 
 ## Non-Goals
 
@@ -54,6 +58,9 @@ The first product surface should favor:
 - Provide cloud KMS, Vault, or rotation clients.
 - Provide a template engine.
 - Hide parser dialect differences behind a fake universal format.
+- Automatically infer env var or CLI mappings from arbitrary names.
+- Persist config reports or collect telemetry by default.
+- Treat a redacted diagnostic report as automatically public-safe.
 
 ## Source of Truth
 
@@ -72,3 +79,6 @@ The first product surface should favor:
   the normalized config object.
 - The change expands into feature flags, secret management, or remote config without
   a deliberate ADR.
+- The change adds raw secret output or a debug bypass without an ADR and tests.
+- The change adds parser dependencies to the core package instead of an adapter
+  boundary.

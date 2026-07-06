@@ -1,0 +1,5 @@
+flowchart TD
+  Start["CLI command or library call"] --> Declare["Declare pipeline sources and mappings"]
+  Declare --> Resolve["Resolve config through shared pipeline"]
+  Resolve --> Explain["Explain winners, losers, coercion, validation, and redaction"]
+  Explain --> Exit["Return ConfigResult or CLI exit code"]

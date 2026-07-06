@@ -31,11 +31,17 @@ Candidate CLI inputs:
 The CLI must print or export the source order used for a run. A CLI flag may select
 or override sources, but it must not silently change source priority.
 
+Env var and CLI argument mapping must be declared. Automatic name-to-path inference is
+out of MVP scope because it hides typos and collisions.
+
 ## Secret Handling
 
 Secret values are redacted by default. A command may report that a value came from
 an environment variable, secret source, or redacted path, but it must not print the
 raw value unless a future ADR explicitly defines a safe debug mode.
+
+Redacted reports can still contain sensitive metadata. CLI documentation must avoid
+describing report output as safe to paste into public issues.
 
 ## Open Decisions
 

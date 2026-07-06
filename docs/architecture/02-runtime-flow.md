@@ -4,14 +4,39 @@ Status: Draft
 
 ## Boundary
 
-Define what this repository owns, what it consumes, and which contracts cannot drift.
+Runtime flow covers local resolution only. It does not include a hosted API, database
+persistence, remote config delivery, telemetry, feature flag evaluation, or secret
+manager behavior.
 
-## Runtime Flow
+## Flow
 
-UNDECIDED. Add the minimal sequence needed to explain request, state, failure, and recovery behavior.
+1. A caller declares sources with ids, kinds, priorities, display names, and redaction
+   policy input.
+2. Loaders return normalized config values, source locations, and loader issues.
+3. Declared override mappings translate process env or argv source values into target
+   config paths.
+4. Resource limits bound file size, object depth, key count, diagnostics count, path
+   length, and env var count.
+5. Unsafe path segments are rejected or escaped before object mutation.
+6. The merge engine resolves values in deterministic priority order and emits
+   provenance events as values are defined, overridden, defaulted, or rejected.
+7. Optional coercion rules transform values and emit coercion provenance or issues.
+8. Validator adapters receive the normalized config object and return normalized
+   issues.
+9. The result builder returns resolved config to the caller and sends reportable data
+   through a redaction-aware diagnostic builder.
+10. CLI commands format the same pipeline result as human output or versioned JSON.
+
+## Redaction Flow
+
+Resolved config may contain raw values for the direct library caller. Diagnostic
+reports must not. A report builder must derive redacted representations from secret
+metadata before report structures are created. Replacing strings at final output time
+is not sufficient.
 
 ## Quality Attributes
 
-- Maintainability: changes must preserve source-of-truth documents.
-- Security: authentication, authorization, tenant boundaries, and secrets need explicit owners.
-- Operability: logs, metrics, rollback, and incident response must be considered before release.
+- Maintainability: library and CLI must execute the same resolution pipeline.
+- Security: diagnostic reports are secret-safe, not necessarily public-safe.
+- Operability: source-aware issues must be bounded and actionable.
+- Compatibility: parser and validator behavior must stay behind adapters.

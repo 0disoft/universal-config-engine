@@ -4,7 +4,12 @@ Status: Draft
 
 ## Operational Contract
 
-Provide a short actionable decision tree with triggers, procedure, database rollback policy, validation, owners, and forward-fix criteria.
+Provide a short actionable decision tree with triggers, package or CLI rollback
+procedure, contract validation, owners, and forward-fix criteria.
+
+This repository does not currently own database rollback policy, hosted API rollback,
+or migration recovery. Those surfaces require a future ADR before becoming active
+operations scope.
 
 ## Owners
 

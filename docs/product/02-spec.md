@@ -5,12 +5,16 @@ Owner: UNASSIGNED
 
 ## Product Contract
 
-Universal Config Engine provides a library-first configuration pipeline with an
-optional CLI for inspection and validation.
+Universal Config Engine provides a library-first local configuration resolution
+pipeline with an optional CLI for inspection and validation.
 
 The engine must make config resolution explainable. A caller should be able to
 inspect the final value, source, precedence decision, validation result, and
 redaction status without reading the implementation.
+
+The engine is not a universal parser suite. Parser support exists to feed normalized
+config objects into the resolution pipeline. The product contract is the explanation
+of why each final value exists.
 
 ## Core Concepts
 
@@ -26,6 +30,11 @@ redaction status without reading the implementation.
   still reporting source, path, and reason.
 - Validator adapter: a boundary for JSON Schema, Zod-like, Valibot-like, custom, or
   future validators without making one validator mandatory.
+- Diagnostic report: a redacted explanation surface for humans, CI, and agents. It
+  may still contain sensitive names such as source ids, env var names, file paths, or
+  internal service labels, so it is secret-safe, not automatically public-safe.
+- Unsafe key: a path segment such as `__proto__`, `prototype`, or `constructor` that
+  must not mutate prototypes during merge or override mapping.
 
 ## MVP Scope
 
@@ -43,6 +52,9 @@ redaction status without reading the implementation.
 - Config provenance metadata.
 - Secret redaction helper for diagnostics.
 - CLI command to explain resolved config and validation results.
+- Prototype-pollution-safe path handling.
+- Configurable resource limits for file size, object depth, key count, diagnostics
+  count, path length, and env var count.
 
 ## Deferred Scope
 
@@ -66,6 +78,14 @@ redaction status without reading the implementation.
 6. Secret values must be redacted by default in CLI and log-oriented output.
 7. Validator adapters must receive normalized config objects, not raw parser text.
 8. Adapter failures must preserve source identity and failure category.
+9. Provenance must be produced during resolution, not reconstructed after only the
+   final object exists.
+10. Redacted diagnostic structures must avoid storing raw secret values; output-time
+   string replacement is not a sufficient redaction model.
+11. Unsafe path segments must be rejected or escaped before merge or mapping can
+   mutate object state.
+12. Resource limits must produce bounded issues instead of unbounded output or
+   process failure.
 
 ## Public Surfaces
 
@@ -74,11 +94,19 @@ redaction status without reading the implementation.
 - CLI for local config explanation, validation, and machine-readable reports.
 - Documentation examples showing precedence, redaction, adapter boundaries, and
   validation error paths.
+- Versioned diagnostic report schema for CLI JSON output.
 
 ## Open Decisions
 
-- Implementation language and package ecosystem: UNDECIDED.
-- Runtime compatibility floor: UNDECIDED.
+- Implementation language and package ecosystem: TypeScript, ESM, pnpm workspace;
+  see `docs/adr/0003-implementation-language-and-package-strategy.md`.
+- Runtime compatibility floor: Node.js `>=24`; see
+  `docs/adr/0003-implementation-language-and-package-strategy.md`.
 - First validator adapter example: UNDECIDED.
 - CLI command names and exact flags: see `docs/cli/command-contract.md`.
 - Package export shape: see `docs/library/public-api.md`.
+- Repository package strategy and package manager: pnpm workspace; see
+  `docs/adr/0003-implementation-language-and-package-strategy.md`.
+- License: UNDECIDED.
+- Whether YAML, TOML, INI, and JSON5 adapters are first-party packages or third-party
+  examples: UNDECIDED.
