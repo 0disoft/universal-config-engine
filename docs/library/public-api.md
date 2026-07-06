@@ -38,6 +38,8 @@ Package naming beyond core remains provisional, but public API ownership is laye
   `.env` source helpers.
 - CLI package: command parsing and presentation only.
 - `@universal-config-engine/validator-zod`: optional Zod validator integration.
+- `@universal-config-engine/validator-ajv`: optional Ajv JSON Schema validator
+  integration.
 - validator adapter packages: optional dependencies on validator libraries.
 - fixture package or directory: shared behavior cases and golden reports.
 
@@ -64,7 +66,9 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 
 - Exact package ecosystem and module format: TypeScript ESM; see ADR 0003.
 - Runtime compatibility floor: Node.js `>=24`; see ADR 0003.
-- First validator adapter example: Zod via `@universal-config-engine/validator-zod`.
+- Initial validator adapter examples: Zod via
+  `@universal-config-engine/validator-zod` and JSON Schema via
+  `@universal-config-engine/validator-ajv`.
 - Error class or Result-style return convention: UNDECIDED.
 - Package boundary names beyond core: UNDECIDED.
 - Diagnostic report schema versioning: UNDECIDED, but required before CLI JSON is

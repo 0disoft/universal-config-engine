@@ -83,6 +83,15 @@ const packages = [
         throw new Error("Zod validator package ESM smoke import failed.");
       }
     }
+  },
+  {
+    name: "@universal-config-engine/validator-ajv",
+    distIndex: join(root, "packages", "validator-ajv", "dist", "index.js"),
+    smoke: async (module) => {
+      if (typeof module.createAjvValidator !== "function") {
+        throw new Error("Ajv validator package ESM smoke import failed.");
+      }
+    }
   }
 ];
 const packDir = join(root, ".tmp", "pack");
@@ -103,6 +112,7 @@ rmSync(join(root, "packages", "core", "dist"), { force: true, recursive: true })
 rmSync(join(root, "packages", "node", "dist"), { force: true, recursive: true });
 rmSync(join(root, "packages", "cli", "dist"), { force: true, recursive: true });
 rmSync(join(root, "packages", "validator-zod", "dist"), { force: true, recursive: true });
+rmSync(join(root, "packages", "validator-ajv", "dist"), { force: true, recursive: true });
 rmSync(join(root, ".tmp"), { force: true, recursive: true });
 
 function runPnpm(args) {

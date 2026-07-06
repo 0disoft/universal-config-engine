@@ -66,9 +66,9 @@ The product direction is documented. ADR 0003 selects TypeScript, ESM output, No
 `>=24`, a pnpm workspace, and a zero-runtime-dependency core package. ADR 0004
 selects `@universal-config-engine/cli`, binary name `uce`, commands `explain` and
 `validate`, JSON pipeline declarations, and JSON report schema version `0.1`.
-The first validator adapter is `@universal-config-engine/validator-zod`. License,
-npm publication scope, release automation, and additional validator integrations
-remain UNDECIDED.
+Initial validator adapters are `@universal-config-engine/validator-zod` and
+`@universal-config-engine/validator-ajv`. License, npm publication scope, release
+automation, and additional validator integrations remain UNDECIDED.
 
 ## Current Structure Warning
 
