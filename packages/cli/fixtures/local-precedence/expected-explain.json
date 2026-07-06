@@ -1,0 +1,113 @@
+{
+  "command": "explain",
+  "schemaVersion": "0.1",
+  "status": "ok",
+  "sources": [
+    {
+      "id": "defaults",
+      "kind": "json-file",
+      "displayName": "defaults",
+      "priority": 0,
+      "status": "loaded"
+    },
+    {
+      "id": "runtime-env",
+      "kind": "process-env",
+      "displayName": "runtime-env",
+      "priority": 10,
+      "status": "loaded"
+    },
+    {
+      "id": "cli",
+      "kind": "argv",
+      "displayName": "cli",
+      "priority": 20,
+      "status": "loaded"
+    }
+  ],
+  "resolvedPaths": [
+    {
+      "path": ["service", "host"],
+      "status": "resolved",
+      "winningSourceId": "cli",
+      "overriddenSourceIds": ["defaults"],
+      "redacted": false
+    },
+    {
+      "path": ["service", "port"],
+      "status": "resolved",
+      "winningSourceId": "runtime-env",
+      "overriddenSourceIds": ["defaults"],
+      "redacted": false
+    },
+    {
+      "path": ["service", "credential"],
+      "status": "resolved",
+      "winningSourceId": "defaults",
+      "overriddenSourceIds": [],
+      "redacted": true,
+      "redactionReason": "secret-path"
+    },
+    {
+      "path": ["features", "cache"],
+      "status": "resolved",
+      "winningSourceId": "runtime-env",
+      "overriddenSourceIds": ["defaults"],
+      "redacted": false
+    }
+  ],
+  "issues": [],
+  "provenance": [
+    {
+      "path": ["service", "host"],
+      "action": "defined",
+      "sourceId": "defaults",
+      "message": "Path was defined by source defaults."
+    },
+    {
+      "path": ["service", "port"],
+      "action": "defined",
+      "sourceId": "defaults",
+      "message": "Path was defined by source defaults."
+    },
+    {
+      "path": ["service", "credential"],
+      "action": "defined",
+      "sourceId": "defaults",
+      "message": "Path was defined by source defaults."
+    },
+    {
+      "path": ["features", "cache"],
+      "action": "defined",
+      "sourceId": "defaults",
+      "message": "Path was defined by source defaults."
+    },
+    {
+      "path": ["service", "port"],
+      "action": "overridden",
+      "sourceId": "runtime-env",
+      "previousSourceId": "defaults",
+      "message": "Source runtime-env overrode source defaults."
+    },
+    {
+      "path": ["features", "cache"],
+      "action": "overridden",
+      "sourceId": "runtime-env",
+      "previousSourceId": "defaults",
+      "message": "Source runtime-env overrode source defaults."
+    },
+    {
+      "path": ["service", "host"],
+      "action": "overridden",
+      "sourceId": "cli",
+      "previousSourceId": "defaults",
+      "message": "Source cli overrode source defaults."
+    }
+  ],
+  "limits": {
+    "maxDepth": 32,
+    "maxKeyCount": 10000,
+    "maxPathLength": 32,
+    "maxDiagnostics": 200
+  }
+}

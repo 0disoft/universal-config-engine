@@ -25,6 +25,7 @@ justifies built-in support.
 - docs/product/02-spec.md: product source of truth
 - docs/library/public-api.md: library API ownership
 - docs/cli/command-contract.md: CLI command behavior
+- packages/cli/fixtures/: executable CLI golden report fixtures
 - docs/: design, operations, architecture, and engineering standards
 - archive/scaffold/: non-authoritative backend scaffold material retained only for
   reference while the product boundary settles
@@ -68,7 +69,9 @@ selects `@universal-config-engine/cli`, binary name `uce`, commands `explain` an
 `validate`, JSON pipeline declarations, and JSON report schema version `0.1`.
 Initial validator adapters are `@universal-config-engine/validator-zod` and
 `@universal-config-engine/validator-ajv`. License, npm publication scope, release
-automation, and additional validator integrations remain UNDECIDED.
+automation, and additional validator integrations remain UNDECIDED. The first CLI
+golden fixture covers local JSON-file defaults, process env overrides, argv
+overrides, provenance, and secret-path redaction.
 
 ## Current Structure Warning
 

@@ -1,6 +1,7 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { runCli } from "../src/index.js";
 
@@ -14,6 +15,29 @@ async function withTempDir<T>(callback: (dir: string) => Promise<T>): Promise<T>
 }
 
 describe("runCli", () => {
+  it("matches the local precedence golden explain report", async () => {
+    const fixtureRoot = new URL("../fixtures/local-precedence/", import.meta.url);
+    const expected = JSON.parse(
+      await readFile(new URL("expected-explain.json", fixtureRoot), "utf8")
+    ) as unknown;
+    let stdout = "";
+    const result = await runCli(["explain", "--config", "uce.json", "--json", "--", "--host", "0.0.0.0"], {
+      cwd: fileURLToPath(fixtureRoot),
+      env: {
+        APP_PORT: "8080",
+        FEATURE_CACHE: "true"
+      },
+      stdout: (text) => {
+        stdout += text;
+      },
+      stderr: () => {}
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(stdout)).toEqual(expected);
+    expect(stdout).not.toContain("fixture-placeholder");
+  });
+
   it("explains a JSON file plus process env override as JSON", async () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, "config.json"), JSON.stringify({ server: { port: 3000 } }), "utf8");

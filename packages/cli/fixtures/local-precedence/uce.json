@@ -1,0 +1,44 @@
+{
+  "sources": [
+    {
+      "id": "defaults",
+      "kind": "json-file",
+      "priority": 0,
+      "path": "defaults.json",
+      "redaction": {
+        "secretPaths": [["service", "credential"]]
+      }
+    },
+    {
+      "id": "runtime-env",
+      "kind": "process-env",
+      "priority": 10,
+      "mappings": [
+        {
+          "externalName": "APP_PORT",
+          "sourceKind": "process-env",
+          "targetPath": ["service", "port"],
+          "parseAs": "number"
+        },
+        {
+          "externalName": "FEATURE_CACHE",
+          "sourceKind": "process-env",
+          "targetPath": ["features", "cache"],
+          "parseAs": "boolean"
+        }
+      ]
+    },
+    {
+      "id": "cli",
+      "kind": "argv",
+      "priority": 20,
+      "mappings": [
+        {
+          "externalName": "--host",
+          "sourceKind": "argv",
+          "targetPath": ["service", "host"]
+        }
+      ]
+    }
+  ]
+}
