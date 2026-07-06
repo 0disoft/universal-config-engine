@@ -102,7 +102,7 @@ of why each final value exists.
   see `docs/adr/0003-implementation-language-and-package-strategy.md`.
 - Runtime compatibility floor: Node.js `>=24`; see
   `docs/adr/0003-implementation-language-and-package-strategy.md`.
-- First validator adapter example: UNDECIDED.
+- First validator adapter example: Zod via `@universal-config-engine/validator-zod`.
 - CLI command names and exact flags: see `docs/cli/command-contract.md` and
   `docs/adr/0004-cli-command-and-pipeline-declaration.md`.
 - Package export shape: see `docs/library/public-api.md`.

@@ -6,6 +6,7 @@ const generatedPaths = [
   join(root, "packages", "core", "dist"),
   join(root, "packages", "node", "dist"),
   join(root, "packages", "cli", "dist"),
+  join(root, "packages", "validator-zod", "dist"),
   join(root, ".tmp")
 ];
 

@@ -74,6 +74,15 @@ const packages = [
         throw new Error("CLI package build did not produce dist/main.js.");
       }
     }
+  },
+  {
+    name: "@universal-config-engine/validator-zod",
+    distIndex: join(root, "packages", "validator-zod", "dist", "index.js"),
+    smoke: async (module) => {
+      if (typeof module.createZodValidator !== "function") {
+        throw new Error("Zod validator package ESM smoke import failed.");
+      }
+    }
   }
 ];
 const packDir = join(root, ".tmp", "pack");
@@ -93,6 +102,7 @@ for (const packageInfo of packages) {
 rmSync(join(root, "packages", "core", "dist"), { force: true, recursive: true });
 rmSync(join(root, "packages", "node", "dist"), { force: true, recursive: true });
 rmSync(join(root, "packages", "cli", "dist"), { force: true, recursive: true });
+rmSync(join(root, "packages", "validator-zod", "dist"), { force: true, recursive: true });
 rmSync(join(root, ".tmp"), { force: true, recursive: true });
 
 function runPnpm(args) {
