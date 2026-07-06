@@ -73,6 +73,17 @@ export interface LoadedSource {
   readonly issues?: readonly ConfigIssue[];
 }
 
+export interface ConfigLoaderResult {
+  readonly value: unknown;
+  readonly locations?: readonly ValueLocation[];
+  readonly issues?: readonly ConfigIssue[];
+}
+
+export interface ConfigLoader<TContext = undefined> {
+  readonly descriptor: ConfigSourceDescriptor;
+  load(context: TContext): Promise<ConfigLoaderResult> | ConfigLoaderResult;
+}
+
 export type ProvenanceAction =
   | "defined"
   | "overridden"

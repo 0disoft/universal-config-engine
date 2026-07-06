@@ -3,10 +3,11 @@ import {
   buildDiagnosticReport,
   createMappedOverrideSource,
   getConfigValueAtPath,
+  loadConfigSources,
   runValidators,
   resolveConfig
 } from "../src/index.js";
-import type { LoadedSource } from "../src/index.js";
+import type { ConfigLoader, LoadedSource } from "../src/index.js";
 
 function source(id: string, priority: number, value: unknown): LoadedSource {
   return {
@@ -213,6 +214,83 @@ describe("resolveConfig", () => {
       action: "validated",
       sourceId: "throws",
       message: "Validator throws failed."
+    });
+  });
+});
+
+describe("loadConfigSources", () => {
+  it("loads source adapters into merge-ready sources", async () => {
+    const loaders: readonly ConfigLoader<{ readonly port: number }>[] = [
+      {
+        descriptor: {
+          id: "defaults",
+          kind: "adapter",
+          priority: 0,
+          displayName: "defaults"
+        },
+        load(context) {
+          return {
+            value: {
+              server: {
+                port: context.port
+              }
+            }
+          };
+        }
+      }
+    ];
+    const loaded = await loadConfigSources({
+      loaders,
+      context: {
+        port: 3000
+      }
+    });
+    const result = resolveConfig({
+      sources: loaded.sources
+    });
+
+    expect(loaded.issues).toEqual([]);
+    expect(result.ok).toBe(true);
+    expect(getConfigValueAtPath(result.config, ["server", "port"])).toBe(3000);
+  });
+
+  it("normalizes loader exceptions into source-load issues", async () => {
+    const loaders: readonly ConfigLoader[] = [
+      {
+        descriptor: {
+          id: "broken-loader",
+          kind: "adapter",
+          priority: 0,
+          displayName: "broken-loader"
+        },
+        load() {
+          throw new Error("adapter exploded");
+        }
+      }
+    ];
+    const loaded = await loadConfigSources({
+      loaders,
+      context: undefined
+    });
+    const result = resolveConfig({
+      sources: loaded.sources
+    });
+    const report = buildDiagnosticReport(result);
+
+    expect(loaded.issues).toContainEqual({
+      category: "source-load",
+      code: "loader_threw",
+      severity: "error",
+      sourceId: "broken-loader",
+      message: "adapter exploded"
+    });
+    expect(result.ok).toBe(false);
+    expect(report.sources).toContainEqual({
+      id: "broken-loader",
+      kind: "adapter",
+      displayName: "broken-loader",
+      priority: 0,
+      status: "failed"
     });
   });
 });

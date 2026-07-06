@@ -31,6 +31,9 @@ const packages = [
       if (!result.ok || report.schemaVersion !== "0.1") {
         throw new Error("Core ESM smoke import failed.");
       }
+      if (typeof module.loadConfigSources !== "function") {
+        throw new Error("Core loader API ESM smoke import failed.");
+      }
     }
   },
   {

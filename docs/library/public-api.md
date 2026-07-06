@@ -12,8 +12,8 @@ Repository Type: library
 ## Candidate API Areas
 
 - `ConfigSource`: source identity, priority, loader, and redaction metadata.
-- `ConfigLoader`: adapter interface that returns normalized config data and source
-  metadata.
+- `ConfigLoader`: adapter interface that owns source metadata and returns normalized
+  config data, value locations, and source issues.
 - `ConfigPipeline`: ordered execution of load, override, merge, coerce, validate,
   and report steps.
 - `OverrideMapping`: explicit env var or CLI flag mapping into config paths.
@@ -33,7 +33,8 @@ Repository Type: library
 Package naming beyond core remains provisional, but public API ownership is layered:
 
 - `@universal-config-engine/core`: pure config values, paths, sources, merge,
-  provenance, diagnostics, redaction, result, and adapter interfaces.
+  provenance, diagnostics, redaction, result, loader orchestration, and adapter
+  interfaces.
 - runtime source package: file-system, process env, argv, JSON file, and simple
   `.env` source helpers.
 - CLI package: command parsing and presentation only.
@@ -52,8 +53,10 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 - Do not require one schema validator library.
 - Do not silently coerce values.
 - Do not print or serialize secret values through diagnostic helpers.
-- Preserve source identity for parse, merge, override, validation, and redaction
-  failures.
+- Preserve source identity for source-load, parse, merge, override, validation, and
+  redaction failures.
+- Normalize loader exceptions into `source-load` issues instead of throwing raw
+  adapter failures through the pipeline.
 - Generate provenance during resolution rather than reconstructing it from the final
   object.
 - Reject or safely escape unsafe keys before path setters or deep merge can mutate

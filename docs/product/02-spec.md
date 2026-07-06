@@ -86,6 +86,8 @@ of why each final value exists.
    mutate object state.
 12. Resource limits must produce bounded issues instead of unbounded output or
    process failure.
+13. Loader exceptions must be converted into source-aware `source-load` issues
+    before merge or diagnostic reporting.
 
 ## Public Surfaces
 

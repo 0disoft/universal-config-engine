@@ -10,6 +10,9 @@ export {
   createMappedOverrideSource
 } from "./mapping.js";
 export {
+  loadConfigSources
+} from "./loader.js";
+export {
   DEFAULT_SECRET_NAME_PATTERNS,
   buildDiagnosticReport
 } from "./redaction.js";
@@ -32,6 +35,8 @@ export {
 } from "./value.js";
 export type {
   CoercionRule,
+  ConfigLoader,
+  ConfigLoaderResult,
   ConfigIssue,
   ConfigIssueCategory,
   ConfigIssueSeverity,
@@ -64,6 +69,10 @@ export type {
   ApplyCoercionRulesInput,
   ApplyCoercionRulesResult
 } from "./coercion.js";
+export type {
+  LoadConfigSourcesInput,
+  LoadConfigSourcesResult
+} from "./loader.js";
 export type {
   CreateMappedOverrideSourceInput
 } from "./mapping.js";
