@@ -30,8 +30,9 @@ The CLI validates the declaration shape before loading sources. Unsupported sour
 kinds, unknown declaration fields, missing or duplicate source ids, missing file
 paths, malformed redaction policies, malformed override mappings, malformed
 coercion rules, malformed validator declarations, duplicate validator ids,
-malformed resource limits, and malformed file size policies fail as `source-load`
-issues with exit code `2`; they are not silently skipped.
+source/validator id namespace collisions, malformed resource limits, and malformed
+file size policies fail as `source-load` issues with exit code `2`; they are not
+silently skipped.
 
 ## Precedence Rules
 

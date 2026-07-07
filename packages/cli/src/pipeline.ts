@@ -240,6 +240,7 @@ function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {
         duplicateMessage: "Pipeline validator ids must be unique."
       })
     );
+    issues.push(...validateDisjointDeclarationIds(value.sources, value.validators));
   }
 
   if (value.coercionRules !== undefined && !Array.isArray(value.coercionRules)) {
@@ -776,6 +777,46 @@ function validateUniqueDeclarationIds(input: {
         path: [input.collectionPath, index, "id"],
         sourceId: entry.id,
         message: `${input.duplicateMessage} Duplicate id ${entry.id} was first declared at ${input.collectionPath}.${firstIndex}.id.`
+      })
+    );
+  }
+
+  return issues;
+}
+
+function validateDisjointDeclarationIds(
+  sources: readonly unknown[],
+  validators: readonly unknown[]
+): readonly ConfigIssue[] {
+  const sourceIndexById = new Map<string, number>();
+  const issues: ConfigIssue[] = [];
+
+  for (const [index, source] of sources.entries()) {
+    if (!isRecord(source) || typeof source.id !== "string" || source.id.length === 0) {
+      continue;
+    }
+
+    if (!sourceIndexById.has(source.id)) {
+      sourceIndexById.set(source.id, index);
+    }
+  }
+
+  for (const [index, validator] of validators.entries()) {
+    if (!isRecord(validator) || typeof validator.id !== "string" || validator.id.length === 0) {
+      continue;
+    }
+
+    const sourceIndex = sourceIndexById.get(validator.id);
+    if (sourceIndex === undefined) {
+      continue;
+    }
+
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_declaration_id_namespace_collision",
+        path: ["validators", index, "id"],
+        sourceId: validator.id,
+        message: `Pipeline validator id ${validator.id} conflicts with source id declared at sources.${sourceIndex}.id.`
       })
     );
   }

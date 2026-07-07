@@ -645,6 +645,67 @@ describe("runCli", () => {
     });
   });
 
+  it("rejects source and validator id namespace collisions before source loading", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "schema:server",
+              kind: "object",
+              priority: 0,
+              value: {
+                server: {
+                  port: 3000
+                }
+              }
+            }
+          ],
+          validators: [
+            {
+              id: "schema:server",
+              kind: "json-schema-ajv",
+              schema: true
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly status: string;
+        readonly issues: readonly {
+          readonly category: string;
+          readonly code: string;
+          readonly sourceId?: string;
+          readonly path?: readonly (string | number)[];
+        }[];
+      };
+
+      expect(result.exitCode).toBe(2);
+      expect(report.status).toBe("error");
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          category: "source-load",
+          code: "pipeline_declaration_id_namespace_collision",
+          sourceId: "schema:server",
+          path: ["validators", 0, "id"]
+        })
+      );
+      expect(report.issues.every((issue) => issue.category === "source-load")).toBe(true);
+    });
+  });
+
   it("runs declared Ajv JSON Schema validators for validate", async () => {
     await withTempDir(async (dir) => {
       await writeFile(

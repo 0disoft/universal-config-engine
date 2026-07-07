@@ -42,9 +42,9 @@ The CLI validates the declaration shape before source loading. Unsupported sourc
 kinds, unknown declaration fields, missing or duplicate source ids, missing file
 paths, malformed redaction policies, malformed override mappings, malformed
 coercion rules, malformed validator declarations, duplicate validator ids,
-malformed resource limits, and malformed file size policies are source-loading
-failures. The CLI must not silently ignore unknown source kinds or unknown
-declaration fields.
+source/validator id namespace collisions, malformed resource limits, and malformed
+file size policies are source-loading failures. The CLI must not silently ignore
+unknown source kinds or unknown declaration fields.
 
 CLI argv source values must appear after `--`, so CLI options do not get mixed with
 configuration override arguments.
