@@ -60,6 +60,9 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 - Normalize malformed validator adapter results and malformed validator issues into
   `validation` issues instead of allowing broken adapter output to corrupt
   diagnostic reports.
+- Normalize inconsistent validator status. A validator that returns `ok: false`
+  without error issues produces a validation error issue, and any returned error
+  issue makes the validator provenance status `error`.
 - Treat `ValidatorResult.value` as adapter-local typed output. Core validation does
   not replace the resolved config with validator-returned values or pass those
   values to later validators.

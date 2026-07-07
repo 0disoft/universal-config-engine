@@ -344,6 +344,70 @@ describe("resolveConfig", () => {
       message: "Validator malformed-result returned an invalid result."
     });
   });
+
+  it("normalizes inconsistent validator status and issue results", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "false-without-error",
+          validate() {
+            return {
+              ok: false,
+              issues: []
+            };
+          }
+        },
+        {
+          id: "true-with-error",
+          validate() {
+            return {
+              ok: true,
+              issues: [
+                {
+                  category: "validation",
+                  code: "custom_error",
+                  severity: "error",
+                  message: "Validator reported an error issue."
+                }
+              ]
+            };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "validator_failed_without_issues",
+      severity: "error",
+      sourceId: "false-without-error",
+      message: "Validator false-without-error returned ok false without any error issues."
+    });
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "custom_error",
+      severity: "error",
+      sourceId: "true-with-error",
+      message: "Validator reported an error issue."
+    });
+    expect(validation.provenance).toContainEqual({
+      path: [],
+      action: "validated",
+      sourceId: "false-without-error",
+      message: "Validator false-without-error completed with status error."
+    });
+    expect(validation.provenance).toContainEqual({
+      path: [],
+      action: "validated",
+      sourceId: "true-with-error",
+      message: "Validator true-with-error completed with status error."
+    });
+  });
 });
 
 describe("loadConfigSources", () => {

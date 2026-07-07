@@ -39,12 +39,16 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
         continue;
       }
 
-      issues.push(...normalizeValidatorIssues(validator.id, result.issues));
+      const validatorIssues = normalizeValidatorIssues(validator.id, result.issues);
+      issues.push(...validatorIssues);
+      if (!result.ok && !validatorIssues.some((issue) => issue.severity === "error")) {
+        issues.push(validatorFailedWithoutIssuesIssue(validator.id));
+      }
       provenance.push({
         path: [],
         action: "validated",
         sourceId: validator.id,
-        message: `Validator ${validator.id} completed with status ${result.ok ? "ok" : "error"}.`
+        message: `Validator ${validator.id} completed with status ${validatorStatus(result, validatorIssues)}.`
       });
     } catch (error) {
       issues.push({
@@ -125,6 +129,20 @@ function invalidValidatorIssue(validatorId: string, index: number): ConfigIssue 
     sourceId: validatorId,
     message: `Validator ${validatorId} returned invalid issue at index ${index}.`
   };
+}
+
+function validatorFailedWithoutIssuesIssue(validatorId: string): ConfigIssue {
+  return {
+    category: "validation",
+    code: "validator_failed_without_issues",
+    severity: "error",
+    sourceId: validatorId,
+    message: `Validator ${validatorId} returned ok false without any error issues.`
+  };
+}
+
+function validatorStatus(result: ValidatorResult, issues: readonly ConfigIssue[]): "ok" | "error" {
+  return result.ok && !issues.some((issue) => issue.severity === "error") ? "ok" : "error";
 }
 
 function isConfigPath(value: unknown): value is ConfigPath {
