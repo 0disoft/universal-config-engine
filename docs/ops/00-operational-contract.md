@@ -25,5 +25,5 @@ unreproducible release assets, and unconfirmed `@0disoft` authentication.
 - Required validation names: check, smoke, docs.
 - Release blocker status: release is blocked when local `check`, package smoke,
   hosted CI, secret-safety checks, or release artifact reproduction fails.
-- Remaining operational risk: npm publication is manual until Trusted Publisher or
-  another automated release credential path is documented.
+- Remaining operational risk: npm publication depends on GitHub Actions Trusted
+  Publisher registration matching `.github/workflows/release.yml`.

@@ -43,8 +43,8 @@ GitHub release after the npm scope correction.
 
 - Package consumers can inspect license and package metadata before publication.
 - Semver-governed surfaces exist, but pre-`1.0` compatibility can still evolve.
-- Release automation remains a future decision; manual release steps must keep
-  validation evidence explicit.
+- Release automation is now decided in ADR 0007; manual release steps must keep
+  validation evidence explicit when used as a break-glass fallback.
 - A future ADR must change license, npm scope, or automated publish strategy.
 
 ## Review Blockers

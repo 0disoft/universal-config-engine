@@ -4,11 +4,11 @@ Status: Draft
 
 ## Operational Contract
 
-Release preparation is manual and validation-gated for the `0.1.x` baseline.
-Publishing to npm uses the verified `@0disoft` scope and a one-time local npm
-token until Trusted Publisher is configured. GitHub release assets may be attached
-before or alongside npm publication when they are produced from the validated tag
-and contain no credentials or generated diagnostic reports with raw secret values.
+Release preparation is validation-gated for the `0.1.x` baseline. Routine npm
+publication uses GitHub Actions Trusted Publisher through
+`.github/workflows/release.yml`. GitHub release assets may be attached before or
+alongside npm publication when they are produced from the validated tag and contain
+no credentials or generated diagnostic reports with raw secret values.
 
 ## Owners
 
@@ -40,7 +40,7 @@ Before publishing, also verify:
 - package versions are aligned across publishable workspace packages;
 - package metadata license is `MIT`;
 - `LICENSE` exists and matches package metadata;
-- npm scope ownership and authentication are confirmed for `@0disoft`;
+- npm Trusted Publisher is registered for every publishable package;
 - no secret-like values appear in tracked files or generated reports.
 
 ## Publish Flow
@@ -48,16 +48,30 @@ Before publishing, also verify:
 1. Confirm the version in each publishable package.
 2. Run the pre-release checklist.
 3. Create a signed or annotated git tag for the package baseline.
-4. Create or update the GitHub release for the tag.
-5. Attach packed package tarballs to the GitHub release after rebuilding from the
-   tagged commit.
-6. Publish packages only after npm scope ownership and authentication are confirmed.
-7. Verify installed package imports and the `uce` binary from published artifacts.
+4. Push the tag to GitHub.
+5. Let `.github/workflows/release.yml` rebuild from the tag, attach GitHub release
+   tarballs, and publish npm packages through Trusted Publisher.
+6. Verify installed package imports and the `uce` binary from published artifacts.
+
+Manual local publication is a break-glass fallback only. If it is used, it must
+follow the same validation gates and use a temporary `.npmrc` that is removed
+after publication.
+
+## Trusted Publisher Registration
+
+Every npm package in this repository must use the same Trusted Publisher settings:
+
+- publisher: GitHub Actions;
+- organization or user: `0disoft`;
+- repository: `universal-config-engine`;
+- workflow filename: `release.yml`;
+- environment name: empty unless ADR 0007 is updated;
+- allowed action: npm publish.
 
 ## GitHub Release Asset Flow
 
 GitHub release assets are inspection artifacts, not a substitute for npm package
-publication. Generate them only from a clean checkout at the release tag:
+publication. The release workflow generates them from the tag with:
 
 ```powershell
 pnpm -r build
@@ -74,13 +88,14 @@ pnpm run clean:build
 
 The `v0.1.0` release includes pre-publication tarballs for core, node, CLI, Ajv
 validator, and Zod validator packages under the superseded package scope. The
-`v0.1.1` release is the first npm publication baseline under `@0disoft`.
+`v0.1.1` release is the first npm publication baseline under `@0disoft`. Later
+releases should be published by `.github/workflows/release.yml`.
 
 ## Stop Conditions
 
 - Any required validation fails.
 - `git status --short` is not clean before tagging.
-- npm scope ownership or authentication is not confirmed.
+- npm Trusted Publisher registration is missing or mismatched.
 - Package metadata does not match ADR 0005.
 - A report, fixture, or package artifact exposes raw secret values.
 - GitHub release assets cannot be reproduced from the validated tag.
@@ -89,6 +104,6 @@ validator, and Zod validator packages under the superseded package scope. The
 
 - Required validation names: check, smoke, docs.
 - Release blocker status: failing local validation, failed smoke package checks,
-  unconfirmed `@0disoft` scope/authentication, or secret exposure.
-- Remaining operational risk: hosted CI currently covers one Ubuntu runner; npm
-  publish automation and cross-platform release verification remain future work.
+  mismatched Trusted Publisher registration, or secret exposure.
+- Remaining operational risk: hosted CI currently covers one Ubuntu runner;
+  cross-platform release verification remains future work.

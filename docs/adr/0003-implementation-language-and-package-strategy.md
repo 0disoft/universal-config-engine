@@ -47,7 +47,7 @@ Package boundaries are:
 - Build and test commands use workspace scripts, not application server commands.
 - Core implementation starts without I/O, parser, validator, or CLI dependencies.
 - CLI implementation must call core instead of duplicating merge behavior.
-- Publish workflow remains manual until a separate ADR decides automation.
+- Publish workflow automation is decided in ADR 0007.
 - License and initial version are decided in ADR 0005.
 
 ## Review Blockers

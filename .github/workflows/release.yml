@@ -1,0 +1,231 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to validate, such as v0.1.2"
+        required: true
+        type: string
+      dry_run:
+        description: "Validate and dry-run publish without writing GitHub release assets or npm packages"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Resolve release inputs
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag_name="${GITHUB_REF_NAME}"
+          dry_run="false"
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            tag_name="${{ inputs.tag }}"
+            if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+              dry_run="true"
+            fi
+          fi
+
+          if [[ ! "$tag_name" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release tag must match v<major>.<minor>.<patch>: $tag_name" >&2
+            exit 1
+          fi
+
+          {
+            echo "tag_name=$tag_name"
+            echo "version=${tag_name#v}"
+            echo "dry_run=$dry_run"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        # actions/checkout v7.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ steps.release.outputs.tag_name }}
+
+      - name: Setup Node.js
+        # actions/setup-node v6.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24.11.1
+
+      - name: Enable pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@11.7.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Assert release package versions
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+
+          const releaseVersion = process.env.RELEASE_VERSION;
+          const packagePaths = [
+            "packages/core/package.json",
+            "packages/node/package.json",
+            "packages/validator-ajv/package.json",
+            "packages/validator-zod/package.json",
+            "packages/cli/package.json"
+          ];
+
+          const mismatches = packagePaths.flatMap((path) => {
+            const manifest = JSON.parse(readFileSync(path, "utf8"));
+            return manifest.version === releaseVersion
+              ? []
+              : [`${manifest.name} has version ${manifest.version}, expected ${releaseVersion}`];
+          });
+
+          if (mismatches.length > 0) {
+            console.error(mismatches.join("\n"));
+            process.exit(1);
+          }
+          NODE
+
+      - name: Run repository check
+        run: pnpm run check
+
+      - name: Smoke core package
+        run: pnpm run smoke:core-package
+
+      - name: Smoke workspace packages
+        run: pnpm run smoke:packages
+
+      - name: Check repository diff hygiene
+        run: git diff --check
+
+      - name: Build release tarballs
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm -r build
+          mkdir -p .tmp/release
+
+          packages=(
+            "@0disoft/universal-config-engine-core"
+            "@0disoft/universal-config-engine-node"
+            "@0disoft/universal-config-engine-cli"
+            "@0disoft/universal-config-engine-validator-ajv"
+            "@0disoft/universal-config-engine-validator-zod"
+          )
+
+          for package_name in "${packages[@]}"; do
+            pnpm --filter "$package_name" pack --pack-destination .tmp/release
+          done
+
+          expected_tarballs=(
+            ".tmp/release/0disoft-universal-config-engine-core-${RELEASE_VERSION}.tgz"
+            ".tmp/release/0disoft-universal-config-engine-node-${RELEASE_VERSION}.tgz"
+            ".tmp/release/0disoft-universal-config-engine-cli-${RELEASE_VERSION}.tgz"
+            ".tmp/release/0disoft-universal-config-engine-validator-ajv-${RELEASE_VERSION}.tgz"
+            ".tmp/release/0disoft-universal-config-engine-validator-zod-${RELEASE_VERSION}.tgz"
+          )
+
+          for tarball in "${expected_tarballs[@]}"; do
+            if [[ ! -s "$tarball" ]]; then
+              echo "Missing release tarball: $tarball" >&2
+              exit 1
+            fi
+          done
+
+      - name: Upload GitHub release assets
+        if: steps.release.outputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" .tmp/release/*.tgz --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$RELEASE_TAG" .tmp/release/*.tgz \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --title "$RELEASE_TAG" \
+              --notes "Release $RELEASE_TAG publishes Universal Config Engine packages from the validated tag."
+          fi
+
+      - name: Publish npm packages
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          DRY_RUN: ${{ steps.release.outputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ping --registry=https://registry.npmjs.org/
+
+          packages=(
+            "@0disoft/universal-config-engine-core|.tmp/release/0disoft-universal-config-engine-core-${RELEASE_VERSION}.tgz"
+            "@0disoft/universal-config-engine-node|.tmp/release/0disoft-universal-config-engine-node-${RELEASE_VERSION}.tgz"
+            "@0disoft/universal-config-engine-validator-ajv|.tmp/release/0disoft-universal-config-engine-validator-ajv-${RELEASE_VERSION}.tgz"
+            "@0disoft/universal-config-engine-validator-zod|.tmp/release/0disoft-universal-config-engine-validator-zod-${RELEASE_VERSION}.tgz"
+            "@0disoft/universal-config-engine-cli|.tmp/release/0disoft-universal-config-engine-cli-${RELEASE_VERSION}.tgz"
+          )
+
+          for entry in "${packages[@]}"; do
+            package_name="${entry%%|*}"
+            tarball="${entry##*|}"
+
+            if [[ "$DRY_RUN" != "true" ]] && npm view "${package_name}@${RELEASE_VERSION}" version --registry=https://registry.npmjs.org/ >/dev/null 2>&1; then
+              echo "Skipping already published package ${package_name}@${RELEASE_VERSION}"
+              continue
+            fi
+
+            publish_args=(publish "$tarball" --access public --provenance --registry=https://registry.npmjs.org/)
+            if [[ "$DRY_RUN" == "true" ]]; then
+              publish_args+=(--dry-run)
+            fi
+
+            npm "${publish_args[@]}"
+          done
+
+      - name: Verify published npm packages
+        if: steps.release.outputs.dry_run != 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          packages=(
+            "@0disoft/universal-config-engine-core"
+            "@0disoft/universal-config-engine-node"
+            "@0disoft/universal-config-engine-validator-ajv"
+            "@0disoft/universal-config-engine-validator-zod"
+            "@0disoft/universal-config-engine-cli"
+          )
+
+          for package_name in "${packages[@]}"; do
+            npm view "${package_name}@${RELEASE_VERSION}" name version dist.tarball --json --registry=https://registry.npmjs.org/
+          done

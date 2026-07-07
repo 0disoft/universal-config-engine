@@ -27,8 +27,8 @@ If a bad package is published:
    publication is active.
 3. Prepare a patch version that reverts or forward-fixes the package behavior.
 4. Run the full release pre-checks from `docs/ops/release.md`.
-5. Publish the patch only after validation passes and package scope/authentication
-   are confirmed.
+5. Publish the patch only after validation passes and Trusted Publisher
+   registration is confirmed.
 
 If a GitHub release exists but npm publication has not happened:
 
