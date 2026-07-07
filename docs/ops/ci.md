@@ -27,6 +27,7 @@ pnpm run smoke:packages
 - workspace TypeScript typecheck
 - workspace tests
 - secret snapshot guard
+- adapter compatibility fixture guard
 - build output cleanup
 
 The smoke commands verify package buildability and package contents for the core, node, CLI, and
