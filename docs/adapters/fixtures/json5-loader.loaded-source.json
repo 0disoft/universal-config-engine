@@ -1,0 +1,38 @@
+{
+  "descriptor": {
+    "id": "json5:developer",
+    "kind": "adapter",
+    "priority": 30,
+    "displayName": "developer.config.json5"
+  },
+  "value": {
+    "server": {
+      "host": "0.0.0.0",
+      "port": 5173
+    },
+    "logging": {
+      "level": "debug"
+    }
+  },
+  "locations": [
+    {
+      "path": ["server", "host"],
+      "location": {
+        "sourceId": "json5:developer",
+        "sourcePath": "developer.config.json5",
+        "line": 3,
+        "column": 11
+      }
+    },
+    {
+      "path": ["logging", "level"],
+      "location": {
+        "sourceId": "json5:developer",
+        "sourcePath": "developer.config.json5",
+        "line": 7,
+        "column": 12
+      }
+    }
+  ],
+  "issues": []
+}

@@ -57,9 +57,12 @@ Owner: UNASSIGNED
 
 ## Phase 4: Adapter Ecosystem
 
+- Documented the adapter ecosystem contract in ADR 0006 without moving dialect
+  parsing into core.
+- Added compatibility fixtures for YAML, TOML, JSON5, and validator path mapping.
+- Added `pnpm run check:adapter-fixtures` to validate adapter fixture shape.
 - Publish adapter examples for YAML, TOML, and JSON5 without moving dialect parsing
   into core.
-- Add compatibility fixtures for adapter provenance.
 - Document how third-party validators attach error paths to normalized config objects.
 
 ## Explicitly Deferred

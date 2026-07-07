@@ -84,7 +84,8 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
   `@universal-config-engine/validator-zod` and JSON Schema via
   `@universal-config-engine/validator-ajv`.
 - Error class or Result-style return convention: UNDECIDED.
-- Package boundary names beyond core: UNDECIDED.
+- Parser adapter package names beyond core remain third-party or example-owned for
+  the `0.1.x` baseline; see ADR 0006.
 - Diagnostic report schema versioning: CLI JSON reports use schema version `0.1`;
   field changes are compatibility changes.
 - Applying validator-returned typed values to pipeline output: UNDECIDED.

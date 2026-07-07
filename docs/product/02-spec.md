@@ -116,5 +116,6 @@ of why each final value exists.
   `docs/adr/0003-implementation-language-and-package-strategy.md`.
 - License and initial package version: MIT and `0.1.0`; see
   `docs/adr/0005-license-version-and-release-baseline.md`.
-- Whether YAML, TOML, INI, and JSON5 adapters are first-party packages or third-party
-  examples: UNDECIDED.
+- YAML, TOML, INI, and JSON5 are adapter examples rather than first-party parser
+  packages for the `0.1.x` baseline; see
+  `docs/adr/0006-adapter-ecosystem-contract.md`.

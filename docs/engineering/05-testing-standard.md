@@ -32,6 +32,8 @@ Testing standard defines merge-blocking expectations for unit, integration, cont
   behavior with the library.
 - Package smoke tests must eventually verify published exports from packed artifacts,
   not only local source imports.
+- Adapter compatibility fixtures under `docs/adapters/fixtures/` must pass
+  `pnpm run check:adapter-fixtures`.
 
 ## Review Blockers
 

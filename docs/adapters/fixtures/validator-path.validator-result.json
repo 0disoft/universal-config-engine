@@ -1,0 +1,31 @@
+{
+  "id": "example-validator",
+  "result": {
+    "ok": false,
+    "issues": [
+      {
+        "category": "validation",
+        "code": "port_out_of_range",
+        "severity": "error",
+        "message": "Port must be between 1 and 65535.",
+        "path": ["server", "port"],
+        "sourceId": "example-validator",
+        "details": {
+          "minimum": 1,
+          "maximum": 65535
+        }
+      },
+      {
+        "category": "validation",
+        "code": "log_level_unknown",
+        "severity": "warning",
+        "message": "Log level is not one of the documented values.",
+        "path": ["logging", "level"],
+        "sourceId": "example-validator",
+        "details": {
+          "allowed": "trace,debug,info,warn,error"
+        }
+      }
+    ]
+  }
+}

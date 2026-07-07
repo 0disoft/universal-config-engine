@@ -1,0 +1,47 @@
+{
+  "descriptor": {
+    "id": "yaml:app",
+    "kind": "adapter",
+    "priority": 20,
+    "displayName": "app.yaml"
+  },
+  "value": {
+    "server": {
+      "host": "127.0.0.1",
+      "port": 3000
+    },
+    "features": {
+      "audit": true
+    }
+  },
+  "locations": [
+    {
+      "path": ["server", "host"],
+      "location": {
+        "sourceId": "yaml:app",
+        "sourcePath": "app.yaml",
+        "line": 2,
+        "column": 9
+      }
+    },
+    {
+      "path": ["server", "port"],
+      "location": {
+        "sourceId": "yaml:app",
+        "sourcePath": "app.yaml",
+        "line": 3,
+        "column": 9
+      }
+    },
+    {
+      "path": ["features", "audit"],
+      "location": {
+        "sourceId": "yaml:app",
+        "sourcePath": "app.yaml",
+        "line": 5,
+        "column": 10
+      }
+    }
+  ],
+  "issues": []
+}

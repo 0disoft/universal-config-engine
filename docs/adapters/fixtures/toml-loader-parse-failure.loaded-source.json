@@ -1,0 +1,23 @@
+{
+  "descriptor": {
+    "id": "toml:app",
+    "kind": "adapter",
+    "priority": 20,
+    "displayName": "app.toml"
+  },
+  "value": {},
+  "issues": [
+    {
+      "category": "parse",
+      "code": "toml_parse_error",
+      "severity": "error",
+      "message": "TOML adapter failed to parse source.",
+      "sourceId": "toml:app",
+      "details": {
+        "sourcePath": "app.toml",
+        "line": 8,
+        "column": 17
+      }
+    }
+  ]
+}
