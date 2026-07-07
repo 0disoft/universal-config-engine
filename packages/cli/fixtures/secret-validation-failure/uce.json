@@ -1,0 +1,39 @@
+{
+  "sources": [
+    {
+      "id": "defaults",
+      "kind": "object",
+      "priority": 0,
+      "redaction": {
+        "secretPaths": [["database", "password"]]
+      },
+      "value": {
+        "database": {
+          "password": "example-secret-value"
+        }
+      }
+    }
+  ],
+  "validators": [
+    {
+      "id": "schema:database",
+      "kind": "json-schema-ajv",
+      "schema": {
+        "type": "object",
+        "required": ["database"],
+        "properties": {
+          "database": {
+            "type": "object",
+            "required": ["password"],
+            "properties": {
+              "password": {
+                "type": "string",
+                "minLength": 64
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -7,6 +7,11 @@ export interface ParsedCliArgs {
   readonly sourceArgv: readonly string[];
 }
 
+export interface CliUsageContext {
+  readonly command?: CliCommand;
+  readonly output: CliOutputMode;
+}
+
 export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
   const [commandCandidate, ...rest] = args;
   if (commandCandidate !== "explain" && commandCandidate !== "validate") {
@@ -62,6 +67,39 @@ export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
     output,
     sourceArgv
   };
+}
+
+export function getCliUsageContext(args: readonly string[]): CliUsageContext {
+  const [commandCandidate, ...rest] = args;
+  const command =
+    commandCandidate === "explain" || commandCandidate === "validate"
+      ? commandCandidate
+      : undefined;
+  const separatorIndex = rest.indexOf("--");
+  const cliArgs = separatorIndex === -1 ? rest : rest.slice(0, separatorIndex);
+  let output: CliOutputMode = "human";
+
+  for (let index = 0; index < cliArgs.length; index += 1) {
+    const arg = cliArgs[index];
+    if (arg === "--json") {
+      output = "json";
+      continue;
+    }
+
+    if (arg === "--output") {
+      if (cliArgs[index + 1] === "json") {
+        output = "json";
+      }
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--output=json") {
+      output = "json";
+    }
+  }
+
+  return command === undefined ? { output } : { command, output };
 }
 
 function readValue(args: readonly string[], index: number, option: string): string {

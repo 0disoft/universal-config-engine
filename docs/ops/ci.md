@@ -32,6 +32,10 @@ pnpm run smoke:packages
 The smoke commands verify package buildability and package contents for the core, node, CLI, and
 validator packages.
 
+Package-level `typecheck` and `test` scripts rebuild their workspace dependency graph before
+running package-local checks, so a package test is expected to pass from a clean build-output
+state after `pnpm run clean:build`.
+
 ## Hosted Workflow
 
 GitHub Actions runs `.github/workflows/ci.yml` on `main` pushes and pull requests. The workflow:

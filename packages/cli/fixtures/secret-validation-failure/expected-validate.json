@@ -1,0 +1,54 @@
+{
+  "command": "validate",
+  "schemaVersion": "0.1",
+  "status": "error",
+  "sources": [
+    {
+      "id": "defaults",
+      "kind": "object",
+      "displayName": "defaults",
+      "priority": 0,
+      "status": "loaded"
+    }
+  ],
+  "resolvedPaths": [
+    {
+      "path": ["database", "password"],
+      "status": "resolved",
+      "winningSourceId": "defaults",
+      "overriddenSourceIds": [],
+      "redacted": true,
+      "redactionReason": "secret-path"
+    }
+  ],
+  "issues": [
+    {
+      "category": "validation",
+      "code": "minLength",
+      "severity": "error",
+      "path": ["database", "password"],
+      "sourceId": "schema:database",
+      "message": "must NOT have fewer than 64 characters"
+    }
+  ],
+  "provenance": [
+    {
+      "path": ["database", "password"],
+      "action": "defined",
+      "sourceId": "defaults",
+      "message": "Path was defined by source defaults."
+    },
+    {
+      "path": [],
+      "action": "validated",
+      "sourceId": "schema:database",
+      "message": "Validator schema:database completed with status error."
+    }
+  ],
+  "limits": {
+    "maxDepth": 32,
+    "maxKeyCount": 10000,
+    "maxPathLength": 32,
+    "maxDiagnostics": 200
+  }
+}

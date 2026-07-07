@@ -41,7 +41,7 @@ Candidate responsibilities:
 - `0`: success.
 - `1`: validation failed.
 - `2`: source loading or parser adapter failed.
-- `3`: merge, override, or coercion policy failed.
+- `3`: merge, override, coercion, mapping, or resource-limit policy failed.
 - `4`: CLI usage error.
 - `5`: redaction policy failure.
 
@@ -53,6 +53,10 @@ Candidate responsibilities:
 - Redacted output may still contain sensitive source names, env var names, config
   paths, file paths, and internal service labels. It is secret-safe, not public-safe.
 - JSON output must carry a report schema version before it is treated as stable.
+- When a known command requests JSON output but has a CLI usage error, the CLI
+  emits a versioned JSON error report on stdout and exits `4`.
+- When the command itself is unknown, the CLI reports the usage error on stderr and
+  exits `4`.
 - `explain` and `validate` must call the same library pipeline. CLI-specific merge or
   validation behavior is not allowed.
 - Full resolved config output requires an explicit future decision and must still honor

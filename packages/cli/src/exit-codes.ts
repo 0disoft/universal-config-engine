@@ -16,6 +16,10 @@ export function exitCodeForResult(result: ConfigResult): number {
 }
 
 export function exitCodeForIssues(issues: readonly ConfigIssue[]): number {
+  if (issues.some((issue) => issue.category === "usage")) {
+    return EXIT_USAGE_ERROR;
+  }
+
   if (issues.some((issue) => issue.category === "redaction")) {
     return EXIT_REDACTION_FAILED;
   }

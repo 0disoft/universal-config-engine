@@ -1,0 +1,22 @@
+{
+  "command": "validate",
+  "schemaVersion": "0.1",
+  "status": "error",
+  "sources": [],
+  "resolvedPaths": [],
+  "issues": [
+    {
+      "category": "usage",
+      "code": "cli_usage_error",
+      "severity": "error",
+      "message": "Missing required --config path."
+    }
+  ],
+  "provenance": [],
+  "limits": {
+    "maxDepth": 0,
+    "maxKeyCount": 0,
+    "maxPathLength": 0,
+    "maxDiagnostics": 1
+  }
+}

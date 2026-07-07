@@ -1,9 +1,10 @@
 import {
   buildDiagnosticReport,
+  type ConfigIssue,
   runValidators,
   resolveConfig
 } from "@universal-config-engine/core";
-import { parseCliArgs } from "./args.js";
+import { getCliUsageContext, parseCliArgs } from "./args.js";
 import {
   EXIT_SOURCE_FAILED,
   EXIT_USAGE_ERROR,
@@ -23,7 +24,13 @@ export async function runCli(args: readonly string[], runtime: CliRuntime): Prom
   try {
     parsed = parseCliArgs(args);
   } catch (error) {
-    runtime.stderr(`${error instanceof Error ? error.message : "Invalid CLI arguments."}\n`);
+    const message = error instanceof Error ? error.message : "Invalid CLI arguments.";
+    const usageContext = getCliUsageContext(args);
+    if (usageContext.output === "json" && usageContext.command !== undefined) {
+      runtime.stdout(formatJsonReport(usageContext.command, buildUsageErrorReport(message)));
+    } else {
+      runtime.stderr(`${message}\n`);
+    }
     return { exitCode: EXIT_USAGE_ERROR };
   }
 
@@ -75,6 +82,30 @@ export async function runCli(args: readonly string[], runtime: CliRuntime): Prom
     runtime.stdout(output);
     return { exitCode: EXIT_SOURCE_FAILED };
   }
+}
+
+function buildUsageErrorReport(message: string) {
+  const issue: ConfigIssue = {
+    category: "usage",
+    code: "cli_usage_error",
+    severity: "error",
+    message
+  };
+
+  return buildDiagnosticReport({
+    ok: false,
+    config: {},
+    sources: [],
+    issues: [issue],
+    provenance: [],
+    resolvedPaths: [],
+    limits: {
+      maxDepth: 0,
+      maxKeyCount: 0,
+      maxPathLength: 0,
+      maxDiagnostics: 1
+    }
+  });
 }
 
 async function applyDeclaredValidation(

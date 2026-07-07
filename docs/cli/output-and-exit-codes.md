@@ -58,6 +58,25 @@ Validation adapter issues use category `validation` and exit code `1`. Source
 loading, mapping, merge, coercion, and resource-limit failures are reported before
 validator execution and keep their more specific exit codes.
 
+CLI usage errors use category `usage` and exit code `4` when the command is known
+and JSON output was requested. Unknown commands still write the usage error to
+stderr because no command-specific JSON report can be attributed safely.
+
+## JSON Golden Coverage
+
+Executable CLI fixtures currently lock these report shapes:
+
+- `local-precedence`: successful `explain` with JSON-file defaults, process env
+  overrides, argv overrides, provenance, and secret-path redaction.
+- `coercion-validation`: successful `validate` with opt-in coercion and declared
+  Ajv JSON Schema validation.
+- `validation-failure`: validator failure with exit code `1`.
+- `secret-validation-failure`: validator failure on a redacted secret path without
+  raw secret values in JSON output.
+- `source-load-failure`: declaration/source-load failure with exit code `2`.
+- `mapping-failure`: mapping policy failure with exit code `3`.
+- `usage-error`: known-command JSON usage error with exit code `4`.
+
 ## Review Blockers
 
 - A command emits different JSON without a contract update.

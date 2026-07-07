@@ -22,8 +22,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "pnpm run build",
-    "typecheck": "pnpm --filter @universal-config-engine/core build && pnpm --filter @universal-config-engine/node build && pnpm --filter @universal-config-engine/validator-ajv build && tsc -p tsconfig.test.json",
-    "test": "pnpm --filter @universal-config-engine/core build && pnpm --filter @universal-config-engine/node build && pnpm --filter @universal-config-engine/validator-ajv build && vitest run"
+    "typecheck": "pnpm --filter @universal-config-engine/cli... build && tsc -p tsconfig.test.json",
+    "test": "pnpm --filter @universal-config-engine/cli... build && vitest run"
   },
   "dependencies": {
     "@universal-config-engine/core": "workspace:*",

@@ -61,6 +61,33 @@ Not owned:
 .editorconfig, .gitattributes, and .gitignore keep line endings, binary diffs,
 local files, build outputs, caches, and secret files under control.
 
+## CLI MVP Usage
+
+Run `explain` with a JSON pipeline declaration:
+
+```powershell
+pnpm --filter @universal-config-engine/cli exec uce explain --config uce.json --json
+```
+
+Run `validate` with declared validators:
+
+```powershell
+pnpm --filter @universal-config-engine/cli exec uce validate --config uce.json --json
+```
+
+Pass CLI source values after `--` so they are treated as config input rather than
+UCE options:
+
+```powershell
+pnpm --filter @universal-config-engine/cli exec uce explain --config uce.json --json -- --host 0.0.0.0
+```
+
+Current JSON report fixtures cover success, validation failure, source-load
+failure, mapping failure, JSON usage errors, and secret-path redaction. Exit codes
+are `0` for success, `1` for validation failure, `2` for source loading or parser
+adapter failure, `3` for merge/mapping/coercion/resource-limit policy failure, `4`
+for CLI usage errors, and `5` for redaction policy failure.
+
 ## Current Decision State
 
 The product direction is documented. ADR 0003 selects TypeScript, ESM output, Node

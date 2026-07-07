@@ -25,8 +25,8 @@ Repository Type: library
 - `RedactedDiagnostic`: secret-safe errors and explain output.
 - `ResourceLimitPolicy`: bounds for file size, object depth, key count, path length,
   diagnostics count, and source size.
-- `ConfigIssue`: source-aware issue taxonomy for load, parse, mapping, merge,
-  coercion, validation, redaction, and resource-limit failures.
+- `ConfigIssue`: bounded issue taxonomy for CLI usage, load, parse, mapping,
+  merge, coercion, validation, redaction, and resource-limit failures.
 
 ## Package Boundary Direction
 
@@ -55,6 +55,8 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 - Do not print or serialize secret values through diagnostic helpers.
 - Preserve source identity for source-load, parse, merge, override, validation, and
   redaction failures.
+- Report CLI usage errors as `usage` issues when JSON output is requested for a
+  known command.
 - Normalize loader exceptions into `source-load` issues instead of throwing raw
   adapter failures through the pipeline.
 - Normalize malformed validator adapter results and malformed validator issues into

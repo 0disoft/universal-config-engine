@@ -45,6 +45,7 @@ export interface ValueLocation {
 }
 
 export type ConfigIssueCategory =
+  | "usage"
   | "source-load"
   | "parse"
   | "mapping"

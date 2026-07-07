@@ -76,6 +76,26 @@ describe("runCli", () => {
     expect(JSON.parse(stdout)).toEqual(expected);
   });
 
+  it("matches the secret validation failure golden report without leaking raw values", async () => {
+    const fixtureRoot = new URL("../fixtures/secret-validation-failure/", import.meta.url);
+    const expected = JSON.parse(
+      await readFile(new URL("expected-validate.json", fixtureRoot), "utf8")
+    ) as unknown;
+    let stdout = "";
+    const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+      cwd: fileURLToPath(fixtureRoot),
+      env: {},
+      stdout: (text) => {
+        stdout += text;
+      },
+      stderr: () => {}
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(stdout)).toEqual(expected);
+    expect(stdout).not.toContain("example-secret-value");
+  });
+
   it("explains a JSON file plus process env override as JSON", async () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, "config.json"), JSON.stringify({ server: { port: 3000 } }), "utf8");
@@ -800,5 +820,28 @@ describe("runCli", () => {
 
     expect(result.exitCode).toBe(4);
     expect(stderr).toContain("Missing required --config path.");
+  });
+
+  it("matches the usage error golden report when JSON output is requested", async () => {
+    const fixtureRoot = new URL("../fixtures/usage-error/", import.meta.url);
+    const expected = JSON.parse(
+      await readFile(new URL("expected-validate.json", fixtureRoot), "utf8")
+    ) as unknown;
+    let stdout = "";
+    let stderr = "";
+    const result = await runCli(["validate", "--json"], {
+      cwd: process.cwd(),
+      env: {},
+      stdout: (text) => {
+        stdout += text;
+      },
+      stderr: (text) => {
+        stderr += text;
+      }
+    });
+
+    expect(result.exitCode).toBe(4);
+    expect(JSON.parse(stdout)).toEqual(expected);
+    expect(stderr).toBe("");
   });
 });
