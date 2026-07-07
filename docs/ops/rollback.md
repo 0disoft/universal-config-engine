@@ -15,10 +15,28 @@ operations scope.
 
 - Primary owner: UNASSIGNED
 - Backup owner: UNASSIGNED
-- Escalation path: UNDECIDED
+- Escalation path: repository issues for non-sensitive package failures; do not
+  include npm tokens or credentials in issues.
+
+## Package Rollback Procedure
+
+If a bad package is published:
+
+1. Stop further publishes and preserve the failing version, tag, and validation log.
+2. Deprecate the bad npm version with a short pointer to the fixed version when npm
+   publication is active.
+3. Prepare a patch version that reverts or forward-fixes the package behavior.
+4. Run the full release pre-checks from `docs/ops/release.md`.
+5. Publish the patch only after validation passes and package scope/authentication
+   are confirmed.
+
+If only a GitHub tag or release draft exists, delete or supersede the draft before
+public announcement and keep the corrective commit history intact.
 
 ## Validation
 
-- Required validation names: VALIDATION.md
-- Release blocker status: UNDECIDED
-- Remaining operational risk: UNDECIDED
+- Required validation names: check, smoke, docs.
+- Release blocker status: rollback is blocked while the fix fails local validation,
+  package smoke checks, or secret-safety checks.
+- Remaining operational risk: npm unpublish behavior is registry-policy dependent;
+  prefer deprecating bad versions and publishing a fixed patch.

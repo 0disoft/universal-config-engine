@@ -48,7 +48,7 @@ CLI presentation, and validator adapters must not leak into core.
 
 - Implementation language and runtime floor.
 - Package manager and package names.
-- License and release automation.
+- Release automation.
 - First validator adapter.
 - Whether dialect-heavy parser adapters are first-party packages or examples.
 

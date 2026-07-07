@@ -114,6 +114,7 @@ of why each final value exists.
 - Package export shape: see `docs/library/public-api.md`.
 - Repository package strategy and package manager: pnpm workspace; see
   `docs/adr/0003-implementation-language-and-package-strategy.md`.
-- License: UNDECIDED.
+- License and initial package version: MIT and `0.1.0`; see
+  `docs/adr/0005-license-version-and-release-baseline.md`.
 - Whether YAML, TOML, INI, and JSON5 adapters are first-party packages or third-party
   examples: UNDECIDED.

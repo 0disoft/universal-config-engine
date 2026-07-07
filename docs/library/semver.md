@@ -42,6 +42,7 @@ behavior when the documented contract already required the corrected behavior.
 
 ## Open Decisions
 
-- Initial package version: UNDECIDED.
+- Initial package version: `0.1.0`; see ADR 0005.
 - Package ecosystem: TypeScript, ESM, and pnpm workspace; see ADR 0003.
-- Release tooling: UNDECIDED.
+- Release tooling: manual validation-gated release preparation; automated publish
+  tooling remains UNDECIDED.

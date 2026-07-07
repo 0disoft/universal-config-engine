@@ -1,9 +1,26 @@
 {
   "name": "@universal-config-engine/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "sideEffects": false,
+  "description": "Core config resolution, provenance, validation, and redacted diagnostics for Universal Config Engine.",
+  "keywords": [
+    "config",
+    "configuration",
+    "provenance",
+    "redaction",
+    "validation"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0disoft/universal-config-engine.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/0disoft/universal-config-engine/issues"
+  },
+  "homepage": "https://github.com/0disoft/universal-config-engine#readme",
   "engines": {
     "node": ">=24"
   },
@@ -16,6 +33,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "pnpm run build",

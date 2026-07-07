@@ -15,7 +15,10 @@ Owner: UNASSIGNED
 - Decide implementation language, package name, and runtime floor. TypeScript, ESM,
   pnpm workspace, Node.js `>=24`, and provisional `@universal-config-engine/core`
   are selected in ADR 0003.
-- Decide license, release policy, and package publication strategy.
+- Decide license, initial package version, release policy, and package publication
+  strategy. MIT, `0.1.0`, and manual validation-gated release preparation are
+  selected in ADR 0005; npm publication remains gated on scope ownership and
+  authentication.
 - Record ADRs for package, runtime, license, redaction, merge, provenance, and CLI
   report schema choices.
 
@@ -48,6 +51,7 @@ Owner: UNASSIGNED
 - Added golden report fixtures for success, validation failure, secret validation
   failure, source-load failure, mapping failure, and JSON usage errors.
 - Added no-secret snapshot checks and secret-path redaction regression coverage.
+- Prepared package metadata and MIT license for the `0.1.0` package baseline.
 
 ## Phase 4: Adapter Ecosystem
 

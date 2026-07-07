@@ -43,7 +43,8 @@ service, or persistence layer.
 - Redacted reports are secret-safe, not automatically public-safe.
 - Parser and validator support claims require adapter contracts and fixtures.
 - Implementation language, runtime, package manager, package names, license, and
-  release automation remain undecided until ADRs record them.
+  initial version are recorded in ADRs. Npm scope ownership and release automation
+  remain undecided until ADRs record them.
 
 ## Review Blockers
 

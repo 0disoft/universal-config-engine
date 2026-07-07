@@ -1,9 +1,26 @@
 {
   "name": "@universal-config-engine/node",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "sideEffects": false,
+  "description": "Node.js JSON file, dotenv file, process env, and argv sources for Universal Config Engine.",
+  "keywords": [
+    "config",
+    "configuration",
+    "dotenv",
+    "environment",
+    "node"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0disoft/universal-config-engine.git",
+    "directory": "packages/node"
+  },
+  "bugs": {
+    "url": "https://github.com/0disoft/universal-config-engine/issues"
+  },
+  "homepage": "https://github.com/0disoft/universal-config-engine#readme",
   "engines": {
     "node": ">=24"
   },
@@ -16,6 +33,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "pnpm run build",

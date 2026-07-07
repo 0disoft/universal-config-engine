@@ -36,7 +36,6 @@ Package boundaries are:
 
 ## Not Decided
 
-- OSS license.
 - npm publication scope and release automation.
 - First validator adapter.
 - Runtime source package names.
@@ -48,11 +47,12 @@ Package boundaries are:
 - Build and test commands use workspace scripts, not application server commands.
 - Core implementation starts without I/O, parser, validator, or CLI dependencies.
 - CLI implementation must call core instead of duplicating merge behavior.
-- License and publish workflow remain blocked until separate ADRs decide them.
+- Publish workflow remains blocked until a separate ADR decides automation.
+- License and initial version are decided in ADR 0005.
 
 ## Review Blockers
 
 - Core adds a runtime dependency.
 - Core imports Node.js file-system, process, argv, parser, validator, or CLI modules.
-- Package metadata claims a publishable OSS license before a license ADR exists.
+- Package metadata claims a publishable OSS license that differs from ADR 0005.
 - Future CLI behavior bypasses the core resolution pipeline.

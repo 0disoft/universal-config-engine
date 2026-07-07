@@ -1,9 +1,26 @@
 {
   "name": "@universal-config-engine/cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "sideEffects": false,
+  "description": "Local CLI for explaining and validating Universal Config Engine pipelines.",
+  "keywords": [
+    "config",
+    "configuration",
+    "cli",
+    "diagnostics",
+    "validation"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0disoft/universal-config-engine.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/0disoft/universal-config-engine/issues"
+  },
+  "homepage": "https://github.com/0disoft/universal-config-engine#readme",
   "bin": {
     "uce": "./dist/main.js"
   },
@@ -19,6 +36,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "pnpm run build",

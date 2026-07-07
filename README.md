@@ -95,9 +95,10 @@ The product direction is documented. ADR 0003 selects TypeScript, ESM output, No
 selects `@universal-config-engine/cli`, binary name `uce`, commands `explain` and
 `validate`, JSON pipeline declarations, and JSON report schema version `0.1`.
 Initial validator adapters are `@universal-config-engine/validator-zod` and
-`@universal-config-engine/validator-ajv`. License, npm publication scope, release
-automation, and additional validator integrations remain UNDECIDED. CLI golden
-fixtures cover local precedence, opt-in coercion, declared Ajv validation,
+`@universal-config-engine/validator-ajv`. ADR 0005 selects the MIT license,
+package version `0.1.0`, and a manual validation-gated release baseline. Npm
+publication remains gated on package scope ownership and npm authentication. CLI
+golden fixtures cover local precedence, opt-in coercion, declared Ajv validation,
 validation failure, source-load failure, mapping policy failure, JSON usage errors,
 and secret-path redaction.
 
