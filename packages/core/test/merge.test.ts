@@ -7,7 +7,7 @@ import {
   runValidators,
   resolveConfig
 } from "../src/index.js";
-import type { ConfigLoader, LoadedSource } from "../src/index.js";
+import type { ConfigLoader, LoadedSource, ValidatorResult } from "../src/index.js";
 
 function source(id: string, priority: number, value: unknown): LoadedSource {
   return {
@@ -214,6 +214,86 @@ describe("resolveConfig", () => {
       action: "validated",
       sourceId: "throws",
       message: "Validator throws failed."
+    });
+  });
+
+  it("normalizes malformed validator results and issues", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "malformed-issues",
+          validate() {
+            return {
+              ok: false,
+              issues: [
+                {
+                  category: "validation",
+                  code: "custom_failure",
+                  severity: "error",
+                  path: ["server", "port"],
+                  message: "Port failed custom validation."
+                },
+                {
+                  category: "merge",
+                  code: "wrong_category",
+                  severity: "error",
+                  message: "Wrong category."
+                },
+                "not-an-issue"
+              ]
+            } as unknown as ValidatorResult;
+          }
+        },
+        {
+          id: "malformed-result",
+          validate() {
+            return {
+              ok: false
+            } as unknown as ValidatorResult;
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "custom_failure",
+      severity: "error",
+      path: ["server", "port"],
+      sourceId: "malformed-issues",
+      message: "Port failed custom validation."
+    });
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "validator_issue_invalid",
+      severity: "error",
+      sourceId: "malformed-issues",
+      message: "Validator malformed-issues returned invalid issue at index 1."
+    });
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "validator_issue_invalid",
+      severity: "error",
+      sourceId: "malformed-issues",
+      message: "Validator malformed-issues returned invalid issue at index 2."
+    });
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "validator_result_invalid",
+      severity: "error",
+      sourceId: "malformed-result",
+      message: "Validator malformed-result returned an invalid result."
+    });
+    expect(validation.provenance).toContainEqual({
+      path: [],
+      action: "validated",
+      sourceId: "malformed-result",
+      message: "Validator malformed-result returned an invalid result."
     });
   });
 });

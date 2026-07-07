@@ -57,6 +57,9 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
   redaction failures.
 - Normalize loader exceptions into `source-load` issues instead of throwing raw
   adapter failures through the pipeline.
+- Normalize malformed validator adapter results and malformed validator issues into
+  `validation` issues instead of allowing broken adapter output to corrupt
+  diagnostic reports.
 - Generate provenance during resolution rather than reconstructing it from the final
   object.
 - Reject or safely escape unsafe keys before path setters or deep merge can mutate
