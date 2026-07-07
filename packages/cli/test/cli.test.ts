@@ -57,6 +57,25 @@ describe("runCli", () => {
     expect(JSON.parse(stdout)).toEqual(expected);
   });
 
+  it("matches the validation failure golden report", async () => {
+    const fixtureRoot = new URL("../fixtures/validation-failure/", import.meta.url);
+    const expected = JSON.parse(
+      await readFile(new URL("expected-validate.json", fixtureRoot), "utf8")
+    ) as unknown;
+    let stdout = "";
+    const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+      cwd: fileURLToPath(fixtureRoot),
+      env: {},
+      stdout: (text) => {
+        stdout += text;
+      },
+      stderr: () => {}
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(stdout)).toEqual(expected);
+  });
+
   it("explains a JSON file plus process env override as JSON", async () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, "config.json"), JSON.stringify({ server: { port: 3000 } }), "utf8");
