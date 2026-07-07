@@ -8,7 +8,9 @@ Dependency policy covers necessity, alternatives, license, maintenance health, v
 
 ## Required Evidence
 
-- Source of truth: UNDECIDED
+- Source of truth: `docs/adr/0003-implementation-language-and-package-strategy.md`,
+  `docs/adr/0006-adapter-ecosystem-contract.md`, `docs/library/public-api.md`,
+  `docs/ops/release.md`
 - Owner: UNASSIGNED
 - Merge-blocking validation: VALIDATION.md
 - Related checklist: CHECKLIST.md

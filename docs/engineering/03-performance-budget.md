@@ -4,11 +4,15 @@ Status: Draft
 
 ## Contract
 
-Performance budgets must track latency, payload size, query count, cache behavior, bundle size, background jobs, and UNDECIDED project-specific thresholds.
+Performance budgets track local resolution cost, source size, object depth, key
+count, path length, diagnostics count, env var count, package size, and CLI
+execution behavior. Query count, cache behavior, background jobs, and hosted runtime
+SLOs are out of scope until a future ADR adds a service surface.
 
 ## Required Evidence
 
-- Source of truth: UNDECIDED
+- Source of truth: `docs/product/02-spec.md`, `docs/architecture/03-quality-attributes.md`,
+  `docs/library/public-api.md`, `docs/ops/ci.md`
 - Owner: UNASSIGNED
 - Merge-blocking validation: VALIDATION.md
 - Related checklist: CHECKLIST.md

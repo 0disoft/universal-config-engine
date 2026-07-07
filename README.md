@@ -21,6 +21,7 @@ justifies built-in support.
 - AGENTS.md: agent working rules
 - CHECKLIST.md: checklist router
 - VALIDATION.md: validation names and reporting requirements
+- SECURITY.md: sensitive vulnerability and secret-exposure reporting policy
 - .agents/context-map.md: agent route map
 - docs/product/02-spec.md: product source of truth
 - docs/library/public-api.md: library API ownership

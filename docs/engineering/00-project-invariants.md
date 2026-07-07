@@ -8,7 +8,9 @@ Project invariants define what must remain true across implementation, tests, do
 
 ## Required Evidence
 
-- Source of truth: UNDECIDED
+- Source of truth: `docs/product/02-spec.md`, `docs/library/public-api.md`,
+  `docs/cli/command-contract.md`, `docs/architecture/00-system-boundary.md`,
+  `docs/adr/*.md`
 - Owner: UNASSIGNED
 - Merge-blocking validation: VALIDATION.md
 - Related checklist: CHECKLIST.md

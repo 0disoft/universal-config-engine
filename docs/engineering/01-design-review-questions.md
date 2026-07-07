@@ -8,7 +8,8 @@ Design review questions must cover problem boundary, ownership, data/state, fail
 
 ## Required Evidence
 
-- Source of truth: UNDECIDED
+- Source of truth: `docs/product/02-spec.md`, `docs/product/03-risk-register.md`,
+  `docs/architecture/00-system-boundary.md`, `docs/adr/*.md`
 - Owner: UNASSIGNED
 - Merge-blocking validation: VALIDATION.md
 - Related checklist: CHECKLIST.md

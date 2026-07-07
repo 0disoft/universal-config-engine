@@ -8,7 +8,8 @@ Operability standard connects code changes to logs, metrics, traces, rollback, r
 
 ## Required Evidence
 
-- Source of truth: UNDECIDED
+- Source of truth: `docs/ops/00-operational-contract.md`, `docs/ops/release.md`,
+  `docs/ops/rollback.md`, `docs/ops/observability.md`, `docs/ops/secrets.md`
 - Owner: UNASSIGNED
 - Merge-blocking validation: VALIDATION.md
 - Related checklist: CHECKLIST.md

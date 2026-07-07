@@ -8,7 +8,9 @@ Code review blockers include ownership drift, hidden auth or tenant rules, untes
 
 ## Required Evidence
 
-- Source of truth: UNDECIDED
+- Source of truth: `docs/library/public-api.md`, `docs/cli/command-contract.md`,
+  `docs/cli/output-and-exit-codes.md`, `docs/adapters/README.md`,
+  `docs/engineering/05-testing-standard.md`
 - Owner: UNASSIGNED
 - Merge-blocking validation: VALIDATION.md
 - Related checklist: CHECKLIST.md
