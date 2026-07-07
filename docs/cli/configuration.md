@@ -28,8 +28,9 @@ CLI inputs:
 
 The CLI validates the declaration shape before loading sources. Unsupported source
 kinds, missing source ids, missing file paths, malformed override mappings,
-malformed coercion rules, and malformed validator declarations fail as `source-load`
-issues with exit code `2`; they are not silently skipped.
+malformed coercion rules, malformed validator declarations, malformed resource
+limits, and malformed file size policies fail as `source-load` issues with exit
+code `2`; they are not silently skipped.
 
 ## Precedence Rules
 

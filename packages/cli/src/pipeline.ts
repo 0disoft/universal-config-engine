@@ -23,6 +23,7 @@ const SUPPORTED_SOURCE_KINDS = new Set(["object", "json-file", "dotenv-file", "p
 const SUPPORTED_MAPPING_PARSE_AS = new Set(["string", "number", "boolean", "json"]);
 const SUPPORTED_COERCION_TARGETS = new Set(["number", "boolean", "json"]);
 const SUPPORTED_VALIDATOR_KINDS = new Set(["json-schema-ajv"]);
+const RESOURCE_LIMIT_FIELDS = ["maxDepth", "maxKeyCount", "maxPathLength", "maxDiagnostics"] as const;
 
 export class PipelineDeclarationError extends Error {
   readonly issues: readonly ConfigIssue[];
@@ -192,6 +193,10 @@ function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {
     issues.push(...validateSourceDeclaration(source, index));
   }
 
+  if (value.limits !== undefined) {
+    issues.push(...validateResourceLimitsDeclaration(value.limits));
+  }
+
   if (value.validators !== undefined && !Array.isArray(value.validators)) {
     issues.push(
       pipelineDeclarationIssue({
@@ -305,6 +310,16 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
           })
         );
       }
+      if (source.maxFileBytes !== undefined && !isPositiveInteger(source.maxFileBytes)) {
+        issues.push(
+          pipelineDeclarationIssue({
+            code: "pipeline_file_source_max_file_bytes_invalid",
+            path: sourcePath("maxFileBytes"),
+            sourceId,
+            message: "File source maxFileBytes must be a positive integer when provided."
+          })
+        );
+      }
       break;
     case "process-env":
     case "argv":
@@ -323,6 +338,35 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
         }
       }
       break;
+  }
+
+  return issues;
+}
+
+function validateResourceLimitsDeclaration(limits: unknown): readonly ConfigIssue[] {
+  const path: ConfigPath = ["limits"];
+  if (!isRecord(limits)) {
+    return [
+      pipelineDeclarationIssue({
+        code: "pipeline_limits_invalid",
+        path,
+        message: "Pipeline limits must be a JSON object when provided."
+      })
+    ];
+  }
+
+  const issues: ConfigIssue[] = [];
+
+  for (const field of RESOURCE_LIMIT_FIELDS) {
+    if (limits[field] !== undefined && !isPositiveInteger(limits[field])) {
+      issues.push(
+        pipelineDeclarationIssue({
+          code: "pipeline_limit_value_invalid",
+          path: [...path, field],
+          message: `Pipeline limits.${field} must be a positive integer when provided.`
+        })
+      );
+    }
   }
 
   return issues;
@@ -546,6 +590,10 @@ function pipelineDeclarationIssue(input: {
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
 }
 
 function isConfigPath(value: unknown): value is ConfigPath {

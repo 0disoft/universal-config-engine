@@ -40,8 +40,9 @@ Pipeline declaration files are JSON. The declaration may include:
 
 The CLI validates the declaration shape before source loading. Unsupported source
 kinds, missing source ids, missing file paths, malformed override mappings,
-malformed coercion rules, and malformed validator declarations are source-loading
-failures. The CLI must not silently ignore unknown source kinds.
+malformed coercion rules, malformed validator declarations, malformed resource
+limits, and malformed file size policies are source-loading failures. The CLI must
+not silently ignore unknown source kinds.
 
 CLI argv source values must appear after `--`, so CLI options do not get mixed with
 configuration override arguments.

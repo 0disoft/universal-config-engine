@@ -337,6 +337,95 @@ describe("runCli", () => {
     });
   });
 
+  it("rejects malformed resource limits and file size policies before source loading", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "file",
+              kind: "json-file",
+              priority: 0,
+              path: "config.json",
+              maxFileBytes: "large"
+            },
+            {
+              id: "env",
+              kind: "dotenv-file",
+              priority: 1,
+              path: ".env",
+              maxFileBytes: 0
+            }
+          ],
+          limits: {
+            maxDepth: "deep",
+            maxKeyCount: 0,
+            maxPathLength: -1,
+            maxDiagnostics: 1.5
+          }
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly status: string;
+        readonly issues: readonly {
+          readonly category: string;
+          readonly code: string;
+          readonly path: readonly (string | number)[];
+          readonly sourceId?: string;
+        }[];
+      };
+      const issueCodes = report.issues.map((issue) => issue.code);
+
+      expect(result.exitCode).toBe(2);
+      expect(report.status).toBe("error");
+      expect(issueCodes).toEqual(
+        expect.arrayContaining([
+          "pipeline_file_source_max_file_bytes_invalid",
+          "pipeline_limit_value_invalid"
+        ])
+      );
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          code: "pipeline_file_source_max_file_bytes_invalid",
+          sourceId: "file",
+          path: ["sources", 0, "maxFileBytes"]
+        })
+      );
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          code: "pipeline_file_source_max_file_bytes_invalid",
+          sourceId: "env",
+          path: ["sources", 1, "maxFileBytes"]
+        })
+      );
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          code: "pipeline_limit_value_invalid",
+          path: ["limits", "maxDepth"]
+        })
+      );
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          code: "pipeline_limit_value_invalid",
+          path: ["limits", "maxDiagnostics"]
+        })
+      );
+      expect(report.issues.every((issue) => issue.category === "source-load")).toBe(true);
+    });
+  });
+
   it("runs declared Ajv JSON Schema validators for validate", async () => {
     await withTempDir(async (dir) => {
       await writeFile(
