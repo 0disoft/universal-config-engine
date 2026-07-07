@@ -4,7 +4,7 @@ import type {
   ValidatorAdapter,
   ValidatorInput,
   ValidatorResult
-} from "@universal-config-engine/core";
+} from "@0disoft/universal-config-engine-core";
 import type { z } from "zod";
 
 export interface CreateZodValidatorInput<TSchema extends z.ZodType> {

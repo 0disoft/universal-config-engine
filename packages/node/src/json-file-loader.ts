@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import type { ConfigIssue, ConfigSourceDescriptor, LoadedSource } from "@universal-config-engine/core";
+import type { ConfigIssue, ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
 import { checkFileSize, DEFAULT_MAX_FILE_BYTES, type FileReadPolicy } from "./file.js";
 
 export interface LoadJsonFileSourceInput extends FileReadPolicy {

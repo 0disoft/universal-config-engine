@@ -13,12 +13,11 @@ Owner: UNASSIGNED
 - Define package boundaries for core, runtime source adapters, CLI, validator
   adapters, and fixtures.
 - Decide implementation language, package name, and runtime floor. TypeScript, ESM,
-  pnpm workspace, Node.js `>=24`, and provisional `@universal-config-engine/core`
+  pnpm workspace, Node.js `>=24`, and provisional `@0disoft/universal-config-engine-core`
   are selected in ADR 0003.
 - Decide license, initial package version, release policy, and package publication
-  strategy. MIT, `0.1.0`, and manual validation-gated release preparation are
-  selected in ADR 0005; npm publication remains gated on scope ownership and
-  authentication.
+  strategy. MIT, `0.1.1`, the `@0disoft` npm scope, and manual validation-gated
+  release preparation are selected in ADR 0005.
 - Record ADRs for package, runtime, license, redaction, merge, provenance, and CLI
   report schema choices.
 
@@ -51,9 +50,9 @@ Owner: UNASSIGNED
 - Added golden report fixtures for success, validation failure, secret validation
   failure, source-load failure, mapping failure, and JSON usage errors.
 - Added no-secret snapshot checks and secret-path redaction regression coverage.
-- Prepared package metadata and MIT license for the `0.1.0` package baseline.
+- Prepared package metadata and MIT license for the `0.1.1` package baseline.
 - Published the `v0.1.0` GitHub release with packed package tarball assets for
-  inspection before npm publication.
+  pre-publication inspection.
 
 ## Phase 4: Adapter Ecosystem
 

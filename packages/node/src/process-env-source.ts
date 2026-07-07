@@ -4,7 +4,7 @@ import {
   type ConfigSourceDescriptor,
   type LoadedSource,
   type OverrideMapping
-} from "@universal-config-engine/core";
+} from "@0disoft/universal-config-engine-core";
 
 export interface CreateProcessEnvSourceInput {
   readonly descriptor: ConfigSourceDescriptor;

@@ -1,4 +1,4 @@
-import { formatPath, type ConfigIssue, type DiagnosticReport } from "@universal-config-engine/core";
+import { formatPath, type ConfigIssue, type DiagnosticReport } from "@0disoft/universal-config-engine-core";
 import type { CliCommand } from "./types.js";
 
 export interface CliJsonReport extends DiagnosticReport {

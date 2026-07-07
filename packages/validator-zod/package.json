@@ -1,6 +1,6 @@
 {
-  "name": "@universal-config-engine/validator-zod",
-  "version": "0.1.0",
+  "name": "@0disoft/universal-config-engine-validator-zod",
+  "version": "0.1.1",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
@@ -38,11 +38,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "pnpm run build",
-    "typecheck": "pnpm --filter @universal-config-engine/validator-zod... build && tsc -p tsconfig.test.json",
-    "test": "pnpm --filter @universal-config-engine/validator-zod... build && vitest run"
+    "typecheck": "pnpm --filter @0disoft/universal-config-engine-validator-zod... build && tsc -p tsconfig.test.json",
+    "test": "pnpm --filter @0disoft/universal-config-engine-validator-zod... build && vitest run"
   },
   "dependencies": {
-    "@universal-config-engine/core": "workspace:*"
+    "@0disoft/universal-config-engine-core": "workspace:*"
   },
   "peerDependencies": {
     "zod": "^4.4.3"

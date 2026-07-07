@@ -5,7 +5,7 @@ import {
   createProcessEnvSource,
   loadDotenvFileSource,
   loadJsonFileSource
-} from "@universal-config-engine/node";
+} from "@0disoft/universal-config-engine-node";
 import type {
   ConfigPath,
   ConfigIssue,
@@ -13,7 +13,7 @@ import type {
   LoadedSource,
   RedactionPolicyInput,
   SourceKind
-} from "@universal-config-engine/core";
+} from "@0disoft/universal-config-engine-core";
 import type {
   PipelineDeclaration,
   PipelineSourceDeclaration

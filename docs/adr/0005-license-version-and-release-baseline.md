@@ -20,23 +20,24 @@ versioning, and release gates.
 The repository uses the MIT license. The root workspace remains private, but each
 workspace package is prepared as a public package with:
 
-- package version `0.1.0`;
+- package version `0.1.1`;
+- package names under the verified `@0disoft` npm scope;
 - license `MIT`;
 - repository, bugs, homepage, description, and keywords metadata;
 - `publishConfig.access = "public"`;
 - built `dist` artifacts as the package `files` surface.
 
-The first release baseline is manual and validation-gated. Publishing to npm is
-allowed only after package scope ownership and npm authentication are confirmed.
-Until then, release validation stops at local checks, packed artifact smoke tests,
-and GitHub tag or release preparation.
+The first npm release baseline is manual and validation-gated. Publishing to npm is
+allowed under `@0disoft` after authentication is confirmed. The earlier `v0.1.0`
+GitHub release is a pre-publication inspection baseline and is superseded for npm
+publication by `v0.1.1`.
 
 ## Rationale
 
 MIT matches the intended small OSS utility surface and keeps downstream adoption
-simple. Version `0.1.0` communicates an implemented MVP baseline without promising
-stable `1.0` compatibility. Keeping npm publication gated avoids claiming package
-availability before the scope and credentials are verified.
+simple. Version `0.1.1` communicates an implemented MVP baseline without promising
+stable `1.0` compatibility, while avoiding mutation of the existing `v0.1.0`
+GitHub release after the npm scope correction.
 
 ## Consequences
 

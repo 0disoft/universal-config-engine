@@ -16,7 +16,7 @@ This document records the first CLI implementation contract.
 
 ## Decision
 
-The first CLI package is `@universal-config-engine/cli` with binary name `uce`.
+The first CLI package is `@0disoft/universal-config-engine-cli` with binary name `uce`.
 
 The first commands are:
 
@@ -25,7 +25,7 @@ The first commands are:
 
 Both commands execute the same local resolution pipeline. The CLI does not own merge,
 mapping, coercion, validation, redaction, or source-loading semantics. It calls
-`@universal-config-engine/core` and `@universal-config-engine/node`.
+`@0disoft/universal-config-engine-core` and `@0disoft/universal-config-engine-node`.
 
 Pipeline declaration files are JSON. The declaration may include:
 
@@ -58,7 +58,7 @@ stderr and exit `4`.
 
 The first CLI validator declaration kind is `json-schema-ajv`. It accepts an inline
 JSON Schema object or boolean schema and runs through
-`@universal-config-engine/validator-ajv`. The CLI does not dynamically import
+`@0disoft/universal-config-engine-validator-ajv`. The CLI does not dynamically import
 validator modules from file paths or package names. Zod and custom validators remain
 library API integrations until a separate ADR defines a safe declaration format.
 

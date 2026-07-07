@@ -19,8 +19,8 @@ This document records the first implementation choices for Universal Config Engi
 The initial implementation uses TypeScript, ESM package output, Node.js `>=24`, and
 a pnpm workspace.
 
-The first package is `@universal-config-engine/core`. The package name is
-provisional until npm scope ownership is confirmed. The core package must have zero
+The first package is `@0disoft/universal-config-engine-core`. Package publication
+uses the verified `@0disoft` npm scope. The core package must have zero
 runtime dependencies and must not import file-system, process, argv, parser,
 validator, or CLI presentation libraries.
 
@@ -36,7 +36,7 @@ Package boundaries are:
 
 ## Not Decided
 
-- npm publication scope and release automation.
+- Release automation.
 - First validator adapter.
 - Runtime source package names.
 - CLI package name and binary name.
@@ -47,7 +47,7 @@ Package boundaries are:
 - Build and test commands use workspace scripts, not application server commands.
 - Core implementation starts without I/O, parser, validator, or CLI dependencies.
 - CLI implementation must call core instead of duplicating merge behavior.
-- Publish workflow remains blocked until a separate ADR decides automation.
+- Publish workflow remains manual until a separate ADR decides automation.
 - License and initial version are decided in ADR 0005.
 
 ## Review Blockers

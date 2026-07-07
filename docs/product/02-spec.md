@@ -105,8 +105,8 @@ of why each final value exists.
 - Runtime compatibility floor: Node.js `>=24`; see
   `docs/adr/0003-implementation-language-and-package-strategy.md`.
 - Initial validator adapter examples: Zod via
-  `@universal-config-engine/validator-zod` and JSON Schema via
-  `@universal-config-engine/validator-ajv`.
+  `@0disoft/universal-config-engine-validator-zod` and JSON Schema via
+  `@0disoft/universal-config-engine-validator-ajv`.
 - CLI command names and exact flags: see `docs/cli/command-contract.md` and
   `docs/adr/0004-cli-command-and-pipeline-declaration.md`.
 - CLI validator declaration support: inline Ajv JSON Schema via `json-schema-ajv`;
@@ -114,7 +114,7 @@ of why each final value exists.
 - Package export shape: see `docs/library/public-api.md`.
 - Repository package strategy and package manager: pnpm workspace; see
   `docs/adr/0003-implementation-language-and-package-strategy.md`.
-- License and initial package version: MIT and `0.1.0`; see
+- License and initial npm package version: MIT and `0.1.1`; see
   `docs/adr/0005-license-version-and-release-baseline.md`.
 - YAML, TOML, INI, and JSON5 are adapter examples rather than first-party parser
   packages for the `0.1.x` baseline; see

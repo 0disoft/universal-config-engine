@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { resolveConfig } from "@universal-config-engine/core";
+import { resolveConfig } from "@0disoft/universal-config-engine-core";
 import {
   createArgvSource,
   createProcessEnvSource,
@@ -10,7 +10,7 @@ import {
   loadJsonFileSource,
   parseSimpleDotenv
 } from "../src/index.js";
-import type { ConfigSourceDescriptor } from "@universal-config-engine/core";
+import type { ConfigSourceDescriptor } from "@0disoft/universal-config-engine-core";
 
 function descriptor(id: string, kind: ConfigSourceDescriptor["kind"], priority: number): ConfigSourceDescriptor {
   return {

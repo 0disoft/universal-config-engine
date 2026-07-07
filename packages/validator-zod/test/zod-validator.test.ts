@@ -3,7 +3,7 @@ import * as z from "zod";
 import {
   resolveConfig,
   runValidators
-} from "@universal-config-engine/core";
+} from "@0disoft/universal-config-engine-core";
 import { createZodValidator } from "../src/index.js";
 
 describe("createZodValidator", () => {

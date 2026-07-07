@@ -67,20 +67,20 @@ local files, build outputs, caches, and secret files under control.
 Run `explain` with a JSON pipeline declaration:
 
 ```powershell
-pnpm --filter @universal-config-engine/cli exec uce explain --config uce.json --json
+pnpm --filter @0disoft/universal-config-engine-cli exec uce explain --config uce.json --json
 ```
 
 Run `validate` with declared validators:
 
 ```powershell
-pnpm --filter @universal-config-engine/cli exec uce validate --config uce.json --json
+pnpm --filter @0disoft/universal-config-engine-cli exec uce validate --config uce.json --json
 ```
 
 Pass CLI source values after `--` so they are treated as config input rather than
 UCE options:
 
 ```powershell
-pnpm --filter @universal-config-engine/cli exec uce explain --config uce.json --json -- --host 0.0.0.0
+pnpm --filter @0disoft/universal-config-engine-cli exec uce explain --config uce.json --json -- --host 0.0.0.0
 ```
 
 Current JSON report fixtures cover success, validation failure, source-load
@@ -93,14 +93,14 @@ for CLI usage errors, and `5` for redaction policy failure.
 
 The product direction is documented. ADR 0003 selects TypeScript, ESM output, Node
 `>=24`, a pnpm workspace, and a zero-runtime-dependency core package. ADR 0004
-selects `@universal-config-engine/cli`, binary name `uce`, commands `explain` and
+selects `@0disoft/universal-config-engine-cli`, binary name `uce`, commands `explain` and
 `validate`, JSON pipeline declarations, and JSON report schema version `0.1`.
-Initial validator adapters are `@universal-config-engine/validator-zod` and
-`@universal-config-engine/validator-ajv`. ADR 0005 selects the MIT license,
-package version `0.1.0`, and a manual validation-gated release baseline. Npm
-publication remains gated on package scope ownership and npm authentication. The
-`v0.1.0` GitHub release carries packed tarball assets for inspection before npm
-publication. CLI golden fixtures cover local precedence, opt-in coercion, declared
+Initial validator adapters are `@0disoft/universal-config-engine-validator-zod` and
+`@0disoft/universal-config-engine-validator-ajv`. ADR 0005 selects the MIT license,
+package version `0.1.1`, the `@0disoft` npm scope, and a manual validation-gated
+release baseline. The `v0.1.0` GitHub release carries pre-publication inspection
+assets; `v0.1.1` is the first npm publication baseline. CLI golden fixtures cover
+local precedence, opt-in coercion, declared
 Ajv validation, validation failure, source-load failure, mapping policy failure,
 JSON usage errors, and secret-path redaction.
 

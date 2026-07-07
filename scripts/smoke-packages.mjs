@@ -7,7 +7,7 @@ const root = process.cwd();
 const pnpmExecPath = process.env.npm_execpath;
 const packages = [
   {
-    name: "@universal-config-engine/core",
+    name: "@0disoft/universal-config-engine-core",
     distIndex: join(root, "packages", "core", "dist", "index.js"),
     smoke: async (module) => {
       const result = module.resolveConfig({
@@ -37,7 +37,7 @@ const packages = [
     }
   },
   {
-    name: "@universal-config-engine/node",
+    name: "@0disoft/universal-config-engine-node",
     distIndex: join(root, "packages", "node", "dist", "index.js"),
     smoke: async (module) => {
       const source = module.createProcessEnvSource({
@@ -65,7 +65,7 @@ const packages = [
     }
   },
   {
-    name: "@universal-config-engine/cli",
+    name: "@0disoft/universal-config-engine-cli",
     distIndex: join(root, "packages", "cli", "dist", "index.js"),
     smoke: async (module) => {
       const parsed = module.parseCliArgs(["explain", "--config", "uce.json", "--json"]);
@@ -82,7 +82,7 @@ const packages = [
     }
   },
   {
-    name: "@universal-config-engine/validator-zod",
+    name: "@0disoft/universal-config-engine-validator-zod",
     distIndex: join(root, "packages", "validator-zod", "dist", "index.js"),
     smoke: async (module) => {
       if (typeof module.createZodValidator !== "function") {
@@ -91,7 +91,7 @@ const packages = [
     }
   },
   {
-    name: "@universal-config-engine/validator-ajv",
+    name: "@0disoft/universal-config-engine-validator-ajv",
     distIndex: join(root, "packages", "validator-ajv", "dist", "index.js"),
     smoke: async (module) => {
       if (typeof module.createAjvValidator !== "function") {

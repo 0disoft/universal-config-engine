@@ -1,5 +1,5 @@
 import { stat } from "node:fs/promises";
-import type { ConfigIssue } from "@universal-config-engine/core";
+import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
 
 export const DEFAULT_MAX_FILE_BYTES = 1024 * 1024;
 

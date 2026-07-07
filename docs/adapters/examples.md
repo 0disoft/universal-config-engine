@@ -21,7 +21,7 @@ import type {
   ConfigSourceDescriptor,
   ConfigValue,
   ValueLocation
-} from "@universal-config-engine/core";
+} from "@0disoft/universal-config-engine-core";
 
 interface ParsedConfigDocument {
   readonly value: ConfigValue;
@@ -167,7 +167,7 @@ import type {
   ConfigIssue,
   ConfigPath,
   ValidatorAdapter
-} from "@universal-config-engine/core";
+} from "@0disoft/universal-config-engine-core";
 
 interface ExternalValidatorIssue {
   readonly code: string;

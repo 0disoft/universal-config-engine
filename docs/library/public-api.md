@@ -32,14 +32,14 @@ Repository Type: library
 
 Package naming beyond core remains provisional, but public API ownership is layered:
 
-- `@universal-config-engine/core`: pure config values, paths, sources, merge,
+- `@0disoft/universal-config-engine-core`: pure config values, paths, sources, merge,
   provenance, diagnostics, redaction, result, loader orchestration, and adapter
   interfaces.
 - runtime source package: file-system, process env, argv, JSON file, and simple
   `.env` source helpers.
 - CLI package: command parsing and presentation only.
-- `@universal-config-engine/validator-zod`: optional Zod validator integration.
-- `@universal-config-engine/validator-ajv`: optional Ajv JSON Schema validator
+- `@0disoft/universal-config-engine-validator-zod`: optional Zod validator integration.
+- `@0disoft/universal-config-engine-validator-ajv`: optional Ajv JSON Schema validator
   integration.
 - validator adapter packages: optional dependencies on validator libraries.
 - fixture package or directory: shared behavior cases and golden reports.
@@ -81,8 +81,8 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 - Exact package ecosystem and module format: TypeScript ESM; see ADR 0003.
 - Runtime compatibility floor: Node.js `>=24`; see ADR 0003.
 - Initial validator adapter examples: Zod via
-  `@universal-config-engine/validator-zod` and JSON Schema via
-  `@universal-config-engine/validator-ajv`.
+  `@0disoft/universal-config-engine-validator-zod` and JSON Schema via
+  `@0disoft/universal-config-engine-validator-ajv`.
 - Error class or Result-style return convention: UNDECIDED.
 - Parser adapter package names beyond core remain third-party or example-owned for
   the `0.1.x` baseline; see ADR 0006.

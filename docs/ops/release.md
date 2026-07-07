@@ -5,11 +5,10 @@ Status: Draft
 ## Operational Contract
 
 Release preparation is manual and validation-gated for the `0.1.x` baseline.
-Publishing to npm is blocked until package scope ownership and npm authentication
-are confirmed.
-GitHub release assets may be attached before npm publication when they are produced
-from the validated tag and contain no credentials or generated diagnostic reports
-with raw secret values.
+Publishing to npm uses the verified `@0disoft` scope and a one-time local npm
+token until Trusted Publisher is configured. GitHub release assets may be attached
+before or alongside npm publication when they are produced from the validated tag
+and contain no credentials or generated diagnostic reports with raw secret values.
 
 ## Owners
 
@@ -41,7 +40,7 @@ Before publishing, also verify:
 - package versions are aligned across publishable workspace packages;
 - package metadata license is `MIT`;
 - `LICENSE` exists and matches package metadata;
-- npm scope ownership and authentication are confirmed;
+- npm scope ownership and authentication are confirmed for `@0disoft`;
 - no secret-like values appear in tracked files or generated reports.
 
 ## Publish Flow
@@ -63,19 +62,19 @@ publication. Generate them only from a clean checkout at the release tag:
 ```powershell
 pnpm -r build
 New-Item -ItemType Directory -Force -Path .tmp/release | Out-Null
-pnpm --filter @universal-config-engine/core pack --pack-destination .tmp/release
-pnpm --filter @universal-config-engine/node pack --pack-destination .tmp/release
-pnpm --filter @universal-config-engine/cli pack --pack-destination .tmp/release
-pnpm --filter @universal-config-engine/validator-ajv pack --pack-destination .tmp/release
-pnpm --filter @universal-config-engine/validator-zod pack --pack-destination .tmp/release
+pnpm --filter @0disoft/universal-config-engine-core pack --pack-destination .tmp/release
+pnpm --filter @0disoft/universal-config-engine-node pack --pack-destination .tmp/release
+pnpm --filter @0disoft/universal-config-engine-cli pack --pack-destination .tmp/release
+pnpm --filter @0disoft/universal-config-engine-validator-ajv pack --pack-destination .tmp/release
+pnpm --filter @0disoft/universal-config-engine-validator-zod pack --pack-destination .tmp/release
 gh release upload <tag> .tmp/release/*.tgz --repo 0disoft/universal-config-engine --clobber
 gh release view <tag> --repo 0disoft/universal-config-engine --json assets,tagName,url
 pnpm run clean:build
 ```
 
-The `v0.1.0` release includes tarballs for core, node, CLI, Ajv validator, and Zod
-validator packages. Npm publication remains blocked until scope ownership and
-authentication are confirmed.
+The `v0.1.0` release includes pre-publication tarballs for core, node, CLI, Ajv
+validator, and Zod validator packages under the superseded package scope. The
+`v0.1.1` release is the first npm publication baseline under `@0disoft`.
 
 ## Stop Conditions
 
@@ -90,6 +89,6 @@ authentication are confirmed.
 
 - Required validation names: check, smoke, docs.
 - Release blocker status: failing local validation, failed smoke package checks,
-  unconfirmed npm scope/authentication, or secret exposure.
+  unconfirmed `@0disoft` scope/authentication, or secret exposure.
 - Remaining operational risk: hosted CI currently covers one Ubuntu runner; npm
   publish automation and cross-platform release verification remain future work.

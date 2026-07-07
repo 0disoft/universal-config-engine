@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   resolveConfig,
   runValidators
-} from "@universal-config-engine/core";
+} from "@0disoft/universal-config-engine-core";
 import {
   createAjvValidator,
   instancePathToConfigPath

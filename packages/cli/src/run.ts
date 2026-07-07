@@ -3,7 +3,7 @@ import {
   type ConfigIssue,
   runValidators,
   resolveConfig
-} from "@universal-config-engine/core";
+} from "@0disoft/universal-config-engine-core";
 import { getCliUsageContext, parseCliArgs } from "./args.js";
 import {
   EXIT_SOURCE_FAILED,

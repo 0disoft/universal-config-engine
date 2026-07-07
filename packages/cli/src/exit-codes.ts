@@ -1,4 +1,4 @@
-import type { ConfigIssue, ConfigResult } from "@universal-config-engine/core";
+import type { ConfigIssue, ConfigResult } from "@0disoft/universal-config-engine-core";
 
 export const EXIT_SUCCESS = 0;
 export const EXIT_VALIDATION_FAILED = 1;

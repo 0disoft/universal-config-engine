@@ -1,8 +1,8 @@
 import type {
   ConfigIssue,
   ValidatorAdapter
-} from "@universal-config-engine/core";
-import { createAjvValidator } from "@universal-config-engine/validator-ajv";
+} from "@0disoft/universal-config-engine-core";
+import { createAjvValidator } from "@0disoft/universal-config-engine-validator-ajv";
 import type {
   PipelineDeclaration,
   AjvJsonSchemaValidatorDeclaration,

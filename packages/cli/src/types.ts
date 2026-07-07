@@ -3,7 +3,7 @@ import type {
   ConfigSourceDescriptor,
   OverrideMapping,
   ResourceLimitPolicy
-} from "@universal-config-engine/core";
+} from "@0disoft/universal-config-engine-core";
 import type { Schema } from "ajv/dist/ajv.js";
 
 export type CliCommand = "explain" | "validate";

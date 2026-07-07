@@ -23,13 +23,13 @@ importers:
 
   packages/cli:
     dependencies:
-      '@universal-config-engine/core':
+      '@0disoft/universal-config-engine-core':
         specifier: workspace:*
         version: link:../core
-      '@universal-config-engine/node':
+      '@0disoft/universal-config-engine-node':
         specifier: workspace:*
         version: link:../node
-      '@universal-config-engine/validator-ajv':
+      '@0disoft/universal-config-engine-validator-ajv':
         specifier: workspace:*
         version: link:../validator-ajv
       ajv:
@@ -40,13 +40,13 @@ importers:
 
   packages/node:
     dependencies:
-      '@universal-config-engine/core':
+      '@0disoft/universal-config-engine-core':
         specifier: workspace:*
         version: link:../core
 
   packages/validator-ajv:
     dependencies:
-      '@universal-config-engine/core':
+      '@0disoft/universal-config-engine-core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -56,7 +56,7 @@ importers:
 
   packages/validator-zod:
     dependencies:
-      '@universal-config-engine/core':
+      '@0disoft/universal-config-engine-core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
