@@ -426,6 +426,141 @@ describe("runCli", () => {
     });
   });
 
+  it("rejects unknown declaration fields and malformed redaction policy before source loading", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "defaults",
+              kind: "object",
+              priority: 0,
+              value: {
+                database: {
+                  password: "example-secret-value"
+                }
+              },
+              redaction: {
+                secretSource: "yes",
+                secretPaths: ["database.password"],
+                secretNamePatterns: ["password", ""],
+                note: "ignored"
+              },
+              extraSourceField: true
+            },
+            {
+              id: "env",
+              kind: "process-env",
+              priority: 10,
+              mappings: [
+                {
+                  externalName: "DATABASE_PASSWORD",
+                  sourceKind: "process-env",
+                  targetPath: ["database", "password"],
+                  secret: "yes",
+                  note: "ignored"
+                }
+              ]
+            }
+          ],
+          limits: {
+            maxDepth: 8,
+            maxKeys: 100
+          },
+          coercionRules: [
+            {
+              path: ["server", "port"],
+              from: "string",
+              to: "number",
+              onFailure: "issue",
+              note: "ignored"
+            }
+          ],
+          validators: [
+            {
+              id: "schema",
+              kind: "json-schema-ajv",
+              schema: true,
+              module: "./validator.js"
+            }
+          ],
+          pipelineVersion: 1
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {
+          DATABASE_PASSWORD: "example-secret-value"
+        },
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly status: string;
+        readonly issues: readonly {
+          readonly category: string;
+          readonly code: string;
+          readonly path: readonly (string | number)[];
+          readonly sourceId?: string;
+        }[];
+      };
+      const issueCodes = report.issues.map((issue) => issue.code);
+
+      expect(result.exitCode).toBe(2);
+      expect(report.status).toBe("error");
+      expect(issueCodes).toEqual(
+        expect.arrayContaining([
+          "pipeline_unknown_field",
+          "pipeline_source_unknown_field",
+          "pipeline_redaction_policy_unknown_field",
+          "pipeline_redaction_secret_source_invalid",
+          "pipeline_redaction_secret_paths_invalid",
+          "pipeline_redaction_secret_name_patterns_invalid",
+          "pipeline_override_mapping_unknown_field",
+          "pipeline_override_mapping_secret_invalid",
+          "pipeline_limits_unknown_field",
+          "pipeline_coercion_rule_unknown_field",
+          "pipeline_validator_unknown_field"
+        ])
+      );
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          code: "pipeline_unknown_field",
+          path: ["pipelineVersion"]
+        })
+      );
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          code: "pipeline_source_unknown_field",
+          sourceId: "defaults",
+          path: ["sources", 0, "extraSourceField"]
+        })
+      );
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          code: "pipeline_override_mapping_secret_invalid",
+          sourceId: "env",
+          path: ["sources", 1, "mappings", 0, "secret"]
+        })
+      );
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          code: "pipeline_validator_unknown_field",
+          sourceId: "schema",
+          path: ["validators", 0, "module"]
+        })
+      );
+      expect(stdout).not.toContain("example-secret-value");
+      expect(report.issues.every((issue) => issue.category === "source-load")).toBe(true);
+    });
+  });
+
   it("runs declared Ajv JSON Schema validators for validate", async () => {
     await withTempDir(async (dir) => {
       await writeFile(

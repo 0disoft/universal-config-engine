@@ -24,6 +24,19 @@ const SUPPORTED_MAPPING_PARSE_AS = new Set(["string", "number", "boolean", "json
 const SUPPORTED_COERCION_TARGETS = new Set(["number", "boolean", "json"]);
 const SUPPORTED_VALIDATOR_KINDS = new Set(["json-schema-ajv"]);
 const RESOURCE_LIMIT_FIELDS = ["maxDepth", "maxKeyCount", "maxPathLength", "maxDiagnostics"] as const;
+const PIPELINE_DECLARATION_FIELDS = new Set(["sources", "validators", "coercionRules", "limits"]);
+const BASE_SOURCE_FIELDS = new Set(["id", "kind", "priority", "displayName", "redaction"]);
+const SOURCE_KIND_FIELDS: Readonly<Record<string, ReadonlySet<string>>> = {
+  object: new Set(["value"]),
+  "json-file": new Set(["path", "maxFileBytes"]),
+  "dotenv-file": new Set(["path", "maxFileBytes"]),
+  "process-env": new Set(["mappings"]),
+  argv: new Set(["mappings"])
+};
+const OVERRIDE_MAPPING_FIELDS = new Set(["externalName", "targetPath", "sourceKind", "parseAs", "secret"]);
+const COERCION_RULE_FIELDS = new Set(["path", "from", "to", "onFailure"]);
+const VALIDATOR_DECLARATION_FIELDS = new Set(["id", "kind", "schema"]);
+const REDACTION_POLICY_FIELDS = new Set(["secretSource", "secretPaths", "secretNamePatterns"]);
 
 export class PipelineDeclarationError extends Error {
   readonly issues: readonly ConfigIssue[];
@@ -178,6 +191,8 @@ function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {
     ];
   }
 
+  issues.push(...validateAllowedFields(value, PIPELINE_DECLARATION_FIELDS, [], "pipeline_unknown_field"));
+
   if (!Array.isArray(value.sources)) {
     issues.push(
       pipelineDeclarationIssue({
@@ -243,6 +258,19 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
   const issues: ConfigIssue[] = [];
   const sourceId = typeof source.id === "string" && source.id.length > 0 ? source.id : undefined;
   const sourcePath = (field: string): ConfigPath => [...path, field];
+  const allowedSourceFields = typeof source.kind === "string" ? SOURCE_KIND_FIELDS[source.kind] : undefined;
+
+  if (allowedSourceFields !== undefined) {
+    issues.push(
+      ...validateAllowedFields(
+        source,
+        unionAllowedFields(BASE_SOURCE_FIELDS, allowedSourceFields),
+        path,
+        "pipeline_source_unknown_field",
+        sourceId
+      )
+    );
+  }
 
   if (sourceId === undefined) {
     issues.push(
@@ -272,6 +300,10 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
         message: `Unsupported source kind ${source.kind}.`
       })
     );
+  }
+
+  if (source.redaction !== undefined) {
+    issues.push(...validateRedactionPolicyDeclaration(source.redaction, sourcePath("redaction"), sourceId));
   }
 
   if (typeof source.priority !== "number" || !Number.isFinite(source.priority)) {
@@ -356,6 +388,7 @@ function validateResourceLimitsDeclaration(limits: unknown): readonly ConfigIssu
   }
 
   const issues: ConfigIssue[] = [];
+  issues.push(...validateAllowedFields(limits, new Set(RESOURCE_LIMIT_FIELDS), path, "pipeline_limits_unknown_field"));
 
   for (const field of RESOURCE_LIMIT_FIELDS) {
     if (limits[field] !== undefined && !isPositiveInteger(limits[field])) {
@@ -391,6 +424,15 @@ function validateOverrideMappingDeclaration(
 
   const issues: ConfigIssue[] = [];
   const fieldPath = (field: string): ConfigPath => [...path, field];
+  issues.push(
+    ...validateAllowedFields(
+      mapping,
+      OVERRIDE_MAPPING_FIELDS,
+      path,
+      "pipeline_override_mapping_unknown_field",
+      sourceId
+    )
+  );
 
   if (typeof mapping.externalName !== "string" || mapping.externalName.length === 0) {
     issues.push(
@@ -436,6 +478,17 @@ function validateOverrideMappingDeclaration(
     );
   }
 
+  if (mapping.secret !== undefined && typeof mapping.secret !== "boolean") {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_override_mapping_secret_invalid",
+        path: fieldPath("secret"),
+        sourceId,
+        message: "Override mapping secret must be a boolean when provided."
+      })
+    );
+  }
+
   return issues;
 }
 
@@ -453,6 +506,7 @@ function validateCoercionRuleDeclaration(rule: unknown, index: number): readonly
 
   const issues: ConfigIssue[] = [];
   const fieldPath = (field: string): ConfigPath => [...path, field];
+  issues.push(...validateAllowedFields(rule, COERCION_RULE_FIELDS, path, "pipeline_coercion_rule_unknown_field"));
 
   if (!isConfigPath(rule.path)) {
     issues.push(
@@ -512,6 +566,15 @@ function validateValidatorDeclaration(validator: unknown, index: number): readon
   const issues: ConfigIssue[] = [];
   const validatorId = typeof validator.id === "string" && validator.id.length > 0 ? validator.id : undefined;
   const fieldPath = (field: string): ConfigPath => [...path, field];
+  issues.push(
+    ...validateAllowedFields(
+      validator,
+      VALIDATOR_DECLARATION_FIELDS,
+      path,
+      "pipeline_validator_unknown_field",
+      validatorId
+    )
+  );
 
   if (validatorId === undefined) {
     issues.push(
@@ -541,6 +604,70 @@ function validateValidatorDeclaration(validator: unknown, index: number): readon
         path: fieldPath("schema"),
         sourceId: validatorId,
         message: "Validator schema must be a JSON Schema object or boolean schema."
+      })
+    );
+  }
+
+  return issues;
+}
+
+function validateRedactionPolicyDeclaration(
+  redaction: unknown,
+  path: ConfigPath,
+  sourceId: string | undefined
+): readonly ConfigIssue[] {
+  if (!isRecord(redaction)) {
+    return [
+      pipelineDeclarationIssue({
+        code: "pipeline_redaction_policy_invalid",
+        path,
+        sourceId,
+        message: "Source redaction must be a JSON object when provided."
+      })
+    ];
+  }
+
+  const issues: ConfigIssue[] = [
+    ...validateAllowedFields(redaction, REDACTION_POLICY_FIELDS, path, "pipeline_redaction_policy_unknown_field", sourceId)
+  ];
+  const fieldPath = (field: string): ConfigPath => [...path, field];
+
+  if (redaction.secretSource !== undefined && typeof redaction.secretSource !== "boolean") {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_redaction_secret_source_invalid",
+        path: fieldPath("secretSource"),
+        sourceId,
+        message: "Source redaction secretSource must be a boolean when provided."
+      })
+    );
+  }
+
+  if (
+    redaction.secretPaths !== undefined &&
+    (!Array.isArray(redaction.secretPaths) || !redaction.secretPaths.every(isConfigPath))
+  ) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_redaction_secret_paths_invalid",
+        path: fieldPath("secretPaths"),
+        sourceId,
+        message: "Source redaction secretPaths must be an array of non-empty path arrays."
+      })
+    );
+  }
+
+  if (
+    redaction.secretNamePatterns !== undefined &&
+    (!Array.isArray(redaction.secretNamePatterns) ||
+      !redaction.secretNamePatterns.every((pattern) => typeof pattern === "string" && pattern.length > 0))
+  ) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_redaction_secret_name_patterns_invalid",
+        path: fieldPath("secretNamePatterns"),
+        sourceId,
+        message: "Source redaction secretNamePatterns must be an array of non-empty strings."
       })
     );
   }
@@ -586,6 +713,33 @@ function pipelineDeclarationIssue(input: {
     ...(input.path === undefined ? {} : { path: input.path }),
     ...(input.sourceId === undefined ? {} : { sourceId: input.sourceId })
   };
+}
+
+function validateAllowedFields(
+  value: Readonly<Record<string, unknown>>,
+  allowedFields: ReadonlySet<string>,
+  path: ConfigPath,
+  code: string,
+  sourceId?: string | undefined
+): readonly ConfigIssue[] {
+  return Object.keys(value)
+    .filter((field) => !allowedFields.has(field))
+    .map((field) =>
+      pipelineDeclarationIssue({
+        code,
+        path: [...path, field],
+        sourceId,
+        message: `Unknown pipeline declaration field ${formatConfigPath([...path, field])}.`
+      })
+    );
+}
+
+function unionAllowedFields(left: ReadonlySet<string>, right: ReadonlySet<string>): ReadonlySet<string> {
+  return new Set([...left, ...right]);
+}
+
+function formatConfigPath(path: ConfigPath): string {
+  return path.length === 0 ? "<root>" : path.map(String).join(".");
 }
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
