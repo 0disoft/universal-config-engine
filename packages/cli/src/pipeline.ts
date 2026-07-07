@@ -207,6 +207,14 @@ function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {
   for (const [index, source] of value.sources.entries()) {
     issues.push(...validateSourceDeclaration(source, index));
   }
+  issues.push(
+    ...validateUniqueDeclarationIds({
+      entries: value.sources,
+      collectionPath: "sources",
+      duplicateCode: "pipeline_source_id_duplicate",
+      duplicateMessage: "Pipeline source ids must be unique."
+    })
+  );
 
   if (value.limits !== undefined) {
     issues.push(...validateResourceLimitsDeclaration(value.limits));
@@ -224,6 +232,14 @@ function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {
     for (const [index, validator] of value.validators.entries()) {
       issues.push(...validateValidatorDeclaration(validator, index));
     }
+    issues.push(
+      ...validateUniqueDeclarationIds({
+        entries: value.validators,
+        collectionPath: "validators",
+        duplicateCode: "pipeline_validator_id_duplicate",
+        duplicateMessage: "Pipeline validator ids must be unique."
+      })
+    );
   }
 
   if (value.coercionRules !== undefined && !Array.isArray(value.coercionRules)) {
@@ -732,6 +748,39 @@ function validateAllowedFields(
         message: `Unknown pipeline declaration field ${formatConfigPath([...path, field])}.`
       })
     );
+}
+
+function validateUniqueDeclarationIds(input: {
+  readonly entries: readonly unknown[];
+  readonly collectionPath: string;
+  readonly duplicateCode: string;
+  readonly duplicateMessage: string;
+}): readonly ConfigIssue[] {
+  const firstIndexById = new Map<string, number>();
+  const issues: ConfigIssue[] = [];
+
+  for (const [index, entry] of input.entries.entries()) {
+    if (!isRecord(entry) || typeof entry.id !== "string" || entry.id.length === 0) {
+      continue;
+    }
+
+    const firstIndex = firstIndexById.get(entry.id);
+    if (firstIndex === undefined) {
+      firstIndexById.set(entry.id, index);
+      continue;
+    }
+
+    issues.push(
+      pipelineDeclarationIssue({
+        code: input.duplicateCode,
+        path: [input.collectionPath, index, "id"],
+        sourceId: entry.id,
+        message: `${input.duplicateMessage} Duplicate id ${entry.id} was first declared at ${input.collectionPath}.${firstIndex}.id.`
+      })
+    );
+  }
+
+  return issues;
 }
 
 function unionAllowedFields(left: ReadonlySet<string>, right: ReadonlySet<string>): ReadonlySet<string> {

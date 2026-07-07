@@ -561,6 +561,90 @@ describe("runCli", () => {
     });
   });
 
+  it("rejects duplicate source and validator ids before source loading", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "defaults",
+              kind: "object",
+              priority: 0,
+              value: {
+                server: {
+                  port: 3000
+                }
+              }
+            },
+            {
+              id: "defaults",
+              kind: "object",
+              priority: 10,
+              value: {
+                server: {
+                  host: "127.0.0.1"
+                }
+              }
+            }
+          ],
+          validators: [
+            {
+              id: "schema:server",
+              kind: "json-schema-ajv",
+              schema: true
+            },
+            {
+              id: "schema:server",
+              kind: "json-schema-ajv",
+              schema: true
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly status: string;
+        readonly issues: readonly {
+          readonly category: string;
+          readonly code: string;
+          readonly sourceId?: string;
+          readonly path?: readonly (string | number)[];
+        }[];
+      };
+
+      expect(result.exitCode).toBe(2);
+      expect(report.status).toBe("error");
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          category: "source-load",
+          code: "pipeline_source_id_duplicate",
+          sourceId: "defaults",
+          path: ["sources", 1, "id"]
+        })
+      );
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          category: "source-load",
+          code: "pipeline_validator_id_duplicate",
+          sourceId: "schema:server",
+          path: ["validators", 1, "id"]
+        })
+      );
+      expect(report.issues.every((issue) => issue.category === "source-load")).toBe(true);
+    });
+  });
+
   it("runs declared Ajv JSON Schema validators for validate", async () => {
     await withTempDir(async (dir) => {
       await writeFile(
