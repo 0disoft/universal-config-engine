@@ -61,9 +61,10 @@ Owner: UNASSIGNED
   parsing into core.
 - Added compatibility fixtures for YAML, TOML, JSON5, and validator path mapping.
 - Added `pnpm run check:adapter-fixtures` to validate adapter fixture shape.
-- Publish adapter examples for YAML, TOML, and JSON5 without moving dialect parsing
-  into core.
-- Document how third-party validators attach error paths to normalized config objects.
+- Published adapter examples for YAML, TOML, and JSON5 without moving dialect
+  parsing into core.
+- Documented how third-party validators attach error paths to normalized config
+  objects.
 
 ## Explicitly Deferred
 

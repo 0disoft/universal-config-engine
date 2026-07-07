@@ -8,6 +8,7 @@ Status: Draft
 - Public library API: `docs/library/public-api.md`
 - Adapter ADR: `docs/adr/0006-adapter-ecosystem-contract.md`
 - Compatibility fixtures: `docs/adapters/fixtures/`
+- Adapter examples: `docs/adapters/examples.md`
 
 ## Product Boundary
 
@@ -75,3 +76,10 @@ Fixtures under `docs/adapters/fixtures/` are checked by
 - `toml-loader-parse-failure.loaded-source.json`: parser adapter parse failure.
 - `validator-path.validator-result.json`: validator issue paths against normalized
   config.
+
+## Current Examples
+
+`docs/adapters/examples.md` shows parser-loader and validator-path adapter patterns
+for YAML, TOML, JSON5, and JSON Pointer-style validator errors. These examples use
+adapter-supplied parser and validator functions; they do not add parser packages to
+core or claim built-in dialect support.

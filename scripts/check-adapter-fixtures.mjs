@@ -1,7 +1,16 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+const adapterDocsDir = join(process.cwd(), "docs", "adapters");
 const fixtureDir = join(process.cwd(), "docs", "adapters", "fixtures");
+const examplesPath = join(adapterDocsDir, "examples.md");
+const requiredExampleHeadings = [
+  "## Parser Loader Pattern",
+  "## YAML Loader Example",
+  "## TOML Parse Failure Example",
+  "## JSON5 Loader Example",
+  "## Validator Path Example"
+];
 const allowedIssueCategories = new Set([
   "usage",
   "source-load",
@@ -14,6 +23,8 @@ const allowedIssueCategories = new Set([
   "resource-limit"
 ]);
 const unsafePathSegments = new Set(["__proto__", "prototype", "constructor"]);
+
+validateExamplesDocument();
 
 const files = readdirSync(fixtureDir)
   .filter((file) => file.endsWith(".json"))
@@ -39,6 +50,30 @@ for (const file of files) {
   }
 
   fail(`${file}: fixture filename must end with .loaded-source.json or .validator-result.json.`);
+}
+
+function validateExamplesDocument() {
+  if (!existsSync(examplesPath)) {
+    fail("docs/adapters/examples.md is missing.");
+  }
+
+  const text = readFileSync(examplesPath, "utf8");
+  for (const heading of requiredExampleHeadings) {
+    if (!text.includes(heading)) {
+      fail(`docs/adapters/examples.md is missing required heading: ${heading}`);
+    }
+  }
+
+  const forbiddenClaims = [
+    "built-in YAML support",
+    "built-in TOML support",
+    "built-in JSON5 support"
+  ];
+  for (const claim of forbiddenClaims) {
+    if (text.includes(claim)) {
+      fail(`docs/adapters/examples.md must not claim ${claim}.`);
+    }
+  }
 }
 
 function validateLoadedSourceFixture(file, fixture) {
