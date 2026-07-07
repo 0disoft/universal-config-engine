@@ -8,7 +8,7 @@ Repository Type: library
 - Product decision: `docs/product/02-spec.md`
 - Public API: `docs/library/public-api.md`
 - Technical owner: UNASSIGNED
-- Related ADR: UNDECIDED
+- Related ADR: `docs/adr/0003-implementation-language-and-package-strategy.md`
 
 ## Semver-Governed Surfaces
 
@@ -43,4 +43,5 @@ behavior when the documented contract already required the corrected behavior.
 ## Open Decisions
 
 - Initial package version: UNDECIDED.
-- Package ecosystem and release tooling: UNDECIDED.
+- Package ecosystem: TypeScript, ESM, and pnpm workspace; see ADR 0003.
+- Release tooling: UNDECIDED.

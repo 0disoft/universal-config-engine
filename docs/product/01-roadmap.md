@@ -39,13 +39,15 @@ Owner: UNASSIGNED
 - Add argv source.
 - Keep dialect-heavy loaders behind adapters.
 
-## Phase 3: CLI MVP
+## Phase 3: CLI MVP Baseline
 
-- Add command to explain final resolved config.
-- Add command to validate config through a configured validator adapter.
-- Add JSON output for CI and agent usage.
-- Add exit-code taxonomy for parse, merge, validation, and redaction-policy failures.
-- Add golden report fixtures and no-secret snapshot checks.
+- Implemented `explain` and `validate` commands over the shared library pipeline.
+- Implemented versioned JSON output for CI and agent usage.
+- Implemented exit-code taxonomy for validation, source-load, mapping, merge,
+  coercion, resource-limit, usage, and redaction-policy failures.
+- Added golden report fixtures for success, validation failure, secret validation
+  failure, source-load failure, mapping failure, and JSON usage errors.
+- Added no-secret snapshot checks and secret-path redaction regression coverage.
 
 ## Phase 4: Adapter Ecosystem
 

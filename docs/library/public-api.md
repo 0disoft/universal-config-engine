@@ -85,6 +85,6 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
   `@universal-config-engine/validator-ajv`.
 - Error class or Result-style return convention: UNDECIDED.
 - Package boundary names beyond core: UNDECIDED.
-- Diagnostic report schema versioning: UNDECIDED, but required before CLI JSON is
-  implemented.
+- Diagnostic report schema versioning: CLI JSON reports use schema version `0.1`;
+  field changes are compatibility changes.
 - Applying validator-returned typed values to pipeline output: UNDECIDED.

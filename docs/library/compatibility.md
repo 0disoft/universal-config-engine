@@ -9,7 +9,7 @@ Repository Type: library
 - Public API: `docs/library/public-api.md`
 - Semantic versioning: `docs/library/semver.md`
 - Technical owner: UNASSIGNED
-- Related ADR: UNDECIDED
+- Related ADR: `docs/adr/0003-implementation-language-and-package-strategy.md`
 
 ## Compatibility Goals
 
@@ -24,8 +24,8 @@ one parser, one validator, one framework, or one remote service.
 - Runtime compatibility floor is Node.js `>=24`.
 - Package module format is ESM.
 - CLI JSON output compatibility is governed by `docs/cli/output-and-exit-codes.md`.
-- Diagnostic report compatibility requires an explicit schema version before CLI JSON
-  becomes stable.
+- CLI JSON diagnostic reports carry schema version `0.1`; schema field changes are
+  compatibility changes for CI and agent consumers.
 - Core dependency compatibility should prefer a minimal or zero runtime dependency
   surface until package boundaries are decided.
 

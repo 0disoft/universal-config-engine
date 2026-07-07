@@ -12,7 +12,7 @@ merge behavior, validator handoff, provenance, and redaction behavior explicit.
 
 - Product decision: `docs/product/02-spec.md`
 - Technical owner: UNASSIGNED
-- Related ADR: UNDECIDED
+- Related ADR: `docs/adr/0003-implementation-language-and-package-strategy.md`
 
 ## Required Decisions
 
@@ -20,8 +20,9 @@ merge behavior, validator handoff, provenance, and redaction behavior explicit.
   report, redaction metadata, validator adapter contract.
 - Semantic versioning policy: public type names, exported functions, diagnostic shape,
   and adapter interfaces are semver-governed.
-- Runtime and platform compatibility: UNDECIDED.
-- Package artifact and export surface: UNDECIDED.
+- Runtime and platform compatibility: Node.js `>=24` and ESM output.
+- Package artifact and export surface: package `exports` point at built `dist`
+  JavaScript and declaration files.
 - Deprecation and migration policy: deprecations must include migration examples before
   removal.
 

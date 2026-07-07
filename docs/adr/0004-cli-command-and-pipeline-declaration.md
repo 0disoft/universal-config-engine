@@ -51,6 +51,11 @@ configuration override arguments.
 
 JSON output carries diagnostic report schema version `0.1` plus the command name.
 
+When a known command requests JSON output but fails CLI usage validation, the CLI
+emits a versioned JSON diagnostic report on stdout and exits `4`. Unknown commands
+cannot be attributed to a command-specific report, so they write usage errors to
+stderr and exit `4`.
+
 The first CLI validator declaration kind is `json-schema-ajv`. It accepts an inline
 JSON Schema object or boolean schema and runs through
 `@universal-config-engine/validator-ajv`. The CLI does not dynamically import

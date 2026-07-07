@@ -96,10 +96,10 @@ selects `@universal-config-engine/cli`, binary name `uce`, commands `explain` an
 `validate`, JSON pipeline declarations, and JSON report schema version `0.1`.
 Initial validator adapters are `@universal-config-engine/validator-zod` and
 `@universal-config-engine/validator-ajv`. License, npm publication scope, release
-automation, and additional validator integrations remain UNDECIDED. The first CLI
-golden fixture covers local JSON-file defaults, process env overrides, argv
-overrides, provenance, and secret-path redaction. CLI fixtures also cover opt-in
-coercion with declared Ajv JSON Schema validation.
+automation, and additional validator integrations remain UNDECIDED. CLI golden
+fixtures cover local precedence, opt-in coercion, declared Ajv validation,
+validation failure, source-load failure, mapping policy failure, JSON usage errors,
+and secret-path redaction.
 
 ## Current Structure Warning
 
