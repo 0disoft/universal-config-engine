@@ -139,6 +139,10 @@ export interface ValidatorInput {
 
 export interface ValidatorResult<TValidated = unknown> {
   readonly ok: boolean;
+  /**
+   * Adapter-local typed output. Core validation records issues and provenance only;
+   * it does not replace pipeline config with this value.
+   */
   readonly value?: TValidated;
   readonly issues: readonly ConfigIssue[];
 }

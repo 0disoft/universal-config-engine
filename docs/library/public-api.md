@@ -60,6 +60,9 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 - Normalize malformed validator adapter results and malformed validator issues into
   `validation` issues instead of allowing broken adapter output to corrupt
   diagnostic reports.
+- Treat `ValidatorResult.value` as adapter-local typed output. Core validation does
+  not replace the resolved config with validator-returned values or pass those
+  values to later validators.
 - Generate provenance during resolution rather than reconstructing it from the final
   object.
 - Reject or safely escape unsafe keys before path setters or deep merge can mutate
@@ -79,3 +82,4 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 - Package boundary names beyond core: UNDECIDED.
 - Diagnostic report schema versioning: UNDECIDED, but required before CLI JSON is
   implemented.
+- Applying validator-returned typed values to pipeline output: UNDECIDED.

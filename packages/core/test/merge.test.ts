@@ -217,6 +217,54 @@ describe("resolveConfig", () => {
     });
   });
 
+  it("does not apply validator returned values to the pipeline config", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const observedPorts: unknown[] = [];
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "typed-output",
+          validate() {
+            return {
+              ok: true,
+              value: {
+                server: {
+                  port: 9000
+                }
+              },
+              issues: []
+            };
+          }
+        },
+        {
+          id: "observer",
+          validate(input) {
+            observedPorts.push(getConfigValueAtPath(input.config, ["server", "port"]));
+            return {
+              ok: true,
+              value: input.config,
+              issues: []
+            };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toEqual([]);
+    expect(observedPorts).toEqual([3000]);
+    expect(getConfigValueAtPath(result.config, ["server", "port"])).toBe(3000);
+    expect(validation.provenance).toContainEqual({
+      path: [],
+      action: "validated",
+      sourceId: "typed-output",
+      message: "Validator typed-output completed with status ok."
+    });
+  });
+
   it("normalizes malformed validator results and issues", async () => {
     const result = resolveConfig({
       sources: [source("defaults", 0, { server: { port: 3000 } })]
