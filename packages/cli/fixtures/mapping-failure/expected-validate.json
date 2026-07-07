@@ -1,0 +1,39 @@
+{
+  "command": "validate",
+  "schemaVersion": "0.1",
+  "status": "error",
+  "sources": [
+    {
+      "id": "env",
+      "kind": "process-env",
+      "displayName": "env",
+      "priority": 10,
+      "status": "failed"
+    }
+  ],
+  "resolvedPaths": [],
+  "issues": [
+    {
+      "category": "mapping",
+      "code": "mapping_parse_failed",
+      "severity": "error",
+      "sourceId": "env",
+      "path": ["server", "port"],
+      "message": "Mapping APP_PORT expected a finite number."
+    }
+  ],
+  "provenance": [
+    {
+      "path": [],
+      "action": "rejected",
+      "sourceId": "env",
+      "message": "Source env was rejected before merge."
+    }
+  ],
+  "limits": {
+    "maxDepth": 32,
+    "maxKeyCount": 10000,
+    "maxPathLength": 32,
+    "maxDiagnostics": 200
+  }
+}

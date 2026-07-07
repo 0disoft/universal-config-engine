@@ -183,53 +183,23 @@ describe("runCli", () => {
     });
   });
 
-  it("uses policy failure exit code for mapping failures", async () => {
-    await withTempDir(async (dir) => {
-      await writeFile(
-        join(dir, "uce.json"),
-        JSON.stringify({
-          sources: [
-            {
-              id: "env",
-              kind: "process-env",
-              priority: 10,
-              mappings: [
-                {
-                  externalName: "APP_PORT",
-                  sourceKind: "process-env",
-                  targetPath: ["server", "port"],
-                  parseAs: "number"
-                }
-              ]
-            }
-          ]
-        }),
-        "utf8"
-      );
-
-      let stdout = "";
-      const result = await runCli(["validate", "--config", "uce.json", "--json"], {
-        cwd: dir,
-        env: { APP_PORT: "not-a-number" },
-        stdout: (text) => {
-          stdout += text;
-        },
-        stderr: () => {}
-      });
-      const report = JSON.parse(stdout) as {
-        readonly status: string;
-        readonly issues: readonly { readonly category: string; readonly code: string }[];
-      };
-
-      expect(result.exitCode).toBe(3);
-      expect(report.status).toBe("error");
-      expect(report.issues).toContainEqual(
-        expect.objectContaining({
-          category: "mapping",
-          code: "mapping_parse_failed"
-        })
-      );
+  it("matches the mapping failure golden report", async () => {
+    const fixtureRoot = new URL("../fixtures/mapping-failure/", import.meta.url);
+    const expected = JSON.parse(
+      await readFile(new URL("expected-validate.json", fixtureRoot), "utf8")
+    ) as unknown;
+    let stdout = "";
+    const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+      cwd: fileURLToPath(fixtureRoot),
+      env: { APP_PORT: "not-a-number" },
+      stdout: (text) => {
+        stdout += text;
+      },
+      stderr: () => {}
     });
+
+    expect(result.exitCode).toBe(3);
+    expect(JSON.parse(stdout)).toEqual(expected);
   });
 
   it("matches the source-load failure golden report", async () => {

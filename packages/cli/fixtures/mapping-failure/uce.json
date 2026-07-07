@@ -1,0 +1,17 @@
+{
+  "sources": [
+    {
+      "id": "env",
+      "kind": "process-env",
+      "priority": 10,
+      "mappings": [
+        {
+          "externalName": "APP_PORT",
+          "sourceKind": "process-env",
+          "targetPath": ["server", "port"],
+          "parseAs": "number"
+        }
+      ]
+    }
+  ]
+}
