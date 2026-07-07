@@ -52,6 +52,8 @@ Owner: UNASSIGNED
   failure, source-load failure, mapping failure, and JSON usage errors.
 - Added no-secret snapshot checks and secret-path redaction regression coverage.
 - Prepared package metadata and MIT license for the `0.1.0` package baseline.
+- Published the `v0.1.0` GitHub release with packed package tarball assets for
+  inspection before npm publication.
 
 ## Phase 4: Adapter Ecosystem
 

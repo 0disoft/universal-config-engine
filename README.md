@@ -97,10 +97,11 @@ selects `@universal-config-engine/cli`, binary name `uce`, commands `explain` an
 Initial validator adapters are `@universal-config-engine/validator-zod` and
 `@universal-config-engine/validator-ajv`. ADR 0005 selects the MIT license,
 package version `0.1.0`, and a manual validation-gated release baseline. Npm
-publication remains gated on package scope ownership and npm authentication. CLI
-golden fixtures cover local precedence, opt-in coercion, declared Ajv validation,
-validation failure, source-load failure, mapping policy failure, JSON usage errors,
-and secret-path redaction.
+publication remains gated on package scope ownership and npm authentication. The
+`v0.1.0` GitHub release carries packed tarball assets for inspection before npm
+publication. CLI golden fixtures cover local precedence, opt-in coercion, declared
+Ajv validation, validation failure, source-load failure, mapping policy failure,
+JSON usage errors, and secret-path redaction.
 
 ## Current Structure Warning
 

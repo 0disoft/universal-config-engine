@@ -30,6 +30,16 @@ If a bad package is published:
 5. Publish the patch only after validation passes and package scope/authentication
    are confirmed.
 
+If a GitHub release exists but npm publication has not happened:
+
+1. Preserve the failing tag, release URL, asset names, and validation log.
+2. Remove or replace only the bad release assets after a corrected build is
+   available from a clean tagged commit.
+3. Supersede the release notes with the corrective commit or replacement tag when
+   the tag itself is wrong.
+4. Keep the corrective commit history intact; do not hide a bad public artifact by
+   rewriting history after it has been announced.
+
 If only a GitHub tag or release draft exists, delete or supersede the draft before
 public announcement and keep the corrective commit history intact.
 
