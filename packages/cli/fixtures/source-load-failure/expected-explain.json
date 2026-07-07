@@ -1,0 +1,24 @@
+{
+  "command": "explain",
+  "schemaVersion": "0.1",
+  "status": "error",
+  "sources": [],
+  "resolvedPaths": [],
+  "issues": [
+    {
+      "category": "source-load",
+      "code": "unsupported_source_kind",
+      "severity": "error",
+      "path": ["sources", 0, "kind"],
+      "sourceId": "yaml",
+      "message": "Unsupported source kind yaml-file."
+    }
+  ],
+  "provenance": [],
+  "limits": {
+    "maxDepth": 0,
+    "maxKeyCount": 0,
+    "maxPathLength": 0,
+    "maxDiagnostics": 1
+  }
+}

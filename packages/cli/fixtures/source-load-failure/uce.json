@@ -1,0 +1,10 @@
+{
+  "sources": [
+    {
+      "id": "yaml",
+      "kind": "yaml-file",
+      "priority": 0,
+      "path": "config.yaml"
+    }
+  ]
+}
