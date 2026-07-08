@@ -227,5 +227,18 @@ jobs:
           )
 
           for package_name in "${packages[@]}"; do
-            npm view "${package_name}@${RELEASE_VERSION}" name version dist.tarball --json --registry=https://registry.npmjs.org/
+            package_ref="${package_name}@${RELEASE_VERSION}"
+            for attempt in {1..12}; do
+              if npm view "$package_ref" name version dist.tarball --json --registry=https://registry.npmjs.org/; then
+                break
+              fi
+
+              if [[ "$attempt" == "12" ]]; then
+                echo "Published package did not become visible after ${attempt} attempts: $package_ref" >&2
+                exit 1
+              fi
+
+              echo "Waiting for npm registry propagation for $package_ref (attempt ${attempt}/12)"
+              sleep 5
+            done
           done
