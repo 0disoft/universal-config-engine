@@ -146,6 +146,54 @@ describe("resolveConfig", () => {
     );
   });
 
+  it("replaces all descendant resolved paths when a parent value wins", () => {
+    const result = resolveConfig({
+      sources: [
+        source("defaults", 0, {
+          server: {
+            host: "127.0.0.1",
+            port: 3000
+          }
+        }),
+        source("site", 1, {
+          server: {
+            tls: true
+          }
+        }),
+        source("env", 10, {
+          server: "disabled"
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({
+      server: "disabled"
+    });
+    expect(result.resolvedPaths).toContainEqual(
+      expect.objectContaining({
+        path: ["server"],
+        winningSourceId: "env",
+        overriddenSourceIds: ["defaults", "site"]
+      })
+    );
+    expect(result.resolvedPaths).not.toContainEqual(
+      expect.objectContaining({
+        path: ["server", "host"]
+      })
+    );
+    expect(result.resolvedPaths).not.toContainEqual(
+      expect.objectContaining({
+        path: ["server", "port"]
+      })
+    );
+    expect(result.resolvedPaths).not.toContainEqual(
+      expect.objectContaining({
+        path: ["server", "tls"]
+      })
+    );
+  });
+
   it("removes stale parent resolved paths when a child path replaces a scalar shape", () => {
     const result = resolveConfig({
       sources: [

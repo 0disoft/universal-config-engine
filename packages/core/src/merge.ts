@@ -1,9 +1,11 @@
 import { applyCoercionRules } from "./coercion.js";
-import { getConfigValueAtPath, isPathPrefix, pathToKey, pathsEqual, setConfigValueAtPath } from "./path.js";
+import { getConfigValueAtPath, pathToKey, setConfigValueAtPath } from "./path.js";
 import { flattenConfigObject } from "./value.js";
 import type {
   ConfigIssue,
   ConfigResult,
+  ConfigPath,
+  ConfigPathSegment,
   ConfigSourceDescriptor,
   ConfigValue,
   LoadedSource,
@@ -31,11 +33,21 @@ export const DEFAULT_RESOURCE_LIMITS: ResourceLimitPolicy = {
 };
 
 interface MutableResolvedPath {
-  path: readonly (string | number)[];
+  path: ConfigPath;
   status: "resolved";
   winningSourceId: string;
   winningPriority: number;
   overriddenSourceIds: string[];
+}
+
+interface MutableResolvedPathIndex {
+  readonly byPath: Map<string, MutableResolvedPath>;
+  readonly root: ResolvedPathTrieNode;
+}
+
+interface ResolvedPathTrieNode {
+  readonly children: Map<string, ResolvedPathTrieNode>;
+  entryKey?: string;
 }
 
 export function resolveConfig(input: ResolveConfigInput): ConfigResult {
@@ -46,7 +58,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
   const config: Record<string, ConfigValue> = {};
   const issues: ConfigIssue[] = [];
   const provenance: ProvenanceEvent[] = [];
-  const resolvedByPath = new Map<string, MutableResolvedPath>();
+  const resolvedIndex = createResolvedPathIndex();
 
   for (const source of sources) {
     const sourceIssues = [...(source.issues ?? [])];
@@ -74,7 +86,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
         limits,
         policy,
         provenance,
-        resolvedByPath
+        resolvedIndex
       });
     }
   }
@@ -96,7 +108,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     sources: descriptors,
     issues: limitedIssues,
     provenance,
-    resolvedPaths: Array.from(resolvedByPath.values()).map((resolved) => ({
+    resolvedPaths: Array.from(resolvedIndex.byPath.values()).map((resolved) => ({
       path: resolved.path,
       status: resolved.status,
       winningSourceId: resolved.winningSourceId,
@@ -126,7 +138,7 @@ function applyEntry(input: {
   readonly limits: ResourceLimitPolicy;
   readonly policy: MergePolicy;
   readonly provenance: ProvenanceEvent[];
-  readonly resolvedByPath: Map<string, MutableResolvedPath>;
+  readonly resolvedIndex: MutableResolvedPathIndex;
 }): void {
   if (input.entryPath.length === 0) {
     input.issues.push({
@@ -140,9 +152,9 @@ function applyEntry(input: {
   }
 
   const pathKey = pathToKey(input.entryPath);
-  const existingResolved = input.resolvedByPath.get(pathKey);
+  const existingResolved = input.resolvedIndex.byPath.get(pathKey);
   const existingValue = getConfigValueAtPath(input.config, input.entryPath);
-  const relatedResolved = findRelatedResolvedPaths(input.resolvedByPath, input.entryPath);
+  const relatedResolved = findRelatedResolvedPaths(input.resolvedIndex, input.entryPath);
 
   if (
     relatedResolved.some(
@@ -186,7 +198,7 @@ function applyEntry(input: {
       sourceId: input.descriptor.id,
       message: `Path was defined by source ${input.descriptor.id}.`
     });
-    input.resolvedByPath.set(pathKey, {
+    setResolvedPath(input.resolvedIndex, {
       path: input.entryPath,
       status: "resolved",
       winningSourceId: input.descriptor.id,
@@ -198,7 +210,7 @@ function applyEntry(input: {
 
   const overriddenSourceIds = collectOverriddenSourceIds(relatedResolved, input.descriptor.id);
   for (const { key } of relatedResolved) {
-    input.resolvedByPath.delete(key);
+    deleteResolvedPath(input.resolvedIndex, key);
   }
   const previousSourceId = overriddenSourceIds[0];
   input.provenance.push({
@@ -211,7 +223,7 @@ function applyEntry(input: {
         ? `Source ${input.descriptor.id} replaced an overlapping config shape.`
         : `Source ${input.descriptor.id} overrode source ${previousSourceId}.`
   });
-  input.resolvedByPath.set(pathKey, {
+  setResolvedPath(input.resolvedIndex, {
     path: input.entryPath,
     status: "resolved",
     winningSourceId: input.descriptor.id,
@@ -221,16 +233,148 @@ function applyEntry(input: {
 }
 
 function findRelatedResolvedPaths(
-  resolvedByPath: ReadonlyMap<string, MutableResolvedPath>,
-  path: readonly (string | number)[]
+  resolvedIndex: MutableResolvedPathIndex,
+  path: ConfigPath
 ): readonly { readonly key: string; readonly resolved: MutableResolvedPath }[] {
-  return Array.from(resolvedByPath.entries())
-    .filter(([, resolved]) => pathsOverlap(resolved.path, path))
-    .map(([key, resolved]) => ({ key, resolved }));
+  const relatedKeys = new Set<string>();
+  collectAncestorResolvedPathKeys(resolvedIndex.root, path, relatedKeys);
+
+  const exactKey = pathToKey(path);
+  if (resolvedIndex.byPath.has(exactKey)) {
+    relatedKeys.add(exactKey);
+  }
+
+  const descendantRoot = findTrieNode(resolvedIndex.root, path);
+  if (descendantRoot !== undefined) {
+    collectDescendantResolvedPathKeys(descendantRoot, relatedKeys);
+  }
+
+  return [...relatedKeys].flatMap((key) => {
+    const resolved = resolvedIndex.byPath.get(key);
+    return resolved === undefined ? [] : [{ key, resolved }];
+  });
 }
 
-function pathsOverlap(left: readonly (string | number)[], right: readonly (string | number)[]): boolean {
-  return pathsEqual(left, right) || isPathPrefix(left, right) || isPathPrefix(right, left);
+function createResolvedPathIndex(): MutableResolvedPathIndex {
+  return {
+    byPath: new Map(),
+    root: createTrieNode()
+  };
+}
+
+function createTrieNode(): ResolvedPathTrieNode {
+  return {
+    children: new Map()
+  };
+}
+
+function setResolvedPath(index: MutableResolvedPathIndex, resolved: MutableResolvedPath): void {
+  const key = pathToKey(resolved.path);
+  index.byPath.set(key, resolved);
+
+  let node = index.root;
+  for (const segment of resolved.path) {
+    const segmentKey = trieSegmentKey(segment);
+    const existing = node.children.get(segmentKey);
+    if (existing !== undefined) {
+      node = existing;
+      continue;
+    }
+
+    const child = createTrieNode();
+    node.children.set(segmentKey, child);
+    node = child;
+  }
+  node.entryKey = key;
+}
+
+function deleteResolvedPath(index: MutableResolvedPathIndex, key: string): void {
+  const resolved = index.byPath.get(key);
+  if (resolved === undefined) {
+    return;
+  }
+
+  index.byPath.delete(key);
+  deleteTriePath(index.root, resolved.path, 0);
+}
+
+function deleteTriePath(node: ResolvedPathTrieNode, path: ConfigPath, depth: number): boolean {
+  if (depth === path.length) {
+    delete node.entryKey;
+    return node.children.size === 0;
+  }
+
+  const segment = path[depth];
+  if (segment === undefined) {
+    return node.children.size === 0 && node.entryKey === undefined;
+  }
+
+  const segmentKey = trieSegmentKey(segment);
+  const child = node.children.get(segmentKey);
+  if (child === undefined) {
+    return node.children.size === 0 && node.entryKey === undefined;
+  }
+
+  if (deleteTriePath(child, path, depth + 1)) {
+    node.children.delete(segmentKey);
+  }
+
+  return node.children.size === 0 && node.entryKey === undefined;
+}
+
+function collectAncestorResolvedPathKeys(
+  root: ResolvedPathTrieNode,
+  path: ConfigPath,
+  relatedKeys: Set<string>
+): void {
+  let node = root;
+
+  for (const segment of path) {
+    const entryKey = node.entryKey;
+    if (entryKey !== undefined) {
+      relatedKeys.add(entryKey);
+    }
+
+    const child = node.children.get(trieSegmentKey(segment));
+    if (child === undefined) {
+      return;
+    }
+    node = child;
+  }
+
+  const entryKey = node.entryKey;
+  if (entryKey !== undefined) {
+    relatedKeys.add(entryKey);
+  }
+}
+
+function findTrieNode(root: ResolvedPathTrieNode, path: ConfigPath): ResolvedPathTrieNode | undefined {
+  let node = root;
+
+  for (const segment of path) {
+    const child = node.children.get(trieSegmentKey(segment));
+    if (child === undefined) {
+      return undefined;
+    }
+    node = child;
+  }
+
+  return node;
+}
+
+function collectDescendantResolvedPathKeys(node: ResolvedPathTrieNode, relatedKeys: Set<string>): void {
+  const entryKey = node.entryKey;
+  if (entryKey !== undefined) {
+    relatedKeys.add(entryKey);
+  }
+
+  for (const child of node.children.values()) {
+    collectDescendantResolvedPathKeys(child, relatedKeys);
+  }
+}
+
+function trieSegmentKey(segment: ConfigPathSegment): string {
+  return JSON.stringify(segment);
 }
 
 function collectOverriddenSourceIds(
