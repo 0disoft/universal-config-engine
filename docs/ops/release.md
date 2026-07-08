@@ -40,6 +40,8 @@ Before publishing, also verify:
 - package versions are aligned across publishable workspace packages;
 - package metadata license is `MIT`;
 - `LICENSE` exists and matches package metadata;
+- `pnpm run smoke:packages` installs the packed tarballs into a temporary consumer
+  project and verifies package imports plus the `uce` binary;
 - npm Trusted Publisher is registered for every publishable package;
 - no secret-like values appear in tracked files or generated reports.
 

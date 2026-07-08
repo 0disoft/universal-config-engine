@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const root = process.cwd();
@@ -101,6 +102,8 @@ const packages = [
   }
 ];
 const packDir = join(root, ".tmp", "pack");
+const consumerDir = mkdtempSync(join(tmpdir(), "uce-consumer-"));
+const packedTarballs = [];
 
 runPnpm(["-r", "build"]);
 
@@ -112,7 +115,13 @@ for (const packageInfo of packages) {
   const module = await import(pathToFileURL(packageInfo.distIndex).href);
   await packageInfo.smoke(module);
   runPnpm(["--filter", packageInfo.name, "pack", "--pack-destination", packDir]);
+  packedTarballs.push({
+    name: packageInfo.name,
+    path: packageTarballPath(packageInfo.name)
+  });
 }
+
+smokeConsumerInstall(packedTarballs);
 
 rmSync(join(root, "packages", "core", "dist"), { force: true, recursive: true });
 rmSync(join(root, "packages", "node", "dist"), { force: true, recursive: true });
@@ -120,18 +129,157 @@ rmSync(join(root, "packages", "cli", "dist"), { force: true, recursive: true });
 rmSync(join(root, "packages", "validator-zod", "dist"), { force: true, recursive: true });
 rmSync(join(root, "packages", "validator-ajv", "dist"), { force: true, recursive: true });
 rmSync(join(root, ".tmp"), { force: true, recursive: true });
+rmSync(consumerDir, { force: true, recursive: true });
 
-function runPnpm(args) {
+function smokeConsumerInstall(tarballs) {
+  const tarballDependencies = Object.fromEntries(
+    tarballs.map((tarball) => [tarball.name, `file:${tarball.path}`])
+  );
+  mkdirSync(consumerDir, { recursive: true });
+  writeFileSync(
+    join(consumerDir, "package.json"),
+    `${JSON.stringify(
+      {
+        private: true,
+        type: "module",
+        dependencies: tarballDependencies,
+        overrides: tarballDependencies
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+  writeFileSync(
+    join(consumerDir, "uce.json"),
+    `${JSON.stringify(
+      {
+        sources: [
+          {
+            id: "defaults",
+            kind: "object",
+            priority: 0,
+            value: {
+              service: {
+                port: 3000
+              }
+            }
+          }
+        ],
+        validators: [
+          {
+            id: "schema:service",
+            kind: "json-schema-ajv",
+            schema: {
+              type: "object",
+              required: ["service"],
+              properties: {
+                service: {
+                  type: "object",
+                  required: ["port"],
+                  properties: {
+                    port: {
+                      type: "integer",
+                      minimum: 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+  writeFileSync(
+    join(consumerDir, "consumer-smoke.mjs"),
+    [
+      'import { buildDiagnosticReport, resolveConfig } from "@0disoft/universal-config-engine-core";',
+      'import { createProcessEnvSource } from "@0disoft/universal-config-engine-node";',
+      'import { createAjvValidator } from "@0disoft/universal-config-engine-validator-ajv";',
+      'import { createZodValidator } from "@0disoft/universal-config-engine-validator-zod";',
+      'import { parseCliArgs } from "@0disoft/universal-config-engine-cli";',
+      'const mapped = createProcessEnvSource({',
+      '  descriptor: { id: "env", kind: "process-env", priority: 10, displayName: "env" },',
+      '  env: { APP_PORT: "8080" },',
+      '  mappings: [{ externalName: "APP_PORT", sourceKind: "process-env", targetPath: ["service", "port"], parseAs: "number" }]',
+      "});",
+      "const result = resolveConfig({ sources: [mapped] });",
+      "const report = buildDiagnosticReport(result);",
+      'if (!result.ok || report.schemaVersion !== "0.1") throw new Error("installed core/node smoke failed");',
+      'const ajv = createAjvValidator({ id: "schema", schema: { type: "object" } });',
+      "const ajvResult = ajv.validate({ config: result.config, provenance: result.provenance });",
+      'if (!ajvResult.ok) throw new Error("installed Ajv validator smoke failed");',
+      'const zodValidator = createZodValidator({ id: "zod", schema: { safeParse: () => ({ success: true, data: result.config }) } });',
+      "const zodResult = zodValidator.validate({ config: result.config, provenance: result.provenance });",
+      'if (!zodResult.ok) throw new Error("installed Zod validator smoke failed");',
+      'const parsed = parseCliArgs(["validate", "--config", "uce.json", "--json"]);',
+      'if (parsed.command !== "validate" || parsed.output !== "json") throw new Error("installed CLI export smoke failed");'
+    ].join("\n"),
+    "utf8"
+  );
+
+  runNpm(["install", "--ignore-scripts"], consumerDir);
+  execFileSync(process.execPath, [join(consumerDir, "consumer-smoke.mjs")], {
+    cwd: consumerDir,
+    stdio: "inherit"
+  });
+
+  const uceBin = join(consumerDir, "node_modules", ".bin", process.platform === "win32" ? "uce.cmd" : "uce");
+  const output =
+    process.platform === "win32"
+      ? execFileSync("cmd.exe", ["/d", "/c", ".\\node_modules\\.bin\\uce.cmd validate --config uce.json --json"], {
+          cwd: consumerDir,
+          encoding: "utf8"
+        })
+      : execFileSync(uceBin, ["validate", "--config", "uce.json", "--json"], {
+          cwd: consumerDir,
+          encoding: "utf8"
+        });
+  const report = JSON.parse(output);
+  if (report.command !== "validate" || report.status !== "ok") {
+    throw new Error("Installed CLI binary smoke failed.");
+  }
+}
+
+function packageTarballPath(packageName) {
+  const packageJsonPath = join(root, "packages", packageName.split("/").at(-1).replace("universal-config-engine-", ""), "package.json");
+  const manifest = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+  const tarballBaseName = packageName.replace(/^@/, "").replace("/", "-");
+  return join(packDir, `${tarballBaseName}-${manifest.version}.tgz`);
+}
+
+function runPnpm(args, cwd = root) {
   if (pnpmExecPath !== undefined && pnpmExecPath.length > 0) {
     execFileSync(process.execPath, [pnpmExecPath, ...args], {
-      cwd: root,
+      cwd,
       stdio: "inherit"
     });
     return;
   }
 
   execFileSync("pnpm", args, {
-    cwd: root,
+    cwd,
     stdio: "inherit"
+  });
+}
+
+function runNpm(args, cwd) {
+  const npmCliPath = join(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
+  if (existsSync(npmCliPath)) {
+    execFileSync(process.execPath, [npmCliPath, ...args], {
+      cwd,
+      stdio: "inherit"
+    });
+    return;
+  }
+
+  execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", args, {
+    cwd,
+    stdio: "inherit",
+    shell: process.platform === "win32"
   });
 }
