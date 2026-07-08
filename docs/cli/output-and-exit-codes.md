@@ -63,6 +63,9 @@ Validation adapter issues use category `validation` and exit code `1`. Source
 loading, mapping, merge, coercion, and resource-limit failures are reported before
 validator execution and keep their more specific exit codes.
 
+CLI file source path boundary failures use category `source-load` and exit code
+`2`. They happen before the file is read or parsed.
+
 When declared validator output exceeds `limits.maxDiagnostics`, the report includes
 `resource-limit/max_diagnostics_exceeded`; that bounded-output failure uses the
 policy failure exit code `3`.

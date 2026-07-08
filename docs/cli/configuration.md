@@ -26,13 +26,19 @@ CLI inputs:
 - inline Ajv JSON Schema validators for `validate`;
 - output mode selection.
 
+JSON file and dotenv file paths are resolved from the pipeline declaration
+directory. The resolved path must stay inside that directory. Absolute file paths
+are accepted only when they still point inside the declaration directory. A file
+source path that escapes with `..` or points to another absolute location fails as
+a `source-load` issue with exit code `2`.
+
 The CLI validates the declaration shape before loading sources. Unsupported source
 kinds, unknown declaration fields, missing or duplicate source ids, missing file
 paths, malformed redaction policies, malformed override mappings, malformed
 coercion rules, malformed validator declarations, duplicate validator ids,
 source/validator id namespace collisions, malformed resource limits, and malformed
 file size policies fail as `source-load` issues with exit code `2`; they are not
-silently skipped.
+silently skipped. File source path boundary failures are also `source-load` issues.
 
 Source `displayName` values must be omitted or non-empty strings. Override mapping
 `targetPath` and coercion rule `path` declarations are write paths, so they must be

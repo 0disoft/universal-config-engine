@@ -1,5 +1,10 @@
 import { readFile } from "node:fs/promises";
-import { isAbsolute, resolve } from "node:path";
+import {
+  dirname,
+  isAbsolute,
+  relative,
+  resolve
+} from "node:path";
 import {
   createArgvSource,
   createProcessEnvSource,
@@ -70,7 +75,7 @@ export async function loadDeclaredSources(input: {
 }): Promise<readonly LoadedSource[]> {
   const sources: LoadedSource[] = [];
 
-  for (const source of input.declaration.sources) {
+  for (const [index, source] of input.declaration.sources.entries()) {
     const descriptor = createDescriptor(source);
 
     switch (source.kind) {
@@ -81,36 +86,58 @@ export async function loadDeclaredSources(input: {
         });
         break;
       case "json-file":
-        sources.push(
-          await loadJsonFileSource(
-            source.maxFileBytes === undefined
-              ? {
-                  descriptor,
-                  filePath: resolveConfigRelativePath(input.configPath, input.cwd, source.path)
-                }
-              : {
-                  descriptor,
-                  filePath: resolveConfigRelativePath(input.configPath, input.cwd, source.path),
-                  maxFileBytes: source.maxFileBytes
-                }
-          )
-        );
+        {
+          const filePath = resolveConfigRelativePath({
+            configPath: input.configPath,
+            cwd: input.cwd,
+            sourceIndex: index,
+            sourceId: descriptor.id,
+            targetPath: source.path
+          });
+          sources.push(
+            filePath.ok
+              ? await loadJsonFileSource(
+                  source.maxFileBytes === undefined
+                    ? {
+                        descriptor,
+                        filePath: filePath.path
+                      }
+                    : {
+                        descriptor,
+                        filePath: filePath.path,
+                        maxFileBytes: source.maxFileBytes
+                      }
+                )
+              : failedDeclaredSource(descriptor, filePath.issue)
+          );
+        }
         break;
       case "dotenv-file":
-        sources.push(
-          await loadDotenvFileSource(
-            source.maxFileBytes === undefined
-              ? {
-                  descriptor,
-                  filePath: resolveConfigRelativePath(input.configPath, input.cwd, source.path)
-                }
-              : {
-                  descriptor,
-                  filePath: resolveConfigRelativePath(input.configPath, input.cwd, source.path),
-                  maxFileBytes: source.maxFileBytes
-                }
-          )
-        );
+        {
+          const filePath = resolveConfigRelativePath({
+            configPath: input.configPath,
+            cwd: input.cwd,
+            sourceIndex: index,
+            sourceId: descriptor.id,
+            targetPath: source.path
+          });
+          sources.push(
+            filePath.ok
+              ? await loadDotenvFileSource(
+                  source.maxFileBytes === undefined
+                    ? {
+                        descriptor,
+                        filePath: filePath.path
+                      }
+                    : {
+                        descriptor,
+                        filePath: filePath.path,
+                        maxFileBytes: source.maxFileBytes
+                      }
+                )
+              : failedDeclaredSource(descriptor, filePath.issue)
+          );
+        }
         break;
       case "process-env":
         sources.push(
@@ -149,6 +176,14 @@ export async function loadDeclaredSources(input: {
   }
 
   return sources;
+}
+
+function failedDeclaredSource(descriptor: ConfigSourceDescriptor, issue: ConfigIssue): LoadedSource {
+  return {
+    descriptor,
+    value: {},
+    issues: [issue]
+  };
 }
 
 function createDescriptor(source: PipelineSourceDeclaration): ConfigSourceDescriptor {
@@ -194,17 +229,46 @@ function mergeSourceRedactionWithSecretMappings(source: PipelineSourceDeclaratio
   };
 }
 
-function resolveConfigRelativePath(configPath: string, cwd: string, targetPath: string): string {
-  if (isAbsolute(targetPath)) {
-    return targetPath;
+function resolveConfigRelativePath(input: {
+  readonly configPath: string;
+  readonly cwd: string;
+  readonly sourceIndex: number;
+  readonly sourceId: string;
+  readonly targetPath: string;
+}): { readonly ok: true; readonly path: string } | { readonly ok: false; readonly issue: ConfigIssue } {
+  const absoluteConfigPath = resolveInputPath(input.configPath, input.cwd);
+  const configDirectory = dirname(absoluteConfigPath);
+  const resolvedTargetPath = input.targetPath === ""
+    ? configDirectory
+    : isAbsolute(input.targetPath)
+      ? resolve(input.targetPath)
+      : resolve(configDirectory, input.targetPath);
+
+  if (!isInsideOrEqualPath(configDirectory, resolvedTargetPath)) {
+    return {
+      ok: false,
+      issue: pipelineDeclarationIssue({
+        code: "pipeline_file_source_path_outside_config_directory",
+        path: ["sources", input.sourceIndex, "path"],
+        sourceId: input.sourceId,
+        message: "File source paths must stay within the pipeline declaration directory."
+      })
+    };
   }
 
-  const absoluteConfigPath = isAbsolute(configPath) ? configPath : resolve(cwd, configPath);
-  return resolve(absoluteConfigPath, "..", targetPath);
+  return {
+    ok: true,
+    path: resolvedTargetPath
+  };
 }
 
 function resolveInputPath(inputPath: string, cwd: string): string {
   return isAbsolute(inputPath) ? inputPath : resolve(cwd, inputPath);
+}
+
+function isInsideOrEqualPath(rootPath: string, targetPath: string): boolean {
+  const relativePath = relative(rootPath, targetPath);
+  return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
 }
 
 function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {

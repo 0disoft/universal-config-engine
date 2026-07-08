@@ -38,6 +38,11 @@ Pipeline declaration files are JSON. The declaration may include:
 - coercion rules;
 - resource limits.
 
+JSON file and dotenv file source paths are bounded by the pipeline declaration
+directory. Relative paths resolve from that directory, and absolute paths are
+accepted only when they remain inside that directory. ADR 0008 owns the path
+boundary details.
+
 Override mapping `targetPath` declarations and coercion rule `path` declarations are
 write paths and therefore accept only non-empty arrays of string path segments in
 the initial CLI contract. Numeric path segments may appear in diagnostic paths, but
@@ -90,5 +95,7 @@ library API integrations until a separate ADR defines a safe declaration format.
 - CLI reads argv override values before the `--` separator.
 - CLI dynamically imports validator code from a pipeline declaration.
 - CLI silently skips an unsupported source kind.
+- CLI file source paths can escape the pipeline declaration directory without a
+  later ADR.
 - JSON output omits schema version.
 - Output includes raw secret values.
