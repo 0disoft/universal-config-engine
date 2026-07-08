@@ -1,9 +1,11 @@
+import { DEFAULT_RESOURCE_LIMITS } from "./merge.js";
 import { cloneConfigValue } from "./path.js";
 import type {
   ConfigIssue,
   ConfigPath,
   ConfigValue,
   ProvenanceEvent,
+  ResourceLimitPolicy,
   ValidatorAdapter,
   ValidatorResult
 } from "./types.js";
@@ -12,6 +14,7 @@ export interface RunValidatorsInput {
   readonly config: ConfigValue;
   readonly provenance: readonly ProvenanceEvent[];
   readonly validators: readonly ValidatorAdapter[];
+  readonly limits?: Partial<ResourceLimitPolicy>;
 }
 
 export interface RunValidatorsResult {
@@ -22,15 +25,20 @@ export interface RunValidatorsResult {
 export async function runValidators(input: RunValidatorsInput): Promise<RunValidatorsResult> {
   const issues: ConfigIssue[] = [];
   const provenance: ProvenanceEvent[] = [];
+  const maxDiagnostics = Math.max(1, input.limits?.maxDiagnostics ?? DEFAULT_RESOURCE_LIMITS.maxDiagnostics);
 
   for (const validator of input.validators) {
+    if (isDiagnosticsLimitReached(issues, maxDiagnostics)) {
+      break;
+    }
+
     try {
       const result = await validator.validate({
         config: freezeConfigValue(cloneConfigValue(input.config)),
         provenance: input.provenance
       });
       if (!isValidatorResult(result)) {
-        issues.push(invalidValidatorResultIssue(validator.id));
+        pushBoundedIssues(issues, [invalidValidatorResultIssue(validator.id)], maxDiagnostics);
         provenance.push({
           path: [],
           action: "validated",
@@ -40,10 +48,14 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
         continue;
       }
 
-      const validatorIssues = normalizeValidatorIssues(validator.id, result.issues);
-      issues.push(...validatorIssues);
+      const validatorIssues = normalizeValidatorIssues(
+        validator.id,
+        result.issues,
+        Math.max(0, maxDiagnostics - issues.length)
+      );
+      pushBoundedIssues(issues, validatorIssues, maxDiagnostics);
       if (!result.ok && !validatorIssues.some((issue) => issue.severity === "error")) {
-        issues.push(validatorFailedWithoutIssuesIssue(validator.id));
+        pushBoundedIssues(issues, [validatorFailedWithoutIssuesIssue(validator.id)], maxDiagnostics);
       }
       provenance.push({
         path: [],
@@ -52,13 +64,19 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
         message: `Validator ${validator.id} completed with status ${validatorStatus(result, validatorIssues)}.`
       });
     } catch (error) {
-      issues.push({
-        category: "validation",
-        code: "validator_threw",
-        severity: "error",
-        sourceId: validator.id,
-        message: error instanceof Error ? error.message : "Validator failed with an unknown error."
-      });
+      pushBoundedIssues(
+        issues,
+        [
+          {
+            category: "validation",
+            code: "validator_threw",
+            severity: "error",
+            sourceId: validator.id,
+            message: error instanceof Error ? error.message : "Validator failed with an unknown error."
+          }
+        ],
+        maxDiagnostics
+      );
       provenance.push({
         path: [],
         action: "validated",
@@ -89,13 +107,29 @@ function freezeConfigValue(value: ConfigValue): ConfigValue {
   return Object.freeze(value);
 }
 
-function normalizeValidatorIssues(validatorId: string, issues: readonly unknown[]): readonly ConfigIssue[] {
-  return issues.map((issue, index) => {
-    if (!isValidatorIssue(issue)) {
-      return invalidValidatorIssue(validatorId, index);
+function normalizeValidatorIssues(
+  validatorId: string,
+  issues: readonly unknown[],
+  maxDiagnostics: number
+): readonly ConfigIssue[] {
+  const normalizedIssues: ConfigIssue[] = [];
+
+  for (const [index, issue] of issues.entries()) {
+    if (normalizedIssues.length >= maxDiagnostics) {
+      replaceLastIssueWithDiagnosticsExceededMarker(normalizedIssues, maxDiagnostics);
+      break;
     }
 
-    return {
+    if (!isValidatorIssue(issue)) {
+      normalizedIssues.push(invalidValidatorIssue(validatorId, index));
+      if (index < issues.length - 1 && normalizedIssues.length >= maxDiagnostics) {
+        replaceLastIssueWithDiagnosticsExceededMarker(normalizedIssues, maxDiagnostics);
+        break;
+      }
+      continue;
+    }
+
+    normalizedIssues.push({
       category: "validation",
       code: issue.code,
       severity: issue.severity,
@@ -103,8 +137,59 @@ function normalizeValidatorIssues(validatorId: string, issues: readonly unknown[
       ...(issue.path === undefined ? {} : { path: issue.path }),
       sourceId: issue.sourceId ?? validatorId,
       ...(issue.details === undefined ? {} : { details: issue.details })
-    };
-  });
+    });
+    if (index < issues.length - 1 && normalizedIssues.length >= maxDiagnostics) {
+      replaceLastIssueWithDiagnosticsExceededMarker(normalizedIssues, maxDiagnostics);
+      break;
+    }
+  }
+
+  return normalizedIssues;
+}
+
+function pushBoundedIssues(
+  destination: ConfigIssue[],
+  nextIssues: readonly ConfigIssue[],
+  maxDiagnostics: number
+): void {
+  for (const [index, issue] of nextIssues.entries()) {
+    if (destination.length >= maxDiagnostics) {
+      replaceLastIssueWithDiagnosticsExceededMarker(destination, maxDiagnostics);
+      return;
+    }
+    destination.push(issue);
+    if (index < nextIssues.length - 1 && destination.length >= maxDiagnostics) {
+      replaceLastIssueWithDiagnosticsExceededMarker(destination, maxDiagnostics);
+      return;
+    }
+  }
+}
+
+function isDiagnosticsLimitReached(issues: readonly ConfigIssue[], maxDiagnostics: number): boolean {
+  return (
+    issues.length >= maxDiagnostics &&
+    issues.some((issue) => issue.category === "resource-limit" && issue.code === "max_diagnostics_exceeded")
+  );
+}
+
+function replaceLastIssueWithDiagnosticsExceededMarker(issues: ConfigIssue[], maxDiagnostics: number): void {
+  if (issues.some((issue) => issue.category === "resource-limit" && issue.code === "max_diagnostics_exceeded")) {
+    return;
+  }
+
+  const marker: ConfigIssue = {
+    category: "resource-limit",
+    code: "max_diagnostics_exceeded",
+    severity: "error",
+    message: `Diagnostics exceeded the maximum of ${maxDiagnostics}.`
+  };
+
+  if (issues.length === 0) {
+    issues.push(marker);
+    return;
+  }
+
+  issues[issues.length - 1] = marker;
 }
 
 function isValidatorResult(value: unknown): value is ValidatorResult {

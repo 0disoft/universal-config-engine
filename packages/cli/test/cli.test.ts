@@ -896,6 +896,65 @@ describe("runCli", () => {
     });
   });
 
+  it("applies maxDiagnostics to declared validation output", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "defaults",
+              kind: "object",
+              priority: 0,
+              value: {}
+            }
+          ],
+          limits: {
+            maxDiagnostics: 2
+          },
+          validators: [
+            {
+              id: "schema:required",
+              kind: "json-schema-ajv",
+              schema: {
+                type: "object",
+                required: ["service", "database", "features"]
+              }
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly status: string;
+        readonly issues: readonly {
+          readonly category: string;
+          readonly code: string;
+        }[];
+      };
+
+      expect(result.exitCode).toBe(3);
+      expect(report.status).toBe("error");
+      expect(report.issues).toHaveLength(2);
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          category: "resource-limit",
+          code: "max_diagnostics_exceeded"
+        })
+      );
+    });
+  });
+
   it("does not include raw secret values in JSON output", async () => {
     await withTempDir(async (dir) => {
       await writeFile(

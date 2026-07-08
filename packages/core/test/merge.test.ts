@@ -579,6 +579,65 @@ describe("resolveConfig", () => {
       message: "Validator true-with-error completed with status error."
     });
   });
+
+  it("bounds validator diagnostics with an overflow marker", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      limits: {
+        maxDiagnostics: 2
+      },
+      validators: [
+        {
+          id: "many-issues",
+          validate() {
+            return {
+              ok: false,
+              issues: [
+                {
+                  category: "validation",
+                  code: "first_failure",
+                  severity: "error",
+                  message: "First failure."
+                },
+                {
+                  category: "validation",
+                  code: "second_failure",
+                  severity: "error",
+                  message: "Second failure."
+                },
+                {
+                  category: "validation",
+                  code: "third_failure",
+                  severity: "error",
+                  message: "Third failure."
+                }
+              ]
+            };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toEqual([
+      {
+        category: "validation",
+        code: "first_failure",
+        severity: "error",
+        sourceId: "many-issues",
+        message: "First failure."
+      },
+      {
+        category: "resource-limit",
+        code: "max_diagnostics_exceeded",
+        severity: "error",
+        message: "Diagnostics exceeded the maximum of 2."
+      }
+    ]);
+  });
 });
 
 describe("loadConfigSources", () => {

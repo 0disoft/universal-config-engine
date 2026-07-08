@@ -127,7 +127,8 @@ async function applyDeclaredValidation(
   const validation = await runValidators({
     config: result.config,
     provenance: result.provenance,
-    validators: declaredValidators.validators
+    validators: declaredValidators.validators,
+    ...(declaration.limits === undefined ? {} : { limits: declaration.limits })
   });
   const issues = [...result.issues, ...setupIssues, ...validation.issues];
 

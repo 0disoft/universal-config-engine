@@ -63,6 +63,10 @@ Validation adapter issues use category `validation` and exit code `1`. Source
 loading, mapping, merge, coercion, and resource-limit failures are reported before
 validator execution and keep their more specific exit codes.
 
+When declared validator output exceeds `limits.maxDiagnostics`, the report includes
+`resource-limit/max_diagnostics_exceeded`; that bounded-output failure uses the
+policy failure exit code `3`.
+
 CLI usage errors use category `usage` and exit code `4` when the command is known
 and JSON output was requested. Unknown commands still write the usage error to
 stderr because no command-specific JSON report can be attributed safely.

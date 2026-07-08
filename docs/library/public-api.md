@@ -70,6 +70,9 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
   values to later validators.
 - Isolate validator inputs from the resolved config. Validators must not be able to
   mutate the pipeline output or affect later validators by modifying `input.config`.
+- Bound validator issues with the same diagnostics limit used by merge/source
+  reporting. When validator output exceeds `maxDiagnostics`, emit
+  `resource-limit/max_diagnostics_exceeded` instead of unbounded validation output.
 - Generate provenance during resolution rather than reconstructing it from the final
   object.
 - Reject unsafe keys in public path setters and deep merge before they can mutate
