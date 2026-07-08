@@ -215,4 +215,29 @@ describe("node source loaders", () => {
       })
     );
   });
+
+  it("reports duplicate argv values instead of choosing an occurrence", () => {
+    const loaded = createArgvSource({
+      descriptor: descriptor("argv", "argv", 20),
+      argv: ["--port", "9000", "--port=8080"],
+      mappings: [
+        {
+          externalName: "--port",
+          sourceKind: "argv",
+          targetPath: ["server", "port"],
+          parseAs: "number"
+        }
+      ]
+    });
+
+    expect(loaded.value).toEqual({});
+    expect(loaded.issues).toContainEqual(
+      expect.objectContaining({
+        category: "mapping",
+        code: "argv_duplicate_argument",
+        sourceId: "argv",
+        path: ["server", "port"]
+      })
+    );
+  });
 });

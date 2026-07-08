@@ -58,6 +58,10 @@ CLI argv source values are read only after the `--` separator. Example:
 uce explain --config uce.json -- --port 9000
 ```
 
+An argv source argument may be provided at most once for each declared mapping.
+Duplicate forms such as `--port 9000 --port=8080` are mapping errors, not
+first-wins or last-wins overrides.
+
 ## Fixture Coverage
 
 `packages/cli/fixtures/local-precedence/` covers JSON-file defaults, declared

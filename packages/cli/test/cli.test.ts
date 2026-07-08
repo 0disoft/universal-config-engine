@@ -203,6 +203,62 @@ describe("runCli", () => {
     });
   });
 
+  it("rejects duplicate argv source values after the separator", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "argv",
+              kind: "argv",
+              priority: 10,
+              mappings: [
+                {
+                  externalName: "--port",
+                  sourceKind: "argv",
+                  targetPath: ["server", "port"],
+                  parseAs: "number"
+                }
+              ]
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json", "--json", "--", "--port", "9000", "--port=8080"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly status: string;
+        readonly issues: readonly {
+          readonly category: string;
+          readonly code: string;
+          readonly sourceId?: string;
+          readonly path?: readonly (string | number)[];
+        }[];
+      };
+
+      expect(result.exitCode).toBe(3);
+      expect(report.status).toBe("error");
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          category: "mapping",
+          code: "argv_duplicate_argument",
+          sourceId: "argv",
+          path: ["server", "port"]
+        })
+      );
+    });
+  });
+
   it("treats secret override mappings as secret paths in explain output", async () => {
     await withTempDir(async (dir) => {
       await writeFile(

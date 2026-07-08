@@ -38,6 +38,18 @@ export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
       continue;
     }
 
+    if (parsed.status === "duplicate") {
+      issues.push({
+        category: "mapping",
+        code: "argv_duplicate_argument",
+        severity: "error",
+        sourceId: input.descriptor.id,
+        path: mapping.targetPath,
+        message: `Argument ${mapping.externalName} must not be provided more than once.`
+      });
+      continue;
+    }
+
     values[mapping.externalName] = parsed.value;
   }
 
@@ -59,21 +71,42 @@ function findArgValue(
 ):
   | { readonly status: "found"; readonly value: string }
   | { readonly status: "missing" }
-  | { readonly status: "invalid" } {
+  | { readonly status: "invalid" }
+  | { readonly status: "duplicate" } {
+  let foundValue: string | undefined;
+  let matchCount = 0;
+  let hasInvalidMatch = false;
+
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === externalName) {
+      matchCount += 1;
       const next = argv[index + 1];
       if (next === undefined || next.startsWith("--")) {
-        return { status: "invalid" };
+        hasInvalidMatch = true;
+        continue;
       }
-      return { status: "found", value: next };
+      foundValue = next;
+      continue;
     }
 
     const assignmentPrefix = `${externalName}=`;
     if (arg?.startsWith(assignmentPrefix) === true) {
-      return { status: "found", value: arg.slice(assignmentPrefix.length) };
+      matchCount += 1;
+      foundValue = arg.slice(assignmentPrefix.length);
     }
+  }
+
+  if (matchCount > 1) {
+    return { status: "duplicate" };
+  }
+
+  if (hasInvalidMatch) {
+    return { status: "invalid" };
+  }
+
+  if (foundValue !== undefined) {
+    return { status: "found", value: foundValue };
   }
 
   return { status: "missing" };
