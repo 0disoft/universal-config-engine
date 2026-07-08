@@ -121,6 +121,10 @@ describe("createAjvValidator", () => {
 });
 
 describe("instancePathToConfigPath", () => {
+  it("normalizes slash-only instance paths to the root path", () => {
+    expect(instancePathToConfigPath("/")).toEqual([]);
+  });
+
   it("decodes JSON pointer escaping and numeric array indexes", () => {
     expect(instancePathToConfigPath("/items/0/a~1b/~0key")).toEqual(["items", 0, "a/b", "~key"]);
   });

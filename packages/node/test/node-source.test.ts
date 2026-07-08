@@ -216,6 +216,52 @@ describe("node source loaders", () => {
     );
   });
 
+  it("reports short flags as missing argv values instead of treating them as values", () => {
+    const loaded = createArgvSource({
+      descriptor: descriptor("argv", "argv", 20),
+      argv: ["--mode", "-v"],
+      mappings: [
+        {
+          externalName: "--mode",
+          sourceKind: "argv",
+          targetPath: ["app", "mode"]
+        }
+      ]
+    });
+
+    expect(loaded.value).toEqual({});
+    expect(loaded.issues).toContainEqual(
+      expect.objectContaining({
+        category: "mapping",
+        code: "argv_missing_value",
+        path: ["app", "mode"]
+      })
+    );
+  });
+
+  it("allows negative numeric argv values", () => {
+    const loaded = createArgvSource({
+      descriptor: descriptor("argv", "argv", 20),
+      argv: ["--offset", "-1.5"],
+      mappings: [
+        {
+          externalName: "--offset",
+          sourceKind: "argv",
+          targetPath: ["tuning", "offset"],
+          parseAs: "number"
+        }
+      ]
+    });
+    const result = resolveConfig({ sources: [loaded] });
+
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({
+      tuning: {
+        offset: -1.5
+      }
+    });
+  });
+
   it("reports duplicate argv values instead of choosing an occurrence", () => {
     const loaded = createArgvSource({
       descriptor: descriptor("argv", "argv", 20),

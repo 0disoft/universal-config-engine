@@ -26,6 +26,7 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
   const issues: ConfigIssue[] = [];
   const provenance: ProvenanceEvent[] = [];
   const maxDiagnostics = Math.max(1, input.limits?.maxDiagnostics ?? DEFAULT_RESOURCE_LIMITS.maxDiagnostics);
+  const validatorConfig = freezeConfigValue(cloneConfigValue(input.config));
 
   for (const validator of input.validators) {
     if (isDiagnosticsLimitReached(issues, maxDiagnostics)) {
@@ -34,7 +35,7 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
 
     try {
       const result = await validator.validate({
-        config: freezeConfigValue(cloneConfigValue(input.config)),
+        config: validatorConfig,
         provenance: input.provenance
       });
       if (!isValidatorResult(result)) {

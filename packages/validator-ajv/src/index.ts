@@ -58,7 +58,7 @@ function toConfigIssue(sourceId: string, error: ErrorObject): ConfigIssue {
 }
 
 export function instancePathToConfigPath(instancePath: string): ConfigPath {
-  if (instancePath.length === 0) {
+  if (instancePath.length === 0 || instancePath === "/") {
     return [];
   }
 

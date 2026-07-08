@@ -82,7 +82,7 @@ function findArgValue(
     if (arg === externalName) {
       matchCount += 1;
       const next = argv[index + 1];
-      if (next === undefined || next.startsWith("--")) {
+      if (next === undefined || !isArgValueToken(next)) {
         hasInvalidMatch = true;
         continue;
       }
@@ -110,4 +110,12 @@ function findArgValue(
   }
 
   return { status: "missing" };
+}
+
+function isArgValueToken(value: string): boolean {
+  return !value.startsWith("-") || isNegativeNumberToken(value);
+}
+
+function isNegativeNumberToken(value: string): boolean {
+  return /^-(?:\d+|\d*\.\d+)(?:e[+-]?\d+)?$/i.test(value);
 }

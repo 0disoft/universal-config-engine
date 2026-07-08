@@ -80,6 +80,8 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 - Return bounded issues for resource-limit failures.
 - Keep raw secret values out of diagnostic report structures, snapshots, thrown
   errors, CLI JSON, issue messages, issue details, and provenance messages.
+- Treat declared `secretPaths` as subtree roots. A path such as `["database"]`
+  redacts diagnostics for `["database"]` and every descendant path below it.
 - Treat user-provided secret-name patterns as bounded diagnostic matchers. Reuse
   compiled matchers within a report and fall back to literal matching for invalid,
   oversized, or risky regular expressions.

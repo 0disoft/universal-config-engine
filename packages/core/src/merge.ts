@@ -1,5 +1,5 @@
 import { applyCoercionRules } from "./coercion.js";
-import { getConfigValueAtPath, pathToKey, pathsEqual, setConfigValueAtPath } from "./path.js";
+import { getConfigValueAtPath, isPathPrefix, pathToKey, pathsEqual, setConfigValueAtPath } from "./path.js";
 import { flattenConfigObject } from "./value.js";
 import type {
   ConfigIssue,
@@ -231,10 +231,6 @@ function findRelatedResolvedPaths(
 
 function pathsOverlap(left: readonly (string | number)[], right: readonly (string | number)[]): boolean {
   return pathsEqual(left, right) || isPathPrefix(left, right) || isPathPrefix(right, left);
-}
-
-function isPathPrefix(prefix: readonly (string | number)[], path: readonly (string | number)[]): boolean {
-  return prefix.length < path.length && prefix.every((segment, index) => segment === path[index]);
 }
 
 function collectOverriddenSourceIds(

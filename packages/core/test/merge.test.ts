@@ -324,6 +324,30 @@ describe("resolveConfig", () => {
     });
   });
 
+  it("rejects non-finite JSON coercion results", () => {
+    const result = resolveConfig({
+      sources: [source("env", 10, { threshold: "1e999" })],
+      coercionRules: [
+        {
+          path: ["threshold"],
+          from: "string",
+          to: "json",
+          onFailure: "issue"
+        }
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        category: "coercion",
+        code: "coercion_failed",
+        path: ["threshold"],
+        message: "Expected JSON-compatible value."
+      })
+    );
+  });
+
   it("normalizes validator failures into config issues", async () => {
     const result = resolveConfig({
       sources: [source("defaults", 0, { server: { port: 3000 } })]
@@ -806,6 +830,59 @@ describe("buildDiagnosticReport", () => {
         message: "Provenance message redacted because it is associated with a secret path or source."
       })
     );
+  });
+
+  it("redacts descendant paths when a parent secret path is declared", () => {
+    const result = resolveConfig({
+      sources: [
+        {
+          descriptor: {
+            id: "defaults",
+            kind: "object",
+            priority: 0,
+            displayName: "defaults",
+            redaction: {
+              secretPaths: [["database"]]
+            }
+          },
+          value: {
+            database: {
+              clientId: "example-secret-value"
+            }
+          },
+          issues: [
+            {
+              category: "source-load",
+              code: "secret_child_failed",
+              severity: "warning",
+              sourceId: "defaults",
+              path: ["database", "clientId"],
+              message: "failed while handling example-secret-value",
+              details: {
+                raw: "example-secret-value"
+              }
+            }
+          ]
+        }
+      ]
+    });
+    const report = buildDiagnosticReport(result);
+    const reportText = JSON.stringify(report);
+
+    expect(report.resolvedPaths).toContainEqual(
+      expect.objectContaining({
+        path: ["database", "clientId"],
+        redacted: true,
+        redactionReason: "secret-path"
+      })
+    );
+    expect(report.issues).toContainEqual(
+      expect.objectContaining({
+        code: "secret_child_failed",
+        message: "Diagnostic message redacted because it is associated with a secret path or source."
+      })
+    );
+    expect(reportText).not.toContain("example-secret-value");
   });
 
   it("keeps default secret-name regex patterns working", () => {

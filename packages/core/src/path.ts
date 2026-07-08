@@ -22,6 +22,10 @@ export function pathsEqual(left: ConfigPath, right: ConfigPath): boolean {
   return left.length === right.length && left.every((segment, index) => segment === right[index]);
 }
 
+export function isPathPrefix(prefix: ConfigPath, path: ConfigPath): boolean {
+  return prefix.length <= path.length && prefix.every((segment, index) => segment === path[index]);
+}
+
 export function getConfigValueAtPath(value: ConfigValue, path: ConfigPath): ConfigValue | undefined {
   let current: ConfigValue | undefined = value;
 

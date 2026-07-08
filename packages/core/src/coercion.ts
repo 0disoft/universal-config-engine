@@ -1,4 +1,5 @@
 import { getConfigValueAtPath, setConfigValueAtPath } from "./path.js";
+import { isConfigValue } from "./value.js";
 import type { CoercionRule, ConfigIssue, ConfigValue, ProvenanceEvent } from "./types.js";
 
 export interface ApplyCoercionRulesInput {
@@ -109,10 +110,10 @@ function coerceJson(
 ): { readonly ok: true; readonly value: ConfigValue } | { readonly ok: false; readonly message: string } {
   try {
     const parsed = JSON.parse(value) as unknown;
-    if (parsed === undefined || typeof parsed === "function" || typeof parsed === "symbol") {
+    if (!isConfigValue(parsed)) {
       return { ok: false, message: "Expected JSON-compatible value." };
     }
-    return { ok: true, value: parsed as ConfigValue };
+    return { ok: true, value: parsed };
   } catch {
     return { ok: false, message: "Expected valid JSON." };
   }

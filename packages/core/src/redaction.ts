@@ -1,4 +1,4 @@
-import { pathsEqual } from "./path.js";
+import { isPathPrefix, pathToKey } from "./path.js";
 import type {
   ConfigIssue,
   ConfigPath,
@@ -31,11 +31,17 @@ export interface BuildDiagnosticReportOptions {
 interface RedactionContext {
   readonly options: BuildDiagnosticReportOptions;
   readonly patternCache: Map<string, PatternMatcher>;
+  readonly anySourceRedactionCache: Map<string, RedactionDecision>;
 }
 
 interface PatternMatcher {
   readonly rawLower: string;
   readonly regex?: RegExp;
+}
+
+interface RedactionDecision {
+  readonly redacted: boolean;
+  readonly reason?: string;
 }
 
 export function buildDiagnosticReport(
@@ -45,7 +51,8 @@ export function buildDiagnosticReport(
   const sourceById = new Map(result.sources.map((source) => [source.id, source]));
   const redactionContext: RedactionContext = {
     options,
-    patternCache: new Map()
+    patternCache: new Map(),
+    anySourceRedactionCache: new Map()
   };
   const sourceIdsWithErrors = new Set(
     result.issues
@@ -155,22 +162,31 @@ function getRedactionForAnySource(
   path: ConfigPath,
   sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
   redactionContext: RedactionContext
-): { readonly redacted: boolean; readonly reason?: string } {
+): RedactionDecision {
+  const cacheKey = pathToKey(path);
+  const cached = redactionContext.anySourceRedactionCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   for (const source of sourceById.values()) {
     const redaction = getRedaction(path, source, redactionContext);
     if (redaction.redacted) {
+      redactionContext.anySourceRedactionCache.set(cacheKey, redaction);
       return redaction;
     }
   }
 
-  return getRedaction(path, undefined, redactionContext);
+  const fallback = getRedaction(path, undefined, redactionContext);
+  redactionContext.anySourceRedactionCache.set(cacheKey, fallback);
+  return fallback;
 }
 
 function getRedaction(
   path: ConfigPath,
   source: ConfigSourceDescriptor | undefined,
   redactionContext: RedactionContext
-): { readonly redacted: boolean; readonly reason?: string } {
+): RedactionDecision {
   if (source?.redaction?.secretSource === true || redactionContext.options.secretSourceIds?.includes(source?.id ?? "")) {
     return { redacted: true, reason: "secret-source" };
   }
@@ -194,7 +210,7 @@ function matchesAnyPath(
   path: ConfigPath,
   policy: Pick<RedactionPolicyInput, "secretPaths"> | Pick<BuildDiagnosticReportOptions, "secretPaths"> | undefined
 ): boolean {
-  return policy?.secretPaths?.some((secretPath) => pathsEqual(path, secretPath)) ?? false;
+  return policy?.secretPaths?.some((secretPath) => isPathPrefix(secretPath, path)) ?? false;
 }
 
 function matchesNamePattern(

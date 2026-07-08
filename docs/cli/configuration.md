@@ -61,6 +61,9 @@ uce explain --config uce.json -- --port 9000
 An argv source argument may be provided at most once for each declared mapping.
 Duplicate forms such as `--port 9000 --port=8080` are mapping errors, not
 first-wins or last-wins overrides.
+When a declared argv argument is followed by another flag-like token such as `-v`
+or `--verbose`, the argument is reported as missing a value. Negative numeric
+values such as `-1` remain valid argument values.
 
 ## Fixture Coverage
 
@@ -113,6 +116,10 @@ raw value unless a future ADR explicitly defines a safe debug mode.
 When an override mapping sets `secret: true`, the CLI treats that mapping target as
 a redaction `secretPath` for the source. This is true even when the target path name
 does not match a default secret-name pattern.
+
+Declared `secretPaths` redact the declared path and its descendants. For example,
+`["database"]` covers `["database", "clientId"]` even though `clientId` is not a
+default secret-name pattern.
 
 Redacted reports can still contain sensitive metadata. CLI documentation must avoid
 describing report output as safe to paste into public issues.

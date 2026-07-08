@@ -2,6 +2,7 @@ import { open, stat } from "node:fs/promises";
 import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
 
 export const DEFAULT_MAX_FILE_BYTES = 1024 * 1024;
+const READ_CHUNK_BYTES = 64 * 1024;
 
 export interface FileReadPolicy {
   readonly maxFileBytes?: number;
@@ -37,10 +38,17 @@ export async function readTextFileWithinLimit(input: {
       };
     }
 
-    return {
-      ok: true,
-      raw: await fileHandle.readFile({ encoding })
-    };
+    const raw = await readFileHandleWithinLimit(fileHandle, maxFileBytes, encoding);
+    return raw.ok
+      ? raw
+      : {
+          ok: false,
+          issues: fileSizeIssues({
+            sourceId: input.sourceId,
+            fileBytes: raw.fileBytes,
+            maxFileBytes
+          })
+        };
   } finally {
     await fileHandle.close();
   }
@@ -82,4 +90,34 @@ function fileSizeIssues(input: {
       }
     }
   ];
+}
+
+async function readFileHandleWithinLimit(
+  fileHandle: Awaited<ReturnType<typeof open>>,
+  maxFileBytes: number,
+  encoding: BufferEncoding
+): Promise<{ readonly ok: true; readonly raw: string } | { readonly ok: false; readonly fileBytes: number }> {
+  const chunks: Buffer[] = [];
+  let totalBytes = 0;
+
+  for (;;) {
+    const buffer = Buffer.allocUnsafe(READ_CHUNK_BYTES);
+    const { bytesRead } = await fileHandle.read(buffer, 0, buffer.length, null);
+    if (bytesRead === 0) {
+      return {
+        ok: true,
+        raw: Buffer.concat(chunks, totalBytes).toString(encoding)
+      };
+    }
+
+    totalBytes += bytesRead;
+    if (totalBytes > maxFileBytes) {
+      return {
+        ok: false,
+        fileBytes: totalBytes
+      };
+    }
+
+    chunks.push(buffer.subarray(0, bytesRead));
+  }
 }

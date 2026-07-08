@@ -23,6 +23,7 @@ export {
   cloneConfigValue,
   formatPath,
   getConfigValueAtPath,
+  isPathPrefix,
   isUnsafePathSegment,
   pathToKey,
   pathsEqual,
