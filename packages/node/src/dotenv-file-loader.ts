@@ -1,6 +1,5 @@
-import { readFile } from "node:fs/promises";
 import type { ConfigIssue, ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
-import { checkFileSize, DEFAULT_MAX_FILE_BYTES, type FileReadPolicy } from "./file.js";
+import { DEFAULT_MAX_FILE_BYTES, readTextFileWithinLimit, type FileReadPolicy } from "./file.js";
 
 const DOTENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -12,23 +11,23 @@ export interface LoadDotenvFileSourceInput extends FileReadPolicy {
 export async function loadDotenvFileSource(input: LoadDotenvFileSourceInput): Promise<LoadedSource> {
   const maxFileBytes = input.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
   const encoding = input.encoding ?? "utf8";
-  const sizeIssues = await checkFileSize({
-    filePath: input.filePath,
-    sourceId: input.descriptor.id,
-    maxFileBytes
-  });
-
-  if (sizeIssues.length > 0) {
-    return {
-      descriptor: input.descriptor,
-      value: {},
-      issues: sizeIssues
-    };
-  }
 
   try {
-    const raw = await readFile(input.filePath, encoding);
-    return parseSimpleDotenv(input.descriptor, raw);
+    const readResult = await readTextFileWithinLimit({
+      filePath: input.filePath,
+      sourceId: input.descriptor.id,
+      maxFileBytes,
+      encoding
+    });
+    if (!readResult.ok) {
+      return {
+        descriptor: input.descriptor,
+        value: {},
+        issues: readResult.issues
+      };
+    }
+
+    return parseSimpleDotenv(input.descriptor, readResult.raw);
   } catch (error) {
     return {
       descriptor: input.descriptor,

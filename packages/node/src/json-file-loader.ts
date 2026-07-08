@@ -1,6 +1,5 @@
-import { readFile } from "node:fs/promises";
-import type { ConfigIssue, ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
-import { checkFileSize, DEFAULT_MAX_FILE_BYTES, type FileReadPolicy } from "./file.js";
+import type { ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
+import { DEFAULT_MAX_FILE_BYTES, readTextFileWithinLimit, type FileReadPolicy } from "./file.js";
 
 export interface LoadJsonFileSourceInput extends FileReadPolicy {
   readonly descriptor: ConfigSourceDescriptor;
@@ -10,25 +9,25 @@ export interface LoadJsonFileSourceInput extends FileReadPolicy {
 export async function loadJsonFileSource(input: LoadJsonFileSourceInput): Promise<LoadedSource> {
   const maxFileBytes = input.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
   const encoding = input.encoding ?? "utf8";
-  const sizeIssues = await checkFileSize({
-    filePath: input.filePath,
-    sourceId: input.descriptor.id,
-    maxFileBytes
-  });
-
-  if (sizeIssues.length > 0) {
-    return {
-      descriptor: input.descriptor,
-      value: {},
-      issues: sizeIssues
-    };
-  }
 
   try {
-    const raw = await readFile(input.filePath, encoding);
+    const readResult = await readTextFileWithinLimit({
+      filePath: input.filePath,
+      sourceId: input.descriptor.id,
+      maxFileBytes,
+      encoding
+    });
+    if (!readResult.ok) {
+      return {
+        descriptor: input.descriptor,
+        value: {},
+        issues: readResult.issues
+      };
+    }
+
     return {
       descriptor: input.descriptor,
-      value: JSON.parse(raw) as unknown
+      value: JSON.parse(readResult.raw) as unknown
     };
   } catch (error) {
     return {

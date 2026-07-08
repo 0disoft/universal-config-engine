@@ -121,6 +121,30 @@ describe("node source loaders", () => {
     }
   });
 
+  it("returns bounded issues for oversized dotenv files", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "uce-dotenv-large-"));
+    try {
+      const filePath = join(dir, ".env");
+      await writeFile(filePath, "APP_PORT=3000\n", "utf8");
+
+      const loaded = await loadDotenvFileSource({
+        descriptor: descriptor("dotenv", "dotenv-file", 1),
+        filePath,
+        maxFileBytes: 2
+      });
+
+      expect(loaded.issues).toContainEqual(
+        expect.objectContaining({
+          category: "resource-limit",
+          code: "max_file_bytes_exceeded",
+          sourceId: "dotenv"
+        })
+      );
+    } finally {
+      await rm(dir, { force: true, recursive: true });
+    }
+  });
+
   it("maps process env only through declared mappings", () => {
     const loaded = createProcessEnvSource({
       descriptor: descriptor("env", "process-env", 10),
