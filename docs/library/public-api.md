@@ -68,13 +68,15 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 - Treat `ValidatorResult.value` as adapter-local typed output. Core validation does
   not replace the resolved config with validator-returned values or pass those
   values to later validators.
+- Isolate validator inputs from the resolved config. Validators must not be able to
+  mutate the pipeline output or affect later validators by modifying `input.config`.
 - Generate provenance during resolution rather than reconstructing it from the final
   object.
-- Reject or safely escape unsafe keys before path setters or deep merge can mutate
-  object state.
+- Reject unsafe keys in public path setters and deep merge before they can mutate
+  object state or object prototypes.
 - Return bounded issues for resource-limit failures.
 - Keep raw secret values out of diagnostic report structures, snapshots, thrown
-  errors, and CLI JSON.
+  errors, CLI JSON, issue messages, issue details, and provenance messages.
 
 ## Open Decisions
 

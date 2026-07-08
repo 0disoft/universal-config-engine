@@ -1,10 +1,12 @@
 import { pathsEqual } from "./path.js";
 import type {
+  ConfigIssue,
   ConfigPath,
   ConfigResult,
   ConfigSourceDescriptor,
   DiagnosticReport,
   DiagnosticReportResolvedPath,
+  ProvenanceEvent,
   RedactionPolicyInput,
   ResolvedPath
 } from "./types.js";
@@ -47,8 +49,8 @@ export function buildDiagnosticReport(
     resolvedPaths: result.resolvedPaths.map((resolvedPath) =>
       buildResolvedPathReport(resolvedPath, sourceById, options)
     ),
-    issues: result.issues,
-    provenance: result.provenance,
+    issues: result.issues.map((issue) => sanitizeIssue(issue, sourceById, options)),
+    provenance: result.provenance.map((event) => sanitizeProvenance(event, sourceById, options)),
     limits: result.limits
   };
 }
@@ -79,6 +81,72 @@ function buildResolvedPathReport(
     overriddenSourceIds: resolvedPath.overriddenSourceIds,
     redacted: false
   };
+}
+
+function sanitizeIssue(
+  issue: ConfigIssue,
+  sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
+  options: BuildDiagnosticReportOptions
+): ConfigIssue {
+  if (!shouldSanitizeDiagnostic(issue.path, issue.sourceId, sourceById, options)) {
+    return issue;
+  }
+
+  return {
+    category: issue.category,
+    code: issue.code,
+    severity: issue.severity,
+    ...(issue.path === undefined ? {} : { path: issue.path }),
+    ...(issue.sourceId === undefined ? {} : { sourceId: issue.sourceId }),
+    message: "Diagnostic message redacted because it is associated with a secret path or source."
+  };
+}
+
+function sanitizeProvenance(
+  event: ProvenanceEvent,
+  sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
+  options: BuildDiagnosticReportOptions
+): ProvenanceEvent {
+  if (!shouldSanitizeDiagnostic(event.path, event.sourceId, sourceById, options)) {
+    return event;
+  }
+
+  return {
+    path: event.path,
+    action: event.action,
+    sourceId: event.sourceId,
+    ...(event.previousSourceId === undefined ? {} : { previousSourceId: event.previousSourceId }),
+    message: "Provenance message redacted because it is associated with a secret path or source."
+  };
+}
+
+function shouldSanitizeDiagnostic(
+  path: ConfigPath | undefined,
+  sourceId: string | undefined,
+  sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
+  options: BuildDiagnosticReportOptions
+): boolean {
+  const source = sourceId === undefined ? undefined : sourceById.get(sourceId);
+  if (source?.redaction?.secretSource === true || options.secretSourceIds?.includes(sourceId ?? "")) {
+    return true;
+  }
+
+  return path === undefined ? false : getRedactionForAnySource(path, sourceById, options).redacted;
+}
+
+function getRedactionForAnySource(
+  path: ConfigPath,
+  sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
+  options: BuildDiagnosticReportOptions
+): { readonly redacted: boolean; readonly reason?: string } {
+  for (const source of sourceById.values()) {
+    const redaction = getRedaction(path, source, options);
+    if (redaction.redacted) {
+      return redaction;
+    }
+  }
+
+  return getRedaction(path, undefined, options);
 }
 
 function getRedaction(

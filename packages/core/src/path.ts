@@ -26,6 +26,10 @@ export function getConfigValueAtPath(value: ConfigValue, path: ConfigPath): Conf
   let current: ConfigValue | undefined = value;
 
   for (const segment of path) {
+    if (isUnsafePathSegment(segment)) {
+      return undefined;
+    }
+
     if (current === null || current === undefined) {
       return undefined;
     }
@@ -40,6 +44,9 @@ export function getConfigValueAtPath(value: ConfigValue, path: ConfigPath): Conf
 
     if (typeof current === "object") {
       if (typeof segment !== "string") {
+        return undefined;
+      }
+      if (!Object.prototype.hasOwnProperty.call(current, segment)) {
         return undefined;
       }
       current = (current as { readonly [key: string]: ConfigValue })[segment];
@@ -65,13 +72,17 @@ export function setConfigValueAtPath(
 
   for (let index = 0; index < path.length - 1; index += 1) {
     const segment = path[index];
+    if (segment === undefined) {
+      throw new Error("Config path contained an undefined segment.");
+    }
+    assertSafeObjectPathSegment(segment);
     if (typeof segment !== "string") {
       throw new Error(`Object merge paths cannot create numeric segment ${String(segment)}.`);
     }
 
-    const existing = current[segment];
+    const existing = Object.prototype.hasOwnProperty.call(current, segment) ? current[segment] : undefined;
     if (existing === undefined || existing === null || typeof existing !== "object" || Array.isArray(existing)) {
-      const next: Record<string, ConfigValue> = {};
+      const next = createConfigObject();
       current[segment] = next;
       current = next;
       continue;
@@ -81,6 +92,10 @@ export function setConfigValueAtPath(
   }
 
   const finalSegment = path[path.length - 1];
+  if (finalSegment === undefined) {
+    throw new Error("Config path contained an undefined final segment.");
+  }
+  assertSafeObjectPathSegment(finalSegment);
   if (typeof finalSegment !== "string") {
     throw new Error(`Object merge paths cannot set numeric segment ${String(finalSegment)}.`);
   }
@@ -97,9 +112,20 @@ export function cloneConfigValue(value: ConfigValue): ConfigValue {
     return value.map((item) => cloneConfigValue(item));
   }
 
-  const output: Record<string, ConfigValue> = {};
+  const output = createConfigObject();
   for (const [key, child] of Object.entries(value)) {
+    assertSafeObjectPathSegment(key);
     output[key] = cloneConfigValue(child);
   }
   return output;
+}
+
+function assertSafeObjectPathSegment(segment: ConfigPathSegment): void {
+  if (isUnsafePathSegment(segment)) {
+    throw new Error(`Unsafe config path segment ${String(segment)} is rejected.`);
+  }
+}
+
+function createConfigObject(): Record<string, ConfigValue> {
+  return Object.create(null) as Record<string, ConfigValue>;
 }

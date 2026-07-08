@@ -38,6 +38,12 @@ Pipeline declaration files are JSON. The declaration may include:
 - coercion rules;
 - resource limits.
 
+Override mapping `targetPath` declarations and coercion rule `path` declarations are
+write paths and therefore accept only non-empty arrays of string path segments in
+the initial CLI contract. Numeric path segments may appear in diagnostic paths, but
+array element writes are deferred until a dedicated merge policy exists. A mapping
+with `secret: true` contributes its target path to source redaction metadata.
+
 The CLI validates the declaration shape before source loading. Unsupported source
 kinds, unknown declaration fields, missing or duplicate source ids, missing file
 paths, malformed redaction policies, malformed override mappings, malformed

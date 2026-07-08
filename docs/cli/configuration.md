@@ -34,6 +34,12 @@ source/validator id namespace collisions, malformed resource limits, and malform
 file size policies fail as `source-load` issues with exit code `2`; they are not
 silently skipped.
 
+Source `displayName` values must be omitted or non-empty strings. Override mapping
+`targetPath` and coercion rule `path` declarations are write paths, so they must be
+non-empty arrays of string path segments. Numeric path segments remain readable in
+diagnostic paths, but array element writes are not part of the current CLI
+declaration contract.
+
 ## Precedence Rules
 
 The CLI must print or export the source order used for a run. A CLI flag may select
@@ -41,6 +47,10 @@ or override sources, but it must not silently change source priority.
 
 Env var and CLI argument mapping must be declared. Automatic name-to-path inference is
 out of MVP scope because it hides typos and collisions.
+
+Within a single process-env or argv source, two mappings must not target the same
+config path. Duplicate mapping targets are declaration errors rather than
+last-writer-wins overrides.
 
 CLI argv source values are read only after the `--` separator. Example:
 
@@ -95,6 +105,10 @@ declaration format.
 Secret values are redacted by default. A command may report that a value came from
 an environment variable, secret source, or redacted path, but it must not print the
 raw value unless a future ADR explicitly defines a safe debug mode.
+
+When an override mapping sets `secret: true`, the CLI treats that mapping target as
+a redaction `secretPath` for the source. This is true even when the target path name
+does not match a default secret-name pattern.
 
 Redacted reports can still contain sensitive metadata. CLI documentation must avoid
 describing report output as safe to paste into public issues.

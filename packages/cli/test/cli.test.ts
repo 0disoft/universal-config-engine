@@ -203,6 +203,63 @@ describe("runCli", () => {
     });
   });
 
+  it("treats secret override mappings as secret paths in explain output", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "env",
+              kind: "process-env",
+              priority: 10,
+              mappings: [
+                {
+                  externalName: "SERVICE_HEADER",
+                  sourceKind: "process-env",
+                  targetPath: ["service", "header"],
+                  secret: true
+                }
+              ]
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {
+          SERVICE_HEADER: "example-secret-value"
+        },
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly status: string;
+        readonly resolvedPaths: readonly {
+          readonly path: readonly string[];
+          readonly redacted: boolean;
+          readonly redactionReason: string;
+        }[];
+      };
+
+      expect(result.exitCode).toBe(0);
+      expect(report.status).toBe("ok");
+      expect(report.resolvedPaths).toContainEqual(
+        expect.objectContaining({
+          path: ["service", "header"],
+          redacted: true,
+          redactionReason: "secret-path"
+        })
+      );
+      expect(stdout).not.toContain("example-secret-value");
+    });
+  });
+
   it("matches the mapping failure golden report", async () => {
     const fixtureRoot = new URL("../fixtures/mapping-failure/", import.meta.url);
     const expected = JSON.parse(
@@ -251,19 +308,25 @@ describe("runCli", () => {
               id: "env",
               kind: "process-env",
               priority: 0,
+              displayName: 123,
               mappings: [
                 {
                   externalName: "APP_PORT",
                   sourceKind: "argv",
                   targetPath: "server.port",
                   parseAs: "integer"
+                },
+                {
+                  externalName: "APP_HOST",
+                  sourceKind: "process-env",
+                  targetPath: ["server", 0, "host"]
                 }
               ]
             }
           ],
           coercionRules: [
             {
-              path: [],
+              path: ["servers", 0, "port"],
               from: "number",
               to: "date",
               onFailure: "throw"
@@ -304,6 +367,7 @@ describe("runCli", () => {
           "pipeline_override_mapping_source_kind_invalid",
           "pipeline_override_mapping_target_path_invalid",
           "pipeline_override_mapping_parse_as_invalid",
+          "pipeline_source_display_name_invalid",
           "pipeline_coercion_rule_path_invalid",
           "pipeline_coercion_rule_from_invalid",
           "pipeline_coercion_rule_to_invalid",
@@ -313,6 +377,71 @@ describe("runCli", () => {
         ])
       );
       expect(report.issues.every((issue) => issue.category === "source-load")).toBe(true);
+    });
+  });
+
+  it("rejects duplicate override target paths before source loading", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "env",
+              kind: "process-env",
+              priority: 10,
+              mappings: [
+                {
+                  externalName: "APP_PORT",
+                  sourceKind: "process-env",
+                  targetPath: ["server", "port"],
+                  parseAs: "number"
+                },
+                {
+                  externalName: "PORT",
+                  sourceKind: "process-env",
+                  targetPath: ["server", "port"],
+                  parseAs: "number"
+                }
+              ]
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {
+          APP_PORT: "8080",
+          PORT: "9000"
+        },
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly status: string;
+        readonly issues: readonly {
+          readonly category: string;
+          readonly code: string;
+          readonly path?: readonly (string | number)[];
+          readonly sourceId?: string;
+        }[];
+      };
+
+      expect(result.exitCode).toBe(2);
+      expect(report.status).toBe("error");
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          category: "source-load",
+          code: "pipeline_override_mapping_target_path_duplicate",
+          sourceId: "env",
+          path: ["sources", 0, "mappings", 1, "targetPath"]
+        })
+      );
     });
   });
 

@@ -1,3 +1,4 @@
+import { cloneConfigValue } from "./path.js";
 import type {
   ConfigIssue,
   ConfigPath,
@@ -25,7 +26,7 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
   for (const validator of input.validators) {
     try {
       const result = await validator.validate({
-        config: input.config,
+        config: freezeConfigValue(cloneConfigValue(input.config)),
         provenance: input.provenance
       });
       if (!isValidatorResult(result)) {
@@ -68,6 +69,24 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
   }
 
   return { issues, provenance };
+}
+
+function freezeConfigValue(value: ConfigValue): ConfigValue {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      freezeConfigValue(item);
+    }
+    return Object.freeze(value);
+  }
+
+  for (const child of Object.values(value)) {
+    freezeConfigValue(child);
+  }
+  return Object.freeze(value);
 }
 
 function normalizeValidatorIssues(validatorId: string, issues: readonly unknown[]): readonly ConfigIssue[] {

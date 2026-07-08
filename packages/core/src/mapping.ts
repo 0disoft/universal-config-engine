@@ -1,4 +1,4 @@
-import { isUnsafePathSegment, setConfigValueAtPath } from "./path.js";
+import { isUnsafePathSegment, pathToKey, setConfigValueAtPath } from "./path.js";
 import type {
   ConfigIssue,
   ConfigSourceDescriptor,
@@ -16,6 +16,7 @@ export interface CreateMappedOverrideSourceInput {
 export function createMappedOverrideSource(input: CreateMappedOverrideSourceInput): LoadedSource {
   const value: Record<string, ConfigValue> = {};
   const issues: ConfigIssue[] = [];
+  const firstMappingByTargetPath = new Map<string, string>();
 
   for (const mapping of input.mappings) {
     if (mapping.sourceKind !== input.descriptor.kind) {
@@ -26,6 +27,21 @@ export function createMappedOverrideSource(input: CreateMappedOverrideSourceInpu
     if (rawValue === undefined) {
       continue;
     }
+
+    const targetPathKey = pathToKey(mapping.targetPath);
+    const previousExternalName = firstMappingByTargetPath.get(targetPathKey);
+    if (previousExternalName !== undefined) {
+      issues.push({
+        category: "mapping",
+        code: "duplicate_mapping_target_path",
+        severity: "error",
+        sourceId: input.descriptor.id,
+        path: mapping.targetPath,
+        message: `Mapping ${mapping.externalName} targets the same path as ${previousExternalName}.`
+      });
+      continue;
+    }
+    firstMappingByTargetPath.set(targetPathKey, mapping.externalName);
 
     const unsafeSegment = mapping.targetPath.find((segment) => isUnsafePathSegment(segment));
     if (unsafeSegment !== undefined) {

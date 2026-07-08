@@ -28,7 +28,7 @@
       "severity": "error",
       "path": ["database", "password"],
       "sourceId": "schema:database",
-      "message": "must NOT have fewer than 64 characters"
+      "message": "Diagnostic message redacted because it is associated with a secret path or source."
     }
   ],
   "provenance": [
@@ -36,7 +36,7 @@
       "path": ["database", "password"],
       "action": "defined",
       "sourceId": "defaults",
-      "message": "Path was defined by source defaults."
+      "message": "Provenance message redacted because it is associated with a secret path or source."
     },
     {
       "path": [],

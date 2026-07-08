@@ -131,7 +131,13 @@ function walk(
   }
 
   if (isPlainConfigObject(value)) {
-    for (const [key, child] of Object.entries(value)) {
+    const entries = Object.entries(value);
+    if (entries.length === 0 && path.length > 0 && emitEntries) {
+      state.entries.push({ path, value: {} });
+      return;
+    }
+
+    for (const [key, child] of entries) {
       state.keyCount += 1;
       const childPath = [...path, key];
 

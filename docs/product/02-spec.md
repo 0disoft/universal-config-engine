@@ -77,11 +77,13 @@ of why each final value exists.
 5. Merge conflicts must be explainable in diagnostics.
 6. Secret values must be redacted by default in CLI and log-oriented output.
 7. Validator adapters must receive normalized config objects, not raw parser text.
+   Validator execution must not mutate the resolved pipeline config.
 8. Adapter failures must preserve source identity and failure category.
 9. Provenance must be produced during resolution, not reconstructed after only the
    final object exists.
 10. Redacted diagnostic structures must avoid storing raw secret values; output-time
-   string replacement is not a sufficient redaction model.
+   string replacement is not a sufficient redaction model. Redaction must cover
+   issue and provenance message text as well as resolved path metadata.
 11. Unsafe path segments must be rejected or escaped before merge or mapping can
    mutate object state.
 12. Resource limits must produce bounded issues instead of unbounded output or

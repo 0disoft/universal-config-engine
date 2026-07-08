@@ -5,7 +5,8 @@ import {
   getConfigValueAtPath,
   loadConfigSources,
   runValidators,
-  resolveConfig
+  resolveConfig,
+  setConfigValueAtPath
 } from "../src/index.js";
 import type { ConfigLoader, LoadedSource, ValidatorResult } from "../src/index.js";
 
@@ -108,6 +109,93 @@ describe("resolveConfig", () => {
     );
   });
 
+  it("rejects unsafe public path writes before they can mutate object prototypes", () => {
+    expect(() => setConfigValueAtPath({}, ["__proto__", "polluted"], true)).toThrow(/Unsafe config path segment/);
+    expect(Object.prototype).not.toHaveProperty("polluted");
+  });
+
+  it("removes stale child resolved paths when a parent value replaces an object shape", () => {
+    const result = resolveConfig({
+      sources: [
+        source("defaults", 0, {
+          server: {
+            port: 3000
+          }
+        }),
+        source("env", 10, {
+          server: "disabled"
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({
+      server: "disabled"
+    });
+    expect(result.resolvedPaths).toContainEqual(
+      expect.objectContaining({
+        path: ["server"],
+        winningSourceId: "env",
+        overriddenSourceIds: ["defaults"]
+      })
+    );
+    expect(result.resolvedPaths).not.toContainEqual(
+      expect.objectContaining({
+        path: ["server", "port"]
+      })
+    );
+  });
+
+  it("removes stale parent resolved paths when a child path replaces a scalar shape", () => {
+    const result = resolveConfig({
+      sources: [
+        source("defaults", 0, {
+          server: "disabled"
+        }),
+        source("env", 10, {
+          server: {
+            port: 8080
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({
+      server: {
+        port: 8080
+      }
+    });
+    expect(result.resolvedPaths).toContainEqual(
+      expect.objectContaining({
+        path: ["server", "port"],
+        winningSourceId: "env",
+        overriddenSourceIds: ["defaults"]
+      })
+    );
+    expect(result.resolvedPaths).not.toContainEqual(
+      expect.objectContaining({
+        path: ["server"]
+      })
+    );
+  });
+
+  it("preserves explicitly declared empty object values", () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { plugins: {} })]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({ plugins: {} });
+    expect(getConfigValueAtPath(result.config, ["plugins"])).toEqual({});
+    expect(result.resolvedPaths).toContainEqual(
+      expect.objectContaining({
+        path: ["plugins"],
+        winningSourceId: "defaults"
+      })
+    );
+  });
+
   it("bounds resource-limit failures", () => {
     const result = resolveConfig({
       sources: [source("too-deep", 1, { a: { b: { c: true } } })],
@@ -122,6 +210,57 @@ describe("resolveConfig", () => {
         category: "resource-limit",
         code: "max_depth_exceeded",
         path: ["a", "b"]
+      })
+    );
+  });
+
+  it("marks diagnostics when source issues are truncated", () => {
+    const result = resolveConfig({
+      sources: [
+        {
+          descriptor: {
+            id: "adapter",
+            kind: "adapter",
+            priority: 0,
+            displayName: "adapter"
+          },
+          value: {},
+          issues: [
+            {
+              category: "source-load",
+              code: "first",
+              severity: "error",
+              sourceId: "adapter",
+              message: "first issue"
+            },
+            {
+              category: "source-load",
+              code: "second",
+              severity: "error",
+              sourceId: "adapter",
+              message: "second issue"
+            },
+            {
+              category: "source-load",
+              code: "third",
+              severity: "error",
+              sourceId: "adapter",
+              message: "third issue"
+            }
+          ]
+        }
+      ],
+      limits: {
+        maxDiagnostics: 2
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toHaveLength(2);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        category: "resource-limit",
+        code: "max_diagnostics_exceeded"
       })
     );
   });
@@ -263,6 +402,38 @@ describe("resolveConfig", () => {
       sourceId: "typed-output",
       message: "Validator typed-output completed with status ok."
     });
+  });
+
+  it("blocks validators from mutating the pipeline config object", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "mutating-validator",
+          validate(input) {
+            (getConfigValueAtPath(input.config, ["server"]) as { port: number }).port = 9000;
+            return {
+              ok: true,
+              value: input.config,
+              issues: []
+            };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toContainEqual(
+      expect.objectContaining({
+        category: "validation",
+        code: "validator_threw",
+        sourceId: "mutating-validator"
+      })
+    );
+    expect(getConfigValueAtPath(result.config, ["server", "port"])).toBe(3000);
   });
 
   it("normalizes malformed validator results and issues", async () => {
@@ -524,5 +695,57 @@ describe("buildDiagnosticReport", () => {
     });
     expect(reportText).not.toContain("example-secret-value");
     expect(reportText).not.toContain("db.internal");
+  });
+
+  it("redacts issue and provenance messages associated with secret paths", () => {
+    const result = resolveConfig({
+      sources: [
+        {
+          descriptor: {
+            id: "defaults",
+            kind: "object",
+            priority: 0,
+            displayName: "defaults",
+            redaction: {
+              secretPaths: [["database", "password"]]
+            }
+          },
+          value: {
+            database: {
+              password: "example-secret-value"
+            }
+          },
+          issues: [
+            {
+              category: "source-load",
+              code: "secret_parse_failed",
+              severity: "warning",
+              sourceId: "defaults",
+              path: ["database", "password"],
+              message: "failed while handling example-secret-value",
+              details: {
+                raw: "example-secret-value"
+              }
+            }
+          ]
+        }
+      ]
+    });
+    const report = buildDiagnosticReport(result);
+    const reportText = JSON.stringify(report);
+
+    expect(reportText).not.toContain("example-secret-value");
+    expect(report.issues).toContainEqual(
+      expect.objectContaining({
+        code: "secret_parse_failed",
+        message: "Diagnostic message redacted because it is associated with a secret path or source."
+      })
+    );
+    expect(report.provenance).toContainEqual(
+      expect.objectContaining({
+        path: ["database", "password"],
+        message: "Provenance message redacted because it is associated with a secret path or source."
+      })
+    );
   });
 });

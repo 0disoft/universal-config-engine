@@ -25,6 +25,11 @@ JSON output should be stable enough for CI and agent usage. It may include paths
 source names, diagnostics, and redaction reasons. It must not include raw secret
 values by default.
 
+Secret redaction applies to resolved path metadata, validation/source issues, and
+provenance messages. If an issue or provenance event is associated with a secret
+path or secret source, human-readable message text and issue details are replaced
+with redacted diagnostic text before JSON output is produced.
+
 Redacted JSON is secret-safe, not public-safe. It may still reveal source ids, env var
 names, file paths, config paths, internal host labels, or service names. Documentation
 and issue templates must tell users not to paste real reports publicly without review.

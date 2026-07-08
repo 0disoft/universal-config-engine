@@ -14,6 +14,7 @@ import type {
   RedactionPolicyInput,
   SourceKind
 } from "@0disoft/universal-config-engine-core";
+import { pathsEqual } from "@0disoft/universal-config-engine-core";
 import type {
   PipelineDeclaration,
   PipelineSourceDeclaration
@@ -151,6 +152,7 @@ export async function loadDeclaredSources(input: {
 }
 
 function createDescriptor(source: PipelineSourceDeclaration): ConfigSourceDescriptor {
+  const redaction = mergeSourceRedactionWithSecretMappings(source);
   const base = {
     id: source.id,
     kind: source.kind as SourceKind,
@@ -158,12 +160,38 @@ function createDescriptor(source: PipelineSourceDeclaration): ConfigSourceDescri
     displayName: source.displayName ?? source.id
   };
 
-  return source.redaction === undefined
+  return redaction === undefined
     ? base
     : {
         ...base,
-        redaction: source.redaction as RedactionPolicyInput
+        redaction
       };
+}
+
+function mergeSourceRedactionWithSecretMappings(source: PipelineSourceDeclaration): RedactionPolicyInput | undefined {
+  const declaredRedaction = source.redaction as RedactionPolicyInput | undefined;
+  const secretMappingPaths =
+    "mappings" in source && Array.isArray(source.mappings)
+      ? source.mappings
+          .filter((mapping) => mapping.secret === true)
+          .map((mapping) => mapping.targetPath)
+      : [];
+
+  if (declaredRedaction === undefined && secretMappingPaths.length === 0) {
+    return undefined;
+  }
+
+  const secretPaths: ConfigPath[] = [];
+  for (const path of [...(declaredRedaction?.secretPaths ?? []), ...secretMappingPaths]) {
+    if (!secretPaths.some((existing) => pathsEqual(existing, path))) {
+      secretPaths.push(path);
+    }
+  }
+
+  return {
+    ...(declaredRedaction ?? {}),
+    ...(secretPaths.length === 0 ? {} : { secretPaths })
+  };
 }
 
 function resolveConfigRelativePath(configPath: string, cwd: string, targetPath: string): string {
@@ -334,6 +362,17 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
     );
   }
 
+  if (source.displayName !== undefined && (typeof source.displayName !== "string" || source.displayName.length === 0)) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_source_display_name_invalid",
+        path: sourcePath("displayName"),
+        sourceId,
+        message: "Pipeline source displayName must be a non-empty string when provided."
+      })
+    );
+  }
+
   switch (source.kind) {
     case "object":
       if (!("value" in source)) {
@@ -385,6 +424,7 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
         for (const [mappingIndex, mapping] of source.mappings.entries()) {
           issues.push(...validateOverrideMappingDeclaration(mapping, source.kind, [...sourcePath("mappings"), mappingIndex], sourceId));
         }
+        issues.push(...validateUniqueMappingTargetPaths(source.mappings, sourcePath("mappings"), sourceId));
       }
       break;
   }
@@ -473,13 +513,13 @@ function validateOverrideMappingDeclaration(
     );
   }
 
-  if (!isConfigPath(mapping.targetPath)) {
+  if (!isStringOnlyConfigPath(mapping.targetPath)) {
     issues.push(
       pipelineDeclarationIssue({
         code: "pipeline_override_mapping_target_path_invalid",
         path: fieldPath("targetPath"),
         sourceId,
-        message: "Override mapping targetPath must be a non-empty path array of strings or numbers."
+        message: "Override mapping targetPath must be a non-empty path array of strings."
       })
     );
   }
@@ -525,12 +565,12 @@ function validateCoercionRuleDeclaration(rule: unknown, index: number): readonly
   const fieldPath = (field: string): ConfigPath => [...path, field];
   issues.push(...validateAllowedFields(rule, COERCION_RULE_FIELDS, path, "pipeline_coercion_rule_unknown_field"));
 
-  if (!isConfigPath(rule.path)) {
+  if (!isStringOnlyConfigPath(rule.path)) {
     issues.push(
       pipelineDeclarationIssue({
         code: "pipeline_coercion_rule_path_invalid",
         path: fieldPath("path"),
-        message: "Coercion rule path must be a non-empty path array of strings or numbers."
+        message: "Coercion rule path must be a non-empty path array of strings."
       })
     );
   }
@@ -824,6 +864,40 @@ function validateDisjointDeclarationIds(
   return issues;
 }
 
+function validateUniqueMappingTargetPaths(
+  mappings: readonly unknown[],
+  path: ConfigPath,
+  sourceId: string | undefined
+): readonly ConfigIssue[] {
+  const seenTargetPaths: { readonly index: number; readonly targetPath: ConfigPath }[] = [];
+  const issues: ConfigIssue[] = [];
+
+  for (const [index, mapping] of mappings.entries()) {
+    if (!isRecord(mapping) || !isStringOnlyConfigPath(mapping.targetPath)) {
+      continue;
+    }
+
+    const targetPath = mapping.targetPath;
+    const existing = seenTargetPaths.find((candidate) => pathsEqual(candidate.targetPath, targetPath));
+
+    if (existing === undefined) {
+      seenTargetPaths.push({ index, targetPath });
+      continue;
+    }
+
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_override_mapping_target_path_duplicate",
+        path: [...path, index, "targetPath"],
+        sourceId,
+        message: `Override mapping targetPath duplicates mappings.${existing.index}.targetPath.`
+      })
+    );
+  }
+
+  return issues;
+}
+
 function unionAllowedFields(left: ReadonlySet<string>, right: ReadonlySet<string>): ReadonlySet<string> {
   return new Set([...left, ...right]);
 }
@@ -846,4 +920,8 @@ function isConfigPath(value: unknown): value is ConfigPath {
     value.length > 0 &&
     value.every((segment) => typeof segment === "string" || typeof segment === "number")
   );
+}
+
+function isStringOnlyConfigPath(value: unknown): value is ConfigPath {
+  return Array.isArray(value) && value.length > 0 && value.every((segment) => typeof segment === "string");
 }

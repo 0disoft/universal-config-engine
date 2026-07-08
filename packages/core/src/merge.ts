@@ -1,5 +1,5 @@
 import { applyCoercionRules } from "./coercion.js";
-import { getConfigValueAtPath, pathToKey, setConfigValueAtPath } from "./path.js";
+import { getConfigValueAtPath, pathToKey, pathsEqual, setConfigValueAtPath } from "./path.js";
 import { flattenConfigObject } from "./value.js";
 import type {
   ConfigIssue,
@@ -142,11 +142,14 @@ function applyEntry(input: {
   const pathKey = pathToKey(input.entryPath);
   const existingResolved = input.resolvedByPath.get(pathKey);
   const existingValue = getConfigValueAtPath(input.config, input.entryPath);
+  const relatedResolved = findRelatedResolvedPaths(input.resolvedByPath, input.entryPath);
 
   if (
-    existingResolved !== undefined &&
-    existingResolved.winningPriority === input.descriptor.priority &&
-    existingResolved.winningSourceId !== input.descriptor.id
+    relatedResolved.some(
+      ({ resolved }) =>
+        resolved.winningPriority === input.descriptor.priority &&
+        resolved.winningSourceId !== input.descriptor.id
+    )
   ) {
     input.issues.push({
       category: "merge",
@@ -154,9 +157,9 @@ function applyEntry(input: {
       severity: "error",
       path: input.entryPath,
       sourceId: input.descriptor.id,
-      message: "Two sources with the same priority wrote the same config path.",
+      message: "Two sources with the same priority wrote the same or overlapping config path.",
       details: {
-        previousSourceId: existingResolved.winningSourceId,
+        previousSourceId: relatedResolved[0]?.resolved.winningSourceId ?? existingResolved?.winningSourceId ?? "",
         priority: input.descriptor.priority
       }
     });
@@ -176,7 +179,7 @@ function applyEntry(input: {
     return;
   }
 
-  if (existingValue === undefined || existingResolved === undefined) {
+  if (relatedResolved.length === 0 && existingValue === undefined) {
     input.provenance.push({
       path: input.entryPath,
       action: "defined",
@@ -193,13 +196,20 @@ function applyEntry(input: {
     return;
   }
 
-  const overriddenSourceIds = [...existingResolved.overriddenSourceIds, existingResolved.winningSourceId];
+  const overriddenSourceIds = collectOverriddenSourceIds(relatedResolved, input.descriptor.id);
+  for (const { key } of relatedResolved) {
+    input.resolvedByPath.delete(key);
+  }
+  const previousSourceId = overriddenSourceIds[0];
   input.provenance.push({
     path: input.entryPath,
     action: "overridden",
     sourceId: input.descriptor.id,
-    previousSourceId: existingResolved.winningSourceId,
-    message: `Source ${input.descriptor.id} overrode source ${existingResolved.winningSourceId}.`
+    ...(previousSourceId === undefined ? {} : { previousSourceId }),
+    message:
+      previousSourceId === undefined
+        ? `Source ${input.descriptor.id} replaced an overlapping config shape.`
+        : `Source ${input.descriptor.id} overrode source ${previousSourceId}.`
   });
   input.resolvedByPath.set(pathKey, {
     path: input.entryPath,
@@ -210,16 +220,56 @@ function applyEntry(input: {
   });
 }
 
+function findRelatedResolvedPaths(
+  resolvedByPath: ReadonlyMap<string, MutableResolvedPath>,
+  path: readonly (string | number)[]
+): readonly { readonly key: string; readonly resolved: MutableResolvedPath }[] {
+  return Array.from(resolvedByPath.entries())
+    .filter(([, resolved]) => pathsOverlap(resolved.path, path))
+    .map(([key, resolved]) => ({ key, resolved }));
+}
+
+function pathsOverlap(left: readonly (string | number)[], right: readonly (string | number)[]): boolean {
+  return pathsEqual(left, right) || isPathPrefix(left, right) || isPathPrefix(right, left);
+}
+
+function isPathPrefix(prefix: readonly (string | number)[], path: readonly (string | number)[]): boolean {
+  return prefix.length < path.length && prefix.every((segment, index) => segment === path[index]);
+}
+
+function collectOverriddenSourceIds(
+  relatedResolved: readonly { readonly resolved: MutableResolvedPath }[],
+  currentSourceId: string
+): string[] {
+  const sourceIds = new Set<string>();
+
+  for (const { resolved } of relatedResolved) {
+    for (const sourceId of [...resolved.overriddenSourceIds, resolved.winningSourceId]) {
+      if (sourceId !== currentSourceId) {
+        sourceIds.add(sourceId);
+      }
+    }
+  }
+
+  return [...sourceIds];
+}
+
 function pushBoundedIssues(
   destination: ConfigIssue[],
   nextIssues: readonly ConfigIssue[],
   limits: ResourceLimitPolicy
 ): void {
-  for (const issue of nextIssues) {
-    if (destination.length >= limits.maxDiagnostics) {
+  const maxDiagnostics = Math.max(1, limits.maxDiagnostics);
+  for (const [index, issue] of nextIssues.entries()) {
+    if (destination.length >= maxDiagnostics) {
+      replaceLastIssueWithDiagnosticsExceededMarker(destination, limits);
       return;
     }
     destination.push(issue);
+    if (index < nextIssues.length - 1 && destination.length >= maxDiagnostics) {
+      replaceLastIssueWithDiagnosticsExceededMarker(destination, limits);
+      return;
+    }
   }
 }
 
@@ -237,4 +287,24 @@ function limitDiagnostics(issues: readonly ConfigIssue[], limits: ResourceLimitP
       message: `Diagnostics exceeded the maximum of ${limits.maxDiagnostics}.`
     }
   ];
+}
+
+function replaceLastIssueWithDiagnosticsExceededMarker(issues: ConfigIssue[], limits: ResourceLimitPolicy): void {
+  if (issues.some((issue) => issue.category === "resource-limit" && issue.code === "max_diagnostics_exceeded")) {
+    return;
+  }
+
+  const marker: ConfigIssue = {
+    category: "resource-limit",
+    code: "max_diagnostics_exceeded",
+    severity: "error",
+    message: `Diagnostics exceeded the maximum of ${limits.maxDiagnostics}.`
+  };
+
+  if (issues.length === 0) {
+    issues.push(marker);
+    return;
+  }
+
+  issues[issues.length - 1] = marker;
 }

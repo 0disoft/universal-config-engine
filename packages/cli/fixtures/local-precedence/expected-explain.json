@@ -27,11 +27,12 @@
   ],
   "resolvedPaths": [
     {
-      "path": ["service", "host"],
+      "path": ["service", "credential"],
       "status": "resolved",
-      "winningSourceId": "cli",
-      "overriddenSourceIds": ["defaults"],
-      "redacted": false
+      "winningSourceId": "defaults",
+      "overriddenSourceIds": [],
+      "redacted": true,
+      "redactionReason": "secret-path"
     },
     {
       "path": ["service", "port"],
@@ -41,17 +42,16 @@
       "redacted": false
     },
     {
-      "path": ["service", "credential"],
-      "status": "resolved",
-      "winningSourceId": "defaults",
-      "overriddenSourceIds": [],
-      "redacted": true,
-      "redactionReason": "secret-path"
-    },
-    {
       "path": ["features", "cache"],
       "status": "resolved",
       "winningSourceId": "runtime-env",
+      "overriddenSourceIds": ["defaults"],
+      "redacted": false
+    },
+    {
+      "path": ["service", "host"],
+      "status": "resolved",
+      "winningSourceId": "cli",
       "overriddenSourceIds": ["defaults"],
       "redacted": false
     }
@@ -74,7 +74,7 @@
       "path": ["service", "credential"],
       "action": "defined",
       "sourceId": "defaults",
-      "message": "Path was defined by source defaults."
+      "message": "Provenance message redacted because it is associated with a secret path or source."
     },
     {
       "path": ["features", "cache"],
