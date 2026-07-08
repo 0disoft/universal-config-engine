@@ -807,4 +807,66 @@ describe("buildDiagnosticReport", () => {
       })
     );
   });
+
+  it("keeps default secret-name regex patterns working", () => {
+    const result = resolveConfig({
+      sources: [
+        {
+          descriptor: {
+            id: "defaults",
+            kind: "object",
+            priority: 0,
+            displayName: "defaults"
+          },
+          value: {
+            service: {
+              "api-key": "example-secret-value"
+            }
+          }
+        }
+      ]
+    });
+    const report = buildDiagnosticReport(result);
+
+    expect(report.resolvedPaths).toContainEqual(
+      expect.objectContaining({
+        path: ["service", "api-key"],
+        redacted: true,
+        redactionReason: "secret-name"
+      })
+    );
+  });
+
+  it("falls back to literal matching for risky secret-name patterns", () => {
+    const result = resolveConfig({
+      sources: [
+        {
+          descriptor: {
+            id: "defaults",
+            kind: "object",
+            priority: 0,
+            displayName: "defaults",
+            redaction: {
+              secretNamePatterns: ["(a+)+$"]
+            }
+          },
+          value: {
+            service: {
+              "(a+)+$": "example-secret-value"
+            }
+          }
+        }
+      ]
+    });
+    const report = buildDiagnosticReport(result);
+
+    expect(report.resolvedPaths).toContainEqual(
+      expect.objectContaining({
+        path: ["service", "(a+)+$"],
+        redacted: true,
+        redactionReason: "secret-name"
+      })
+    );
+    expect(JSON.stringify(report)).not.toContain("example-secret-value");
+  });
 });

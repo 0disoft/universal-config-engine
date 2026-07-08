@@ -19,10 +19,23 @@ export const DEFAULT_SECRET_NAME_PATTERNS: readonly string[] = [
   "credential"
 ];
 
+const MAX_SECRET_NAME_PATTERN_LENGTH = 128;
+const MAX_REDACTION_MATCH_INPUT_LENGTH = 512;
+
 export interface BuildDiagnosticReportOptions {
   readonly secretPaths?: readonly ConfigPath[];
   readonly secretSourceIds?: readonly string[];
   readonly secretNamePatterns?: readonly string[];
+}
+
+interface RedactionContext {
+  readonly options: BuildDiagnosticReportOptions;
+  readonly patternCache: Map<string, PatternMatcher>;
+}
+
+interface PatternMatcher {
+  readonly rawLower: string;
+  readonly regex?: RegExp;
 }
 
 export function buildDiagnosticReport(
@@ -30,6 +43,10 @@ export function buildDiagnosticReport(
   options: BuildDiagnosticReportOptions = {}
 ): DiagnosticReport {
   const sourceById = new Map(result.sources.map((source) => [source.id, source]));
+  const redactionContext: RedactionContext = {
+    options,
+    patternCache: new Map()
+  };
   const sourceIdsWithErrors = new Set(
     result.issues
       .filter((issue) => issue.severity === "error" && issue.sourceId !== undefined)
@@ -47,10 +64,10 @@ export function buildDiagnosticReport(
       status: sourceIdsWithErrors.has(source.id) ? "failed" : "loaded"
     })),
     resolvedPaths: result.resolvedPaths.map((resolvedPath) =>
-      buildResolvedPathReport(resolvedPath, sourceById, options)
+      buildResolvedPathReport(resolvedPath, sourceById, redactionContext)
     ),
-    issues: result.issues.map((issue) => sanitizeIssue(issue, sourceById, options)),
-    provenance: result.provenance.map((event) => sanitizeProvenance(event, sourceById, options)),
+    issues: result.issues.map((issue) => sanitizeIssue(issue, sourceById, redactionContext)),
+    provenance: result.provenance.map((event) => sanitizeProvenance(event, sourceById, redactionContext)),
     limits: result.limits
   };
 }
@@ -58,10 +75,10 @@ export function buildDiagnosticReport(
 function buildResolvedPathReport(
   resolvedPath: ResolvedPath,
   sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
-  options: BuildDiagnosticReportOptions
+  redactionContext: RedactionContext
 ): DiagnosticReportResolvedPath {
   const winningSource = sourceById.get(resolvedPath.winningSourceId);
-  const redaction = getRedaction(resolvedPath.path, winningSource, options);
+  const redaction = getRedaction(resolvedPath.path, winningSource, redactionContext);
 
   if (redaction.redacted) {
     return {
@@ -86,9 +103,9 @@ function buildResolvedPathReport(
 function sanitizeIssue(
   issue: ConfigIssue,
   sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
-  options: BuildDiagnosticReportOptions
+  redactionContext: RedactionContext
 ): ConfigIssue {
-  if (!shouldSanitizeDiagnostic(issue.path, issue.sourceId, sourceById, options)) {
+  if (!shouldSanitizeDiagnostic(issue.path, issue.sourceId, sourceById, redactionContext)) {
     return issue;
   }
 
@@ -105,9 +122,9 @@ function sanitizeIssue(
 function sanitizeProvenance(
   event: ProvenanceEvent,
   sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
-  options: BuildDiagnosticReportOptions
+  redactionContext: RedactionContext
 ): ProvenanceEvent {
-  if (!shouldSanitizeDiagnostic(event.path, event.sourceId, sourceById, options)) {
+  if (!shouldSanitizeDiagnostic(event.path, event.sourceId, sourceById, redactionContext)) {
     return event;
   }
 
@@ -124,49 +141,49 @@ function shouldSanitizeDiagnostic(
   path: ConfigPath | undefined,
   sourceId: string | undefined,
   sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
-  options: BuildDiagnosticReportOptions
+  redactionContext: RedactionContext
 ): boolean {
   const source = sourceId === undefined ? undefined : sourceById.get(sourceId);
-  if (source?.redaction?.secretSource === true || options.secretSourceIds?.includes(sourceId ?? "")) {
+  if (source?.redaction?.secretSource === true || redactionContext.options.secretSourceIds?.includes(sourceId ?? "")) {
     return true;
   }
 
-  return path === undefined ? false : getRedactionForAnySource(path, sourceById, options).redacted;
+  return path === undefined ? false : getRedactionForAnySource(path, sourceById, redactionContext).redacted;
 }
 
 function getRedactionForAnySource(
   path: ConfigPath,
   sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
-  options: BuildDiagnosticReportOptions
+  redactionContext: RedactionContext
 ): { readonly redacted: boolean; readonly reason?: string } {
   for (const source of sourceById.values()) {
-    const redaction = getRedaction(path, source, options);
+    const redaction = getRedaction(path, source, redactionContext);
     if (redaction.redacted) {
       return redaction;
     }
   }
 
-  return getRedaction(path, undefined, options);
+  return getRedaction(path, undefined, redactionContext);
 }
 
 function getRedaction(
   path: ConfigPath,
   source: ConfigSourceDescriptor | undefined,
-  options: BuildDiagnosticReportOptions
+  redactionContext: RedactionContext
 ): { readonly redacted: boolean; readonly reason?: string } {
-  if (source?.redaction?.secretSource === true || options.secretSourceIds?.includes(source?.id ?? "")) {
+  if (source?.redaction?.secretSource === true || redactionContext.options.secretSourceIds?.includes(source?.id ?? "")) {
     return { redacted: true, reason: "secret-source" };
   }
 
-  if (matchesAnyPath(path, source?.redaction) || matchesAnyPath(path, options)) {
+  if (matchesAnyPath(path, source?.redaction) || matchesAnyPath(path, redactionContext.options)) {
     return { redacted: true, reason: "secret-path" };
   }
 
-  if (matchesNamePattern(path, source?.redaction?.secretNamePatterns ?? options.secretNamePatterns)) {
+  if (matchesNamePattern(path, source?.redaction?.secretNamePatterns ?? redactionContext.options.secretNamePatterns, redactionContext)) {
     return { redacted: true, reason: "secret-name" };
   }
 
-  if (matchesNamePattern(path, DEFAULT_SECRET_NAME_PATTERNS)) {
+  if (matchesNamePattern(path, DEFAULT_SECRET_NAME_PATTERNS, redactionContext)) {
     return { redacted: true, reason: "secret-name" };
   }
 
@@ -180,7 +197,11 @@ function matchesAnyPath(
   return policy?.secretPaths?.some((secretPath) => pathsEqual(path, secretPath)) ?? false;
 }
 
-function matchesNamePattern(path: ConfigPath, patterns: readonly string[] | undefined): boolean {
+function matchesNamePattern(
+  path: ConfigPath,
+  patterns: readonly string[] | undefined,
+  redactionContext: RedactionContext
+): boolean {
   if (patterns === undefined || patterns.length === 0) {
     return false;
   }
@@ -188,13 +209,60 @@ function matchesNamePattern(path: ConfigPath, patterns: readonly string[] | unde
   const pathName = path.map(String).join(".");
   const lastSegment = String(path[path.length - 1] ?? "");
 
-  return patterns.some((pattern) => safePatternMatches(pattern, pathName) || safePatternMatches(pattern, lastSegment));
+  return patterns.some(
+    (pattern) =>
+      safePatternMatches(pattern, pathName, redactionContext) ||
+      safePatternMatches(pattern, lastSegment, redactionContext)
+  );
 }
 
-function safePatternMatches(pattern: string, value: string): boolean {
-  try {
-    return new RegExp(pattern, "i").test(value);
-  } catch {
-    return value.toLowerCase().includes(pattern.toLowerCase());
+function safePatternMatches(pattern: string, value: string, redactionContext: RedactionContext): boolean {
+  const matcher = getPatternMatcher(pattern, redactionContext.patternCache);
+  const matchInput = boundPatternInput(value);
+
+  if (matcher.regex !== undefined) {
+    return matcher.regex.test(matchInput);
   }
+
+  return value.toLowerCase().includes(matcher.rawLower);
+}
+
+function getPatternMatcher(pattern: string, patternCache: Map<string, PatternMatcher>): PatternMatcher {
+  const cached = patternCache.get(pattern);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const matcher = compilePatternMatcher(pattern);
+  patternCache.set(pattern, matcher);
+  return matcher;
+}
+
+function compilePatternMatcher(pattern: string): PatternMatcher {
+  const rawLower = pattern.toLowerCase();
+  if (pattern.length > MAX_SECRET_NAME_PATTERN_LENGTH || hasNestedQuantifier(pattern)) {
+    return { rawLower };
+  }
+
+  try {
+    return {
+      rawLower,
+      regex: new RegExp(pattern, "i")
+    };
+  } catch {
+    return { rawLower };
+  }
+}
+
+function hasNestedQuantifier(pattern: string): boolean {
+  return /\([^)]*[+*{][^)]*\)[+*{]/.test(pattern);
+}
+
+function boundPatternInput(value: string): string {
+  if (value.length <= MAX_REDACTION_MATCH_INPUT_LENGTH) {
+    return value;
+  }
+
+  const half = MAX_REDACTION_MATCH_INPUT_LENGTH / 2;
+  return `${value.slice(0, half)}${value.slice(-half)}`;
 }
