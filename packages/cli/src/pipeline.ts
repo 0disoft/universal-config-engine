@@ -508,10 +508,6 @@ async function resolveConfigRelativePath(input: {
       ? resolve(input.targetPath)
       : resolve(configDirectory, input.targetPath);
 
-  if (!isInsideOrEqualPath(configDirectory, resolvedTargetPath)) {
-    return outsideConfigDirectoryResult(input);
-  }
-
   const canonicalTargetPath = await canonicalizeExistingPath(resolvedTargetPath);
   if (!isInsideOrEqualPath(configDirectory, canonicalTargetPath)) {
     return outsideConfigDirectoryResult(input);

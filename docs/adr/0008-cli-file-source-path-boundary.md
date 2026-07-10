@@ -29,6 +29,8 @@ For `json-file` and `dotenv-file` sources:
 - the declaration and existing source paths are compared by canonical filesystem
   path, so symbolic links and Windows junctions cannot redirect a source outside
   the declaration directory;
+- equivalent filesystem aliases for the same canonical declaration directory are
+  accepted;
 - rejected file source paths produce exit code `2`.
 
 This rule applies before JSON or dotenv parsing and before config merge.

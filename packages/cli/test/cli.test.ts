@@ -363,6 +363,52 @@ describe("runCli", () => {
     });
   });
 
+  it("allows an internal absolute source through a declaration directory alias", async () => {
+    await withTempDir(async (dir) => {
+      const projectDir = join(dir, "project");
+      const aliasDir = join(dir, "project-alias");
+      await mkdir(projectDir);
+      await writeFile(join(projectDir, "config.json"), JSON.stringify({ server: { port: 3000 } }), "utf8");
+      await writeFile(
+        join(projectDir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "file",
+              kind: "json-file",
+              priority: 0,
+              path: join(aliasDir, "config.json")
+            }
+          ]
+        }),
+        "utf8"
+      );
+      await symlink(projectDir, aliasDir, "junction");
+
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json", "--json"], {
+        cwd: aliasDir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly status: string;
+        readonly resolvedPaths: readonly { readonly path: readonly string[] }[];
+      };
+
+      expect(result.exitCode).toBe(0);
+      expect(report.status).toBe("ok");
+      expect(report.resolvedPaths).toContainEqual(
+        expect.objectContaining({
+          path: ["server", "port"]
+        })
+      );
+    });
+  });
+
   it("passes argv source values only after the separator", async () => {
     await withTempDir(async (dir) => {
       await writeFile(
