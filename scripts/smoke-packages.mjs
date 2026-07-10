@@ -254,9 +254,13 @@ function packageTarballPath(packageName) {
 
 function runPnpm(args, cwd = root) {
   if (pnpmExecPath !== undefined && pnpmExecPath.length > 0) {
-    execFileSync(process.execPath, [pnpmExecPath, ...args], {
+    const isJavaScriptCli = /\.(?:cjs|mjs|js)$/i.test(pnpmExecPath);
+    const command = isJavaScriptCli ? process.execPath : pnpmExecPath;
+    const commandArgs = isJavaScriptCli ? [pnpmExecPath, ...args] : args;
+    execFileSync(command, commandArgs, {
       cwd,
-      stdio: "inherit"
+      stdio: "inherit",
+      shell: process.platform === "win32" && /\.(?:bat|cmd)$/i.test(command)
     });
     return;
   }
