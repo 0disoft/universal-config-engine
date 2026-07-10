@@ -11,7 +11,7 @@ import type {
   ValidatorResult
 } from "./types.js";
 
-const VALIDATOR_ISSUE_CODE_PATTERN = /^[a-z][a-z0-9_.:-]{0,127}$/;
+const VALIDATOR_ISSUE_CODE_PATTERN = /^[A-Za-z][A-Za-z0-9_.:-]{0,127}$/;
 
 export interface RunValidatorsInput {
   readonly config: ConfigValue;

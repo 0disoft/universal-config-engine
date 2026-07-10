@@ -18,7 +18,7 @@ diagnostic reports.
 
 Validator adapters return `ValidatorIssue` values. The authoritative fields are:
 
-- `code`: stable validator-specific lowercase ASCII machine identifier, starting
+- `code`: stable validator-specific ASCII machine identifier, starting
   with a letter and limited to 128 characters;
 - `severity`: `error` or `warning`;
 - `path`: optional normalized config path.
@@ -37,7 +37,7 @@ Thrown exception text and validator-provided free-form text must not enter publi
 issues, reports, provenance, snapshots, or CLI output. A future removal of the
 legacy compatibility fields requires a deliberate semver review.
 
-Codes that do not match `[a-z][a-z0-9_.:-]{0,127}` are malformed validator issues.
+Codes that do not match `[A-Za-z][A-Za-z0-9_.:-]{0,127}` are malformed validator issues.
 This prevents whitespace, assignment syntax, and arbitrary diagnostic prose from
 being smuggled through the machine-code field.
 
