@@ -39,7 +39,8 @@ state after `pnpm run clean:build`.
 
 ## Hosted Workflow
 
-GitHub Actions runs `.github/workflows/ci.yml` on `main` pushes and pull requests. The workflow:
+GitHub Actions runs `.github/workflows/ci.yml` on `main` pushes and pull requests.
+The existing `check` job remains the Ubuntu compatibility gate and:
 
 - checks out the repository
 - installs Node.js 24.11.1
@@ -50,10 +51,16 @@ GitHub Actions runs `.github/workflows/ci.yml` on `main` pushes and pull request
 - runs `pnpm run smoke:packages`
 - runs `git diff --check`
 
+The `windows-check` job uses the same pinned Node.js and pnpm versions on
+`windows-latest`. It runs the repository check, packed workspace package smoke, and
+diff hygiene. The Ubuntu job name remains stable for existing branch protection;
+Windows coverage is a separate status that can be made required without renaming
+the existing gate.
+
 ## Validation
 
 - Required validation names: typecheck, test, smoke, check.
 - Release blocker status: public API, CLI, or package-surface changes are blocked when local `check`,
   smoke, or hosted CI fails.
-- Remaining operational risk: hosted CI covers one Ubuntu runner; future OS-specific file-system,
-  environment, or shell behavior still needs targeted validation before release.
+- Remaining operational risk: publication still runs on Ubuntu. Windows CI covers
+  package behavior and smoke installation, but not the Trusted Publisher release job.
