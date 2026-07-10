@@ -21,6 +21,8 @@ one parser, one validator, one framework, or one remote service.
 
 - Parser compatibility is owned by loader adapters.
 - Validator compatibility is owned by validator adapters.
+- Packed-package smoke validation compiles and runs a pre-0.3
+  `ConfigIssue[]`-returning validator fixture against the current core types.
 - Runtime compatibility floor is Node.js `>=24`.
 - Package module format is ESM.
 - CLI JSON output compatibility is governed by `docs/cli/output-and-exit-codes.md`.

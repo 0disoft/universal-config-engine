@@ -155,6 +155,8 @@ function smokeConsumerInstall(tarballs) {
   );
   copyFileSync(join(root, "examples", "uce.json"), join(consumerDir, "uce.json"));
   copyFileSync(join(root, "examples", "basic-library.mjs"), join(consumerDir, "basic-library.mjs"));
+  copyFileSync(join(root, "fixtures", "consumer", "validator-0.2.ts"), join(consumerDir, "validator-0.2.ts"));
+  copyFileSync(join(root, "fixtures", "consumer", "tsconfig.json"), join(consumerDir, "tsconfig.json"));
   writeFileSync(
     join(consumerDir, "consumer-smoke.mjs"),
     [
@@ -197,6 +199,18 @@ function smokeConsumerInstall(tarballs) {
     throw new Error("Installed basic library example failed.");
   }
   execFileSync(process.execPath, [join(consumerDir, "consumer-smoke.mjs")], {
+    cwd: consumerDir,
+    stdio: "inherit"
+  });
+  execFileSync(
+    process.execPath,
+    [join(root, "node_modules", "typescript", "bin", "tsc"), "-p", join(consumerDir, "tsconfig.json")],
+    {
+      cwd: consumerDir,
+      stdio: "inherit"
+    }
+  );
+  execFileSync(process.execPath, [join(consumerDir, "dist", "validator-0.2.js")], {
     cwd: consumerDir,
     stdio: "inherit"
   });
