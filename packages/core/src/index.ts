@@ -66,6 +66,7 @@ export type {
   SourceLocation,
   ValidatorAdapter,
   ValidatorInput,
+  ValidatorIssue,
   ValidatorResult,
   ValueLocation
 } from "./types.js";

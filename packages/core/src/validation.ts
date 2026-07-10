@@ -7,6 +7,7 @@ import type {
   ProvenanceEvent,
   ResourceLimitPolicy,
   ValidatorAdapter,
+  ValidatorIssue,
   ValidatorResult
 } from "./types.js";
 
@@ -130,17 +131,13 @@ function normalizeValidatorIssues(
       continue;
     }
 
-    const hasNonRootPath = issue.path !== undefined && issue.path.length > 0;
     normalizedIssues.push({
       category: "validation",
       code: issue.code,
       severity: issue.severity,
-      message: hasNonRootPath
-        ? issue.message
-        : `Validator ${validatorId} reported a validation issue without a non-root config path.`,
+      message: `Validator ${validatorId} reported validation issue ${issue.code}.`,
       ...(issue.path === undefined ? {} : { path: issue.path }),
-      sourceId: issue.sourceId ?? validatorId,
-      ...(hasNonRootPath && issue.details !== undefined ? { details: issue.details } : {})
+      sourceId: validatorId
     });
     if (index < issues.length - 1 && normalizedIssues.length >= maxDiagnostics) {
       replaceLastIssueWithDiagnosticsExceededMarker(normalizedIssues, maxDiagnostics);
@@ -204,16 +201,15 @@ function isValidatorResult(value: unknown): value is ValidatorResult {
   );
 }
 
-function isValidatorIssue(value: unknown): value is ConfigIssue {
+function isValidatorIssue(value: unknown): value is ValidatorIssue {
   return (
     isRecord(value) &&
-    value.category === "validation" &&
+    (value.category === undefined || value.category === "validation") &&
     typeof value.code === "string" &&
     value.code.length > 0 &&
     (value.severity === "error" || value.severity === "warning") &&
-    typeof value.message === "string" &&
-    value.message.length > 0 &&
     (value.path === undefined || isConfigPath(value.path)) &&
+    (value.message === undefined || typeof value.message === "string") &&
     (value.sourceId === undefined || typeof value.sourceId === "string") &&
     (value.details === undefined || isIssueDetails(value.details))
   );

@@ -36,6 +36,11 @@ Minor versions may add new optional fields, new adapter hooks, new diagnostics,
 new CLI report sections, or new loader examples when existing behavior remains
 compatible.
 
+The 0.3 validator boundary adds `ValidatorIssue` while retaining optional legacy
+`ConfigIssue`-shaped input fields. Removing those compatibility fields or changing
+which structured fields core trusts requires a deliberate pre-1.0 minor or stable
+major-version review.
+
 ## Patch Changes
 
 Patch versions may fix incorrect provenance, redaction, validation, or parsing

@@ -1,8 +1,8 @@
 import type {
-  ConfigIssue,
   ConfigPath,
   ValidatorAdapter,
   ValidatorInput,
+  ValidatorIssue,
   ValidatorResult
 } from "@0disoft/universal-config-engine-core";
 import type { z } from "zod";
@@ -32,13 +32,10 @@ export function createZodValidator<TSchema extends z.ZodType>(
 
       return {
         ok: false,
-        issues: result.error.issues.map((issue): ConfigIssue => ({
-          category: "validation",
+        issues: result.error.issues.map((issue): ValidatorIssue => ({
           code: issue.code,
           severity: "error",
-          path: toConfigPath(issue.path),
-          sourceId: input.id ?? "zod",
-          message: issue.message
+          path: toConfigPath(issue.path)
         }))
       };
     }

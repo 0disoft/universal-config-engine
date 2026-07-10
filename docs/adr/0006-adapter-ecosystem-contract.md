@@ -33,17 +33,16 @@ Parser adapters interoperate through the existing `ConfigLoader` boundary:
 Validator adapters interoperate through the existing `ValidatorAdapter` boundary:
 
 - validate the normalized config object, not raw parser text;
-- return normalized validation issues with config paths;
+- return structured validation issue codes, severities, and config paths;
 - keep typed validator output adapter-local;
 - avoid replacing the pipeline output with validator-returned values.
 
 ADR 0009 owns the typed output boundary and requires a separate public transform
 stage if validator-produced values ever need to affect pipeline output.
 
-Core does not copy thrown validator exception text into diagnostics. Free-form
-messages and details are retained only for issues with a non-root normalized config
-path, where report redaction can classify the diagnostic against declared secret
-paths. Root and pathless issues retain structured status but use generalized text.
+Core does not copy thrown validator exception text or adapter-provided free-form
+issue fields into diagnostics. ADR 0011 defines how core reconstructs public
+validation issues from structured validator output.
 
 Compatibility fixtures live under `docs/adapters/fixtures/` and are checked by
 `pnpm run check:adapter-fixtures`. Fixtures are contract examples for adapter

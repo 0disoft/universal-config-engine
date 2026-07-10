@@ -74,6 +74,10 @@ describe("createZodValidator", () => {
         })
       })
     });
+    const adapterResult = await validator.validate({
+      config: result.config,
+      provenance: result.provenance
+    });
     const validation = await runValidators({
       config: result.config,
       provenance: result.provenance,
@@ -88,6 +92,13 @@ describe("createZodValidator", () => {
         sourceId: "zod:server"
       })
     );
+    expect(adapterResult.issues).toEqual([
+      {
+        code: "invalid_type",
+        severity: "error",
+        path: ["server", "port"]
+      }
+    ]);
     expect(validation.provenance).toContainEqual({
       path: [],
       action: "validated",

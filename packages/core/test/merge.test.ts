@@ -456,7 +456,7 @@ describe("resolveConfig", () => {
     });
   });
 
-  it("omits free-form validator diagnostics that do not identify a non-root config path", async () => {
+  it("ignores untrusted validator message, details, and source identity", async () => {
     const result = resolveConfig({
       sources: [source("defaults", 0, { database: { password: "example-secret-value" } })]
     });
@@ -474,7 +474,8 @@ describe("resolveConfig", () => {
                   category: "validation",
                   code: "root_invalid",
                   severity: "error",
-                  path: [],
+                  path: ["database", "password"],
+                  sourceId: "spoofed-validator",
                   message: "Rejected example-secret-value.",
                   details: {
                     received: "example-secret-value"
@@ -492,9 +493,9 @@ describe("resolveConfig", () => {
         category: "validation",
         code: "root_invalid",
         severity: "error",
-        path: [],
+        path: ["database", "password"],
         sourceId: "root-check",
-        message: "Validator root-check reported a validation issue without a non-root config path."
+        message: "Validator root-check reported validation issue root_invalid."
       }
     ]);
     expect(JSON.stringify(validation)).not.toContain("example-secret-value");
@@ -629,7 +630,7 @@ describe("resolveConfig", () => {
       severity: "error",
       path: ["server", "port"],
       sourceId: "malformed-issues",
-      message: "Port failed custom validation."
+      message: "Validator malformed-issues reported validation issue custom_failure."
     });
     expect(validation.issues).toContainEqual({
       category: "validation",
@@ -708,7 +709,7 @@ describe("resolveConfig", () => {
       code: "custom_error",
       severity: "error",
       sourceId: "true-with-error",
-      message: "Validator true-with-error reported a validation issue without a non-root config path."
+      message: "Validator true-with-error reported validation issue custom_error."
     });
     expect(validation.provenance).toContainEqual({
       path: [],
@@ -772,7 +773,7 @@ describe("resolveConfig", () => {
         code: "first_failure",
         severity: "error",
         sourceId: "many-issues",
-        message: "Validator many-issues reported a validation issue without a non-root config path."
+        message: "Validator many-issues reported validation issue first_failure."
       },
       {
         category: "resource-limit",

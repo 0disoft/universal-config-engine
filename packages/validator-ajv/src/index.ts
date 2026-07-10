@@ -1,8 +1,8 @@
 import type {
-  ConfigIssue,
   ConfigPath,
   ValidatorAdapter,
   ValidatorInput,
+  ValidatorIssue,
   ValidatorResult
 } from "@0disoft/universal-config-engine-core";
 import {
@@ -40,20 +40,17 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
 
       return {
         ok: false,
-        issues: errors.map((error) => toConfigIssue(id, error))
+        issues: errors.map(toValidatorIssue)
       };
     }
   };
 }
 
-function toConfigIssue(sourceId: string, error: ErrorObject): ConfigIssue {
+function toValidatorIssue(error: ErrorObject): ValidatorIssue {
   return {
-    category: "validation",
     code: error.keyword,
     severity: "error",
-    path: instancePathToConfigPath(error.instancePath),
-    sourceId,
-    message: error.message ?? `JSON Schema validation failed for ${error.keyword}.`
+    path: instancePathToConfigPath(error.instancePath)
   };
 }
 

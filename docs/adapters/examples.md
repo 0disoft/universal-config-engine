@@ -164,9 +164,9 @@ or library-specific path arrays, before returning issues.
 
 ```ts
 import type {
-  ConfigIssue,
   ConfigPath,
-  ValidatorAdapter
+  ValidatorAdapter,
+  ValidatorIssue
 } from "@0disoft/universal-config-engine-core";
 
 interface ExternalValidatorIssue {
@@ -182,7 +182,7 @@ export function createJsonPointerValidator(
     id: "example-json-pointer-validator",
     validate(input) {
       const externalIssues = validateExternal(input.config);
-      const issues = externalIssues.map(toConfigIssue);
+      const issues = externalIssues.map(toValidatorIssue);
 
       return {
         ok: issues.length === 0,
@@ -192,14 +192,11 @@ export function createJsonPointerValidator(
   };
 }
 
-function toConfigIssue(issue: ExternalValidatorIssue): ConfigIssue {
+function toValidatorIssue(issue: ExternalValidatorIssue): ValidatorIssue {
   return {
-    category: "validation",
     code: issue.code,
     severity: "error",
-    message: issue.message,
-    path: jsonPointerToConfigPath(issue.instancePath),
-    sourceId: "example-json-pointer-validator"
+    path: jsonPointerToConfigPath(issue.instancePath)
   };
 }
 

@@ -52,15 +52,16 @@ It returns:
 
 - `ok`: validator status;
 - `value`: optional adapter-local typed output;
-- `issues`: normalized validation issues.
+- `issues`: structured `ValidatorIssue` values containing `code`, `severity`, and
+  an optional normalized config `path`.
 
 `value` is not written back to the pipeline output. Later validators still receive
 the resolved config produced by core. ADR 0009 owns this boundary.
 
 Validator exceptions are normalized without copying exception text into diagnostic
-output. Issues should identify a non-root normalized config path when their message
-or details are useful; core generalizes root or pathless issue text because it cannot
-apply path-based redaction safely.
+output. Core also ignores adapter-provided message, details, category, and source id
+fields. It reconstructs the public `ConfigIssue` with the registered validator id
+and a stable generic message. ADR 0011 owns this trust boundary.
 
 ## Fixture Rules
 
@@ -71,7 +72,8 @@ Fixtures under `docs/adapters/fixtures/` are checked by
 - `*.validator-result.json` models a validator adapter result.
 - Fixture paths use normalized config paths, not raw parser token paths.
 - Fixture issues must be bounded and must not include raw secret values.
-- Fixture source ids must match the descriptor or validator id they document.
+- Loader fixture source ids must match the descriptor they document.
+- Validator result fixtures contain only structured validator issue fields.
 
 ## Current Fixtures
 

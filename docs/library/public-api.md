@@ -23,6 +23,8 @@ Repository Type: library
 - `MergePolicy`: deterministic object merge and conflict handling.
 - `CoercionPolicy`: opt-in type conversion rules.
 - `ValidatorAdapter`: validation boundary for consumer-selected validators.
+- `ValidatorIssue`: structured validator output containing a stable code, severity,
+  and optional normalized config path.
 - `ConfigProvenance`: value-level source, override, default, coercion, validation,
   and redaction report.
 - `RedactedDiagnostic`: secret-safe errors and explain output.
@@ -67,10 +69,9 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 - Normalize malformed validator adapter results and malformed validator issues into
   `validation` issues instead of allowing broken adapter output to corrupt
   diagnostic reports.
-- Do not copy thrown validator exception text into diagnostics. Validator issues
-  without a non-root config path keep their structured code and severity, but core
-  replaces free-form messages and omits details because redaction metadata cannot
-  safely classify that text.
+- Do not copy thrown validator exception text or validator-provided message,
+  details, category, or source identity into diagnostics. Core reconstructs public
+  validation issues from `code`, `severity`, and optional `path`; see ADR 0011.
 - Normalize inconsistent validator status. A validator that returns `ok: false`
   without error issues produces a validation error issue, and any returned error
   issue makes the validator provenance status `error`.

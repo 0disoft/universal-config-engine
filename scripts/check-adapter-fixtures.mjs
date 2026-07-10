@@ -122,8 +122,25 @@ function validateValidatorResultFixture(file, fixture) {
   assertArray(file, fixture.result.issues, "result.issues");
 
   for (const [index, issue] of fixture.result.issues.entries()) {
-    validateIssue(file, issue, `result.issues[${index}]`, fixture.id);
-    assertEqual(file, issue.category, "validation", `result.issues[${index}].category`);
+    validateValidatorIssue(file, issue, `result.issues[${index}]`);
+  }
+}
+
+function validateValidatorIssue(file, issue, path) {
+  assertRecord(file, issue, path);
+  assertNonEmptyString(file, issue.code, `${path}.code`);
+  if (issue.severity !== "error" && issue.severity !== "warning") {
+    fail(`${file}: ${path}.severity must be error or warning.`);
+  }
+  if (issue.path !== undefined) {
+    validatePath(file, issue.path, `${path}.path`);
+  }
+
+  const untrustedFields = ["category", "message", "sourceId", "details"];
+  for (const field of untrustedFields) {
+    if (issue[field] !== undefined) {
+      fail(`${file}: ${path}.${field} is not part of the structured validator fixture contract.`);
+    }
   }
 }
 

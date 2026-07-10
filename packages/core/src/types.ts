@@ -138,6 +138,20 @@ export interface ValidatorInput {
   readonly provenance: readonly ProvenanceEvent[];
 }
 
+export interface ValidatorIssue {
+  readonly code: string;
+  readonly severity: ConfigIssueSeverity;
+  readonly path?: ConfigPath;
+  /**
+   * Legacy compatibility fields accepted from pre-0.3 adapters. Core ignores
+   * these untrusted fields and constructs the public ConfigIssue itself.
+   */
+  readonly category?: ConfigIssueCategory;
+  readonly message?: string;
+  readonly sourceId?: string;
+  readonly details?: Readonly<Record<string, string | number | boolean | null>>;
+}
+
 export interface ValidatorResult<TValidated = unknown> {
   readonly ok: boolean;
   /**
@@ -145,7 +159,7 @@ export interface ValidatorResult<TValidated = unknown> {
    * it does not replace pipeline config with this value.
    */
   readonly value?: TValidated;
-  readonly issues: readonly ConfigIssue[];
+  readonly issues: readonly ValidatorIssue[];
 }
 
 export interface ValidatorAdapter<TValidated = unknown> {
