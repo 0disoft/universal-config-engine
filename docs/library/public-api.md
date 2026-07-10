@@ -52,6 +52,11 @@ Published package ownership is layered:
 The core package must not depend on parser libraries, validator libraries, Node.js
 file-system APIs, process env, argv parsing, or CLI presentation libraries.
 
+The committed `docs/library/public-api.snapshot.txt` records normalized declaration
+files for every publishable package. `pnpm run check:api-snapshot` fails when the
+built declaration surface drifts. Intentional API changes require semver and
+migration review before running `pnpm run update:api-snapshot`.
+
 ## Public API Principles
 
 - Do not expose parser-specific raw shapes as core output.

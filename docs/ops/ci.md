@@ -28,6 +28,7 @@ pnpm run smoke:packages
 - workspace tests
 - secret snapshot guard
 - adapter compatibility fixture guard
+- packed declaration API snapshot guard
 - build output cleanup
 
 The smoke commands verify package buildability and package contents for the core, node, CLI, and
