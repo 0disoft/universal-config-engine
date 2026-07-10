@@ -313,6 +313,33 @@ describe("resolveConfig", () => {
     );
   });
 
+  it("keeps merge-generated diagnostics and the overflow marker within the declared limit", () => {
+    const result = resolveConfig({
+      sources: [
+        source("left", 1, { first: 1, second: 2, third: 3 }),
+        source("right", 1, { first: 10, second: 20, third: 30 })
+      ],
+      limits: {
+        maxDiagnostics: 2
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        category: "merge",
+        code: "same_priority_conflict",
+        path: ["first"]
+      }),
+      {
+        category: "resource-limit",
+        code: "max_diagnostics_exceeded",
+        severity: "error",
+        message: "Diagnostics exceeded the maximum of 2."
+      }
+    ]);
+  });
+
   it("applies declared override mappings without inferring names", () => {
     const mapped = createMappedOverrideSource({
       descriptor: {

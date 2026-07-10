@@ -73,6 +73,8 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 - Bound validator issues with the same diagnostics limit used by merge/source
   reporting. When validator output exceeds `maxDiagnostics`, emit
   `resource-limit/max_diagnostics_exceeded` instead of unbounded validation output.
+- Treat the overflow marker as one of the bounded diagnostics. Every core stage
+  returns at most `maxDiagnostics` issues, including the marker.
 - Generate provenance during resolution rather than reconstructing it from the final
   object.
 - Reject unsafe keys in public path setters and deep merge before they can mutate

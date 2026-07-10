@@ -100,13 +100,11 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     provenance.push(...coercionResult.provenance);
   }
 
-  const limitedIssues = limitDiagnostics(issues, limits);
-
   return {
-    ok: !limitedIssues.some((issue) => issue.severity === "error"),
+    ok: !issues.some((issue) => issue.severity === "error"),
     config,
     sources: descriptors,
-    issues: limitedIssues,
+    issues,
     provenance,
     resolvedPaths: Array.from(resolvedIndex.byPath.values()).map((resolved) => ({
       path: resolved.path,
@@ -141,13 +139,17 @@ function applyEntry(input: {
   readonly resolvedIndex: MutableResolvedPathIndex;
 }): void {
   if (input.entryPath.length === 0) {
-    input.issues.push({
-      category: "merge",
-      code: "empty_path",
-      severity: "error",
-      sourceId: input.descriptor.id,
-      message: "Source entries must resolve to a non-root config path."
-    });
+    pushBoundedIssue(
+      input.issues,
+      {
+        category: "merge",
+        code: "empty_path",
+        severity: "error",
+        sourceId: input.descriptor.id,
+        message: "Source entries must resolve to a non-root config path."
+      },
+      input.limits
+    );
     return;
   }
 
@@ -163,31 +165,39 @@ function applyEntry(input: {
         resolved.winningSourceId !== input.descriptor.id
     )
   ) {
-    input.issues.push({
-      category: "merge",
-      code: "same_priority_conflict",
-      severity: "error",
-      path: input.entryPath,
-      sourceId: input.descriptor.id,
-      message: "Two sources with the same priority wrote the same or overlapping config path.",
-      details: {
-        previousSourceId: relatedResolved[0]?.resolved.winningSourceId ?? existingResolved?.winningSourceId ?? "",
-        priority: input.descriptor.priority
-      }
-    });
+    pushBoundedIssue(
+      input.issues,
+      {
+        category: "merge",
+        code: "same_priority_conflict",
+        severity: "error",
+        path: input.entryPath,
+        sourceId: input.descriptor.id,
+        message: "Two sources with the same priority wrote the same or overlapping config path.",
+        details: {
+          previousSourceId: relatedResolved[0]?.resolved.winningSourceId ?? existingResolved?.winningSourceId ?? "",
+          priority: input.descriptor.priority
+        }
+      },
+      input.limits
+    );
   }
 
   try {
     setConfigValueAtPath(input.config, input.entryPath, input.entryValue);
   } catch (error) {
-    input.issues.push({
-      category: "merge",
-      code: "path_set_failed",
-      severity: "error",
-      path: input.entryPath,
-      sourceId: input.descriptor.id,
-      message: error instanceof Error ? error.message : "Failed to set config path."
-    });
+    pushBoundedIssue(
+      input.issues,
+      {
+        category: "merge",
+        code: "path_set_failed",
+        severity: "error",
+        path: input.entryPath,
+        sourceId: input.descriptor.id,
+        message: error instanceof Error ? error.message : "Failed to set config path."
+      },
+      input.limits
+    );
     return;
   }
 
@@ -413,20 +423,12 @@ function pushBoundedIssues(
   }
 }
 
-function limitDiagnostics(issues: readonly ConfigIssue[], limits: ResourceLimitPolicy): readonly ConfigIssue[] {
-  if (issues.length <= limits.maxDiagnostics) {
-    return issues;
-  }
-
-  return [
-    ...issues.slice(0, limits.maxDiagnostics),
-    {
-      category: "resource-limit",
-      code: "max_diagnostics_exceeded",
-      severity: "error",
-      message: `Diagnostics exceeded the maximum of ${limits.maxDiagnostics}.`
-    }
-  ];
+function pushBoundedIssue(
+  destination: ConfigIssue[],
+  issue: ConfigIssue,
+  limits: ResourceLimitPolicy
+): void {
+  pushBoundedIssues(destination, [issue], limits);
 }
 
 function replaceLastIssueWithDiagnosticsExceededMarker(issues: ConfigIssue[], limits: ResourceLimitPolicy): void {

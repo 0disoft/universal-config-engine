@@ -68,7 +68,8 @@ CLI file source path boundary failures use category `source-load` and exit code
 
 When declared validator output exceeds `limits.maxDiagnostics`, the report includes
 `resource-limit/max_diagnostics_exceeded`; that bounded-output failure uses the
-policy failure exit code `3`.
+policy failure exit code `3`. The overflow marker counts toward `maxDiagnostics`, so
+the report never emits more issues than the declared limit.
 
 CLI usage errors use category `usage` and exit code `4` when the command is known
 and JSON output was requested. Unknown commands still write the usage error to
