@@ -8,8 +8,9 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { runCli } from "../src/index.js";
+import { loadPipelineDeclaration } from "../src/pipeline.js";
 
 async function withTempDir<T>(callback: (dir: string) => Promise<T>): Promise<T> {
   const dir = await mkdtemp(join(tmpdir(), "uce-cli-"));
@@ -19,6 +20,53 @@ async function withTempDir<T>(callback: (dir: string) => Promise<T>): Promise<T>
     await rm(dir, { force: true, recursive: true });
   }
 }
+
+describe("loadPipelineDeclaration", () => {
+  it("rebuilds validated declarations instead of returning the parsed JSON object", async () => {
+    await withTempDir(async (dir) => {
+      const configPath = join(dir, "uce.json");
+      await writeFile(configPath, "{}", "utf8");
+      const parsed = {
+        sources: [
+          {
+            id: "env",
+            kind: "process-env",
+            priority: 10,
+            mappings: [
+              {
+                externalName: "APP_PORT",
+                sourceKind: "process-env",
+                targetPath: ["server", "port"],
+                parseAs: "number"
+              }
+            ]
+          }
+        ],
+        limits: {
+          maxDiagnostics: 10
+        }
+      };
+      const parse = vi.spyOn(JSON, "parse").mockReturnValue(parsed);
+
+      try {
+        const declaration = await loadPipelineDeclaration(configPath, dir);
+
+        expect(declaration).toEqual(parsed);
+        expect(declaration).not.toBe(parsed);
+        expect(declaration.sources).not.toBe(parsed.sources);
+        expect(declaration.sources[0]).not.toBe(parsed.sources[0]);
+        const source = declaration.sources[0];
+        if (source?.kind !== "process-env") {
+          throw new Error("Expected normalized process-env source.");
+        }
+        expect(source.mappings).not.toBe(parsed.sources[0]?.mappings);
+        expect(source.mappings[0]?.targetPath).not.toBe(parsed.sources[0]?.mappings[0]?.targetPath);
+      } finally {
+        parse.mockRestore();
+      }
+    });
+  });
+});
 
 describe("runCli", () => {
   it("matches the local precedence golden explain report", async () => {

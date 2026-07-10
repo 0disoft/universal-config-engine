@@ -57,6 +57,10 @@ source/validator id namespace collisions, malformed resource limits, and malform
 file size policies are source-loading failures. The CLI must not silently ignore
 unknown source kinds or unknown declaration fields.
 
+After declaration validation succeeds, the CLI rebuilds a typed declaration object
+from the validated JSON fields instead of passing the parsed JSON object through by
+type assertion. Runtime code should consume only that normalized declaration shape.
+
 CLI argv source values must appear after `--`, so CLI options do not get mixed with
 configuration override arguments.
 
@@ -97,5 +101,6 @@ library API integrations until a separate ADR defines a safe declaration format.
 - CLI silently skips an unsupported source kind.
 - CLI file source paths can escape the pipeline declaration directory without a
   later ADR.
+- Runtime execution consumes the unnormalized parsed JSON declaration object.
 - JSON output omits schema version.
 - Output includes raw secret values.
