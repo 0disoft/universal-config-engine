@@ -74,6 +74,7 @@ Candidate responsibilities:
 - Validator declarations support first-party Ajv JSON Schema via
   `kind: "json-schema-ajv"`.
 
-## Open Decisions
+## Deferred
 
-- Full resolved config printing: UNDECIDED.
+- Full resolved config printing is not supported in the `0.x` CLI. A future ADR
+  must define redaction, output-size, and compatibility rules before adding it.

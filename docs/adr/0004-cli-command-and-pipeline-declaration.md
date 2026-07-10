@@ -1,6 +1,6 @@
 # CLI Command and Pipeline Declaration
 
-Status: Draft
+Status: Accepted
 Owner: UNASSIGNED
 
 ## Purpose

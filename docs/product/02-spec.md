@@ -100,7 +100,7 @@ of why each final value exists.
   validation error paths.
 - Versioned diagnostic report schema for CLI JSON output.
 
-## Open Decisions
+## Decision Index
 
 - Implementation language and package ecosystem: TypeScript, ESM, pnpm workspace;
   see `docs/adr/0003-implementation-language-and-package-strategy.md`.

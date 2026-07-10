@@ -1,6 +1,6 @@
 # Contract Source of Truth
 
-Status: Draft
+Status: Accepted
 Owner: UNASSIGNED
 
 ## Purpose
@@ -42,9 +42,9 @@ service, or persistence layer.
 - JSON report compatibility requires a report schema version before stable use.
 - Redacted reports are secret-safe, not automatically public-safe.
 - Parser and validator support claims require adapter contracts and fixtures.
-- Implementation language, runtime, package manager, package names, license, and
-  initial version are recorded in ADRs. Npm scope ownership and release automation
-  remain undecided until ADRs record them.
+- Implementation language, runtime, package manager, package names, license, npm
+  scope, initial version, and release automation are recorded in ADRs 0003, 0005,
+  and 0007.
 
 ## Review Blockers
 

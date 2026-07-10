@@ -40,9 +40,9 @@ compatible.
 Patch versions may fix incorrect provenance, redaction, validation, or parsing
 behavior when the documented contract already required the corrected behavior.
 
-## Open Decisions
+## Decided Baseline
 
 - Initial npm package version: `0.1.1`; see ADR 0005.
 - Package ecosystem: TypeScript, ESM, and pnpm workspace; see ADR 0003.
-- Release tooling: manual validation-gated release preparation; automated publish
-  tooling remains UNDECIDED.
+- Release tooling: validation-gated tag releases publish through GitHub Actions
+  Trusted Publisher; see ADR 0007.

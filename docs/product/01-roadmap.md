@@ -13,11 +13,11 @@ Owner: UNASSIGNED
 - Define package boundaries for core, runtime source adapters, CLI, validator
   adapters, and fixtures.
 - Decide implementation language, package name, and runtime floor. TypeScript, ESM,
-  pnpm workspace, Node.js `>=24`, and provisional `@0disoft/universal-config-engine-core`
+  pnpm workspace, Node.js `>=24`, and `@0disoft/universal-config-engine-core`
   are selected in ADR 0003.
 - Decide license, initial package version, release policy, and package publication
-  strategy. MIT, `0.1.1`, the `@0disoft` npm scope, and manual validation-gated
-  release preparation are selected in ADR 0005.
+  strategy. MIT, `0.1.1`, the `@0disoft` npm scope, and the manual release baseline
+  are selected in ADR 0005; ADR 0007 adds routine Trusted Publisher automation.
 - Record ADRs for package, runtime, license, redaction, merge, provenance, and CLI
   report schema choices.
 

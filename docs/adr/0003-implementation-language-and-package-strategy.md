@@ -1,6 +1,6 @@
 # Implementation Language and Package Strategy
 
-Status: Draft
+Status: Accepted
 Owner: UNASSIGNED
 
 ## Purpose
@@ -28,19 +28,21 @@ Package boundaries are:
 
 - core: config values, paths, source descriptors, merge, provenance, issues,
   redaction, diagnostics, and result contracts.
-- runtime source adapters: future JSON file, simple `.env`, process env, and argv
-  helpers.
-- CLI: future `explain` and `validate` command parsing and presentation.
-- validator adapters: future optional validator integrations.
-- fixtures: future shared behavior cases and golden diagnostic reports.
+- `@0disoft/universal-config-engine-node`: JSON file, simple `.env`, process env,
+  and argv helpers.
+- `@0disoft/universal-config-engine-cli`: `explain` and `validate` command parsing
+  and presentation.
+- validator packages: optional Ajv and Zod integrations.
+- repository fixtures: shared behavior cases and golden diagnostic reports.
 
-## Not Decided
+## Resolved Follow-Ups
 
-- Release automation.
-- First validator adapter.
-- Runtime source package names.
-- CLI package name and binary name.
-- Whether dialect-heavy parser adapters are first-party packages or examples.
+- ADR 0004 selects `@0disoft/universal-config-engine-cli` and binary `uce`.
+- ADR 0006 keeps dialect-heavy parser integrations adapter-owned.
+- ADR 0007 selects tag-driven Trusted Publisher release automation.
+- `@0disoft/universal-config-engine-node` owns Node.js source adapters.
+- `@0disoft/universal-config-engine-validator-ajv` and
+  `@0disoft/universal-config-engine-validator-zod` are the first validator packages.
 
 ## Consequences
 

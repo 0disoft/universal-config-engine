@@ -176,7 +176,9 @@ selects `@0disoft/universal-config-engine-cli`, binary name `uce`, commands `exp
 `validate`, JSON pipeline declarations, and JSON report schema version `0.1`.
 Initial validator adapters are `@0disoft/universal-config-engine-validator-zod` and
 `@0disoft/universal-config-engine-validator-ajv`. ADR 0005 selects the MIT license,
-the `@0disoft` npm scope, and a manual validation-gated release baseline. The
+the `@0disoft` npm scope, and a manual validation-gated release baseline. ADR 0007
+supersedes routine manual publication with tag-driven Trusted Publisher
+automation. The
 `v0.1.0` GitHub release carries pre-publication inspection assets; `v0.1.1` is the
 first npm publication baseline, and the current package version is `0.2.1`. CLI
 golden fixtures cover

@@ -132,6 +132,7 @@ default secret-name pattern.
 Redacted reports can still contain sensitive metadata. CLI documentation must avoid
 describing report output as safe to paste into public issues.
 
-## Open Decisions
+## Deferred
 
-- Non-JSON pipeline declaration formats: UNDECIDED.
+- Pipeline declarations remain JSON-only for `0.x`. A future format requires an
+  ADR, parser ownership, fixtures, and declaration-normalization coverage.

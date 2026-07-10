@@ -1,12 +1,12 @@
 # Initial Architecture Boundaries
 
-Status: Draft
+Status: Accepted
 Owner: UNASSIGNED
 
 ## Purpose
 
-This document captures the initial architecture boundary for Universal Config Engine.
-It records the current product direction before implementation begins.
+This document captures the foundational architecture boundary for Universal Config
+Engine.
 
 ## Source of Truth
 
@@ -44,13 +44,13 @@ CLI presentation, and validator adapters must not leak into core.
 - Future HTTP API, database, remote config, feature flag, or secret manager behavior
   requires a new ADR.
 
-## Deferred Decisions
+## Resolved Follow-Ups
 
-- Implementation language and runtime floor.
-- Package manager and package names.
-- Release automation.
-- First validator adapter.
-- Whether dialect-heavy parser adapters are first-party packages or examples.
+- ADR 0003 selects TypeScript, ESM, Node.js `>=24`, pnpm, and package boundaries.
+- ADR 0004 selects the CLI package, binary, commands, and JSON declaration format.
+- ADR 0006 keeps dialect-heavy parser integrations adapter-owned.
+- ADR 0007 selects tag-driven Trusted Publisher release automation.
+- The first validator packages integrate Ajv and Zod.
 
 ## Review Blockers
 

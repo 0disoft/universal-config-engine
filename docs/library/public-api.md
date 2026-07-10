@@ -9,7 +9,7 @@ Repository Type: library
 - Technical owner: UNASSIGNED
 - Related ADR: `docs/adr/0003-implementation-language-and-package-strategy.md`
 
-## Candidate API Areas
+## Public API Areas
 
 - `ConfigSource`: source identity, priority, loader, and redaction metadata.
 - `ConfigLoader`: adapter interface that owns source metadata and returns normalized
@@ -30,19 +30,19 @@ Repository Type: library
 
 ## Package Boundary Direction
 
-Package naming beyond core remains provisional, but public API ownership is layered:
+Published package ownership is layered:
 
 - `@0disoft/universal-config-engine-core`: pure config values, paths, sources, merge,
   provenance, diagnostics, redaction, result, loader orchestration, and adapter
   interfaces.
-- runtime source package: file-system, process env, argv, JSON file, and simple
-  `.env` source helpers.
-- CLI package: command parsing and presentation only.
+- `@0disoft/universal-config-engine-node`: file-system, process env, argv, JSON
+  file, and simple `.env` source helpers.
+- `@0disoft/universal-config-engine-cli`: command parsing and presentation only.
 - `@0disoft/universal-config-engine-validator-zod`: optional Zod validator integration.
 - `@0disoft/universal-config-engine-validator-ajv`: optional Ajv JSON Schema validator
   integration.
-- validator adapter packages: optional dependencies on validator libraries.
-- fixture package or directory: shared behavior cases and golden reports.
+- Validator adapter packages keep validator libraries outside core.
+- Repository fixtures own shared behavior cases and golden reports.
 
 The core package must not depend on parser libraries, validator libraries, Node.js
 file-system APIs, process env, argv parsing, or CLI presentation libraries.
@@ -92,17 +92,9 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
   compiled matchers within a report and fall back to literal matching for invalid,
   oversized, or risky regular expressions.
 
-## Open Decisions
+## Decision State
 
-- Exact package ecosystem and module format: TypeScript ESM; see ADR 0003.
-- Runtime compatibility floor: Node.js `>=24`; see ADR 0003.
-- Initial validator adapter examples: Zod via
-  `@0disoft/universal-config-engine-validator-zod` and JSON Schema via
-  `@0disoft/universal-config-engine-validator-ajv`.
 - Error class or Result-style return convention: UNDECIDED.
-- Parser adapter package names beyond core remain third-party or example-owned for
-  the `0.1.x` baseline; see ADR 0006.
-- Diagnostic report schema versioning: CLI JSON reports use schema version `0.1`;
-  field changes are compatibility changes.
-- Validator-returned typed values remain adapter-local and are not applied to
-  pipeline output; see ADR 0009.
+- TypeScript ESM, Node.js `>=24`, package ownership, validator packages, report
+  schema `0.1`, adapter ownership, and validator typed output are decided in ADRs
+  0003, 0004, 0006, and 0009.
