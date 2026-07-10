@@ -27,6 +27,10 @@ manager behavior.
    through a redaction-aware diagnostic builder.
 10. CLI commands format the same pipeline result as human output or versioned JSON.
 
+Library consumers may call these stages independently or use `runConfigPipeline`.
+The facade stops before validator execution when resolution already failed and
+returns the final `ConfigResult` together with its `DiagnosticReport`.
+
 ## Redaction Flow
 
 Resolved config may contain raw values for the direct library caller. Diagnostic

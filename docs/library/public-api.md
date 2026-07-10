@@ -16,6 +16,9 @@ Repository Type: library
   config data, value locations, and source issues.
 - `ConfigPipeline`: ordered execution of load, override, merge, coerce, validate,
   and report steps.
+- `runConfigPipeline`: high-level facade that loads sources, resolves config, skips
+  validation after resolution failure, runs validators, bounds combined issues, and
+  returns both `ConfigResult` and `DiagnosticReport`.
 - `OverrideMapping`: explicit env var or CLI flag mapping into config paths.
 - `MergePolicy`: deterministic object merge and conflict handling.
 - `CoercionPolicy`: opt-in type conversion rules.
@@ -55,6 +58,8 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 - Do not print or serialize secret values through diagnostic helpers.
 - Preserve source identity for source-load, parse, merge, override, validation, and
   redaction failures.
+- Keep `runConfigPipeline` thin: it orchestrates existing public stages and does not
+  introduce a second merge, validation, or redaction implementation.
 - Report CLI usage errors as `usage` issues when JSON output is requested for a
   known command.
 - Normalize loader exceptions into `source-load` issues instead of throwing raw

@@ -35,6 +35,9 @@ const packages = [
       if (typeof module.loadConfigSources !== "function") {
         throw new Error("Core loader API ESM smoke import failed.");
       }
+      if (typeof module.runConfigPipeline !== "function") {
+        throw new Error("Core pipeline facade ESM smoke import failed.");
+      }
     }
   },
   {

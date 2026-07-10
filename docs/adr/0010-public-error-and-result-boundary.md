@@ -58,6 +58,8 @@ versus caller or invariant failure, not a blanket ban on exceptions.
 ## Consequences
 
 - New high-level APIs must return domain result objects for expected failures.
+- `runConfigPipeline` is the reference high-level boundary and returns
+  `RunConfigPipelineResult` without rejecting for expected failures.
 - New adapters must catch provider, parser, filesystem, and validator exceptions
   before returning to core orchestration.
 - Public issue codes and categories are compatibility surfaces; raw exception text
@@ -82,4 +84,3 @@ versus caller or invariant failure, not a blanket ban on exceptions.
   separate demonstrated need.
 - A strict helper changes throw behavior without documentation and compatibility
   review.
-

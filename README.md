@@ -84,12 +84,11 @@ validation and release commands documented in `VALIDATION.md` and
 
 ```javascript
 import {
-  buildDiagnosticReport,
-  resolveConfig
+  runConfigPipeline
 } from "@0disoft/universal-config-engine-core";
 
-const result = resolveConfig({
-  sources: [
+const { result, report } = await runConfigPipeline({
+  loaders: [
     {
       descriptor: {
         id: "defaults",
@@ -97,7 +96,9 @@ const result = resolveConfig({
         priority: 0,
         displayName: "defaults"
       },
-      value: { service: { port: 3000 } }
+      load() {
+        return { value: { service: { port: 3000 } } };
+      }
     },
     {
       descriptor: {
@@ -106,18 +107,22 @@ const result = resolveConfig({
         priority: 10,
         displayName: "local"
       },
-      value: { service: { port: 8080 } }
+      load() {
+        return { value: { service: { port: 8080 } } };
+      }
     }
-  ]
+  ],
+  context: undefined
 });
 
-const report = buildDiagnosticReport(result);
 console.log(result.config.service.port); // 8080
 console.log(report.resolvedPaths);
 ```
 
 [`examples/basic-library.mjs`](examples/basic-library.mjs) is the executable form
 of this flow and is run against packed workspace tarballs by the package smoke test.
+`resolveConfig`, `runValidators`, and `buildDiagnosticReport` remain available when
+consumers need to own individual pipeline stages.
 
 ## CLI Quickstart
 

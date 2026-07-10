@@ -1,10 +1,9 @@
 import {
-  buildDiagnosticReport,
-  resolveConfig
+  runConfigPipeline
 } from "@0disoft/universal-config-engine-core";
 
-const result = resolveConfig({
-  sources: [
+const { result, report } = await runConfigPipeline({
+  loaders: [
     {
       descriptor: {
         id: "defaults",
@@ -12,11 +11,15 @@ const result = resolveConfig({
         priority: 0,
         displayName: "defaults"
       },
-      value: {
-        service: {
-          host: "127.0.0.1",
-          port: 3000
-        }
+      load() {
+        return {
+          value: {
+            service: {
+              host: "127.0.0.1",
+              port: 3000
+            }
+          }
+        };
       }
     },
     {
@@ -26,16 +29,20 @@ const result = resolveConfig({
         priority: 10,
         displayName: "local"
       },
-      value: {
-        service: {
-          port: 8080
-        }
+      load() {
+        return {
+          value: {
+            service: {
+              port: 8080
+            }
+          }
+        };
       }
     }
-  ]
+  ],
+  context: undefined
 });
 
-const report = buildDiagnosticReport(result);
 process.stdout.write(`${JSON.stringify({
   status: report.status,
   port: result.config.service.port,
@@ -43,4 +50,3 @@ process.stdout.write(`${JSON.stringify({
     (entry) => entry.path.join(".") === "service.port"
   )?.winningSourceId
 })}\n`);
-

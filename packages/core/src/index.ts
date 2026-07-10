@@ -13,6 +13,9 @@ export {
   loadConfigSources
 } from "./loader.js";
 export {
+  runConfigPipeline
+} from "./pipeline.js";
+export {
   DEFAULT_SECRET_NAME_PATTERNS,
   buildDiagnosticReport
 } from "./redaction.js";
@@ -74,6 +77,13 @@ export type {
   LoadConfigSourcesInput,
   LoadConfigSourcesResult
 } from "./loader.js";
+export type {
+  RunConfigPipelineInput,
+  RunConfigPipelineResult
+} from "./pipeline.js";
+export type {
+  BuildDiagnosticReportOptions
+} from "./redaction.js";
 export type {
   CreateMappedOverrideSourceInput
 } from "./mapping.js";
