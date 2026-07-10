@@ -55,7 +55,7 @@ It returns:
 - `issues`: normalized validation issues.
 
 `value` is not written back to the pipeline output. Later validators still receive
-the resolved config produced by core.
+the resolved config produced by core. ADR 0009 owns this boundary.
 
 Validator exceptions are normalized without copying exception text into diagnostic
 output. Issues should identify a non-root normalized config path when their message

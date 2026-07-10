@@ -71,7 +71,7 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
   issue makes the validator provenance status `error`.
 - Treat `ValidatorResult.value` as adapter-local typed output. Core validation does
   not replace the resolved config with validator-returned values or pass those
-  values to later validators.
+  values to later validators; see ADR 0009.
 - Isolate validator inputs from the resolved config. Validators must not be able to
   mutate the pipeline output or affect later validators by modifying `input.config`.
 - Bound validator issues with the same diagnostics limit used by merge/source
@@ -104,4 +104,5 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
   the `0.1.x` baseline; see ADR 0006.
 - Diagnostic report schema versioning: CLI JSON reports use schema version `0.1`;
   field changes are compatibility changes.
-- Applying validator-returned typed values to pipeline output: UNDECIDED.
+- Validator-returned typed values remain adapter-local and are not applied to
+  pipeline output; see ADR 0009.

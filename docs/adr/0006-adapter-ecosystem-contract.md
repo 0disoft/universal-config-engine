@@ -37,6 +37,9 @@ Validator adapters interoperate through the existing `ValidatorAdapter` boundary
 - keep typed validator output adapter-local;
 - avoid replacing the pipeline output with validator-returned values.
 
+ADR 0009 owns the typed output boundary and requires a separate public transform
+stage if validator-produced values ever need to affect pipeline output.
+
 Core does not copy thrown validator exception text into diagnostics. Free-form
 messages and details are retained only for issues with a non-root normalized config
 path, where report redaction can classify the diagnostic against declared secret
