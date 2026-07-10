@@ -11,6 +11,8 @@ import type {
   ValidatorResult
 } from "./types.js";
 
+const VALIDATOR_ISSUE_CODE_PATTERN = /^[a-z][a-z0-9_.:-]{0,127}$/;
+
 export interface RunValidatorsInput {
   readonly config: ConfigValue;
   readonly provenance: readonly ProvenanceEvent[];
@@ -206,7 +208,7 @@ function isValidatorIssue(value: unknown): value is ValidatorIssue {
     isRecord(value) &&
     (value.category === undefined || value.category === "validation") &&
     typeof value.code === "string" &&
-    value.code.length > 0 &&
+    VALIDATOR_ISSUE_CODE_PATTERN.test(value.code) &&
     (value.severity === "error" || value.severity === "warning") &&
     (value.path === undefined || isConfigPath(value.path)) &&
     (value.message === undefined || typeof value.message === "string") &&

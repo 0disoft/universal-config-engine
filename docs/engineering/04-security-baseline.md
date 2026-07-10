@@ -29,6 +29,8 @@ boundaries, hosted API security, database security, or remote secret delivery.
 - Resource limits must bound file size, object depth, key count, diagnostics count,
   path length, and env var count.
 - Parser and validator adapters are untrusted boundaries until tested by fixtures.
+- Validator issue codes are bounded machine identifiers, not a free-form text
+  escape hatch around diagnostic redaction.
 - No telemetry, persistence, or report upload is in MVP scope.
 
 ## Review Blockers

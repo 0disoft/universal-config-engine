@@ -139,6 +139,7 @@ export interface ValidatorInput {
 }
 
 export interface ValidatorIssue {
+  /** Lowercase ASCII machine identifier, at most 128 characters. */
   readonly code: string;
   readonly severity: ConfigIssueSeverity;
   readonly path?: ConfigPath;

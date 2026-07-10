@@ -501,6 +501,44 @@ describe("resolveConfig", () => {
     expect(JSON.stringify(validation)).not.toContain("example-secret-value");
   });
 
+  it("rejects validator issue codes that can carry free-form diagnostic text", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "malicious-code",
+          validate() {
+            return {
+              ok: false,
+              issues: [
+                {
+                  code: "token=validator-secret-value",
+                  severity: "error",
+                  path: ["server", "port"]
+                }
+              ]
+            };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toEqual([
+      {
+        category: "validation",
+        code: "validator_issue_invalid",
+        severity: "error",
+        sourceId: "malicious-code",
+        message: "Validator malicious-code returned invalid issue at index 0."
+      }
+    ]);
+    expect(JSON.stringify(validation)).not.toContain("validator-secret-value");
+  });
+
   it("does not apply validator returned values to the pipeline config", async () => {
     const result = resolveConfig({
       sources: [source("defaults", 0, { server: { port: 3000 } })]
@@ -863,6 +901,107 @@ describe("loadConfigSources", () => {
 });
 
 describe("buildDiagnosticReport", () => {
+  it.each([
+    {
+      name: "descriptor secret source with a pathless issue",
+      redaction: { secretSource: true },
+      options: {},
+      configPath: ["service", "value"],
+      issuePath: undefined,
+      reason: "secret-source"
+    },
+    {
+      name: "option secret source with a pathless issue",
+      redaction: undefined,
+      options: { secretSourceIds: ["defaults"] },
+      configPath: ["service", "value"],
+      issuePath: undefined,
+      reason: "secret-source"
+    },
+    {
+      name: "descriptor parent secret path",
+      redaction: { secretPaths: [["service"]] },
+      options: {},
+      configPath: ["service", "value"],
+      issuePath: ["service", "value"],
+      reason: "secret-path"
+    },
+    {
+      name: "option secret path",
+      redaction: undefined,
+      options: { secretPaths: [["service", "value"]] },
+      configPath: ["service", "value"],
+      issuePath: ["service", "value"],
+      reason: "secret-path"
+    },
+    {
+      name: "descriptor custom secret name",
+      redaction: { secretNamePatterns: ["private_value"] },
+      options: {},
+      configPath: ["service", "private_value"],
+      issuePath: ["service", "private_value"],
+      reason: "secret-name"
+    },
+    {
+      name: "default secret name",
+      redaction: undefined,
+      options: {},
+      configPath: ["service", "access_token"],
+      issuePath: ["service", "access_token"],
+      reason: "secret-name"
+    }
+  ])("redacts combined diagnostic fields for $name", ({ redaction, options, configPath, issuePath, reason }) => {
+    const secretValue = "matrix-secret-value";
+    const result = resolveConfig({
+      sources: [
+        {
+          descriptor: {
+            id: "defaults",
+            kind: "object",
+            priority: 0,
+            displayName: "defaults",
+            ...(redaction === undefined ? {} : { redaction })
+          },
+          value: {
+            service: {
+              [String(configPath[1])]: secretValue
+            }
+          },
+          issues: [
+            {
+              category: "source-load",
+              code: "matrix_source_failure",
+              severity: "warning",
+              sourceId: "defaults",
+              ...(issuePath === undefined ? {} : { path: issuePath }),
+              message: `failed while handling ${secretValue}`,
+              details: {
+                raw: secretValue
+              }
+            }
+          ]
+        }
+      ]
+    });
+    const report = buildDiagnosticReport(result, options);
+    const reportText = JSON.stringify(report);
+
+    expect(reportText).not.toContain(secretValue);
+    expect(report.issues).toContainEqual(
+      expect.objectContaining({
+        code: "matrix_source_failure",
+        message: "Diagnostic message redacted because it is associated with a secret path or source."
+      })
+    );
+    expect(report.resolvedPaths).toContainEqual(
+      expect.objectContaining({
+        path: configPath,
+        redacted: true,
+        redactionReason: reason
+      })
+    );
+  });
+
   it("does not include raw secret values in diagnostic report structures", () => {
     const result = resolveConfig({
       sources: [

@@ -77,6 +77,8 @@ migration review before running `pnpm run update:api-snapshot`.
 - Do not copy thrown validator exception text or validator-provided message,
   details, category, or source identity into diagnostics. Core reconstructs public
   validation issues from `code`, `severity`, and optional `path`; see ADR 0011.
+- Accept validator issue codes only as bounded lowercase ASCII machine identifiers;
+  reject prose-like or assignment-like codes as malformed adapter output.
 - Normalize inconsistent validator status. A validator that returns `ok: false`
   without error issues produces a validation error issue, and any returned error
   issue makes the validator provenance status `error`.
