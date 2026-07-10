@@ -64,7 +64,7 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
         sourceId: validator.id,
         message: `Validator ${validator.id} completed with status ${validatorStatus(result, validatorIssues)}.`
       });
-    } catch (error) {
+    } catch {
       pushBoundedIssues(
         issues,
         [
@@ -73,7 +73,7 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
             code: "validator_threw",
             severity: "error",
             sourceId: validator.id,
-            message: error instanceof Error ? error.message : "Validator failed with an unknown error."
+            message: `Validator ${validator.id} threw an exception. Exception details were omitted from diagnostics.`
           }
         ],
         maxDiagnostics
@@ -130,14 +130,17 @@ function normalizeValidatorIssues(
       continue;
     }
 
+    const hasNonRootPath = issue.path !== undefined && issue.path.length > 0;
     normalizedIssues.push({
       category: "validation",
       code: issue.code,
       severity: issue.severity,
-      message: issue.message,
+      message: hasNonRootPath
+        ? issue.message
+        : `Validator ${validatorId} reported a validation issue without a non-root config path.`,
       ...(issue.path === undefined ? {} : { path: issue.path }),
       sourceId: issue.sourceId ?? validatorId,
-      ...(issue.details === undefined ? {} : { details: issue.details })
+      ...(hasNonRootPath && issue.details !== undefined ? { details: issue.details } : {})
     });
     if (index < issues.length - 1 && normalizedIssues.length >= maxDiagnostics) {
       replaceLastIssueWithDiagnosticsExceededMarker(normalizedIssues, maxDiagnostics);

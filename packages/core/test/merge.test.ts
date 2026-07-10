@@ -434,7 +434,7 @@ describe("resolveConfig", () => {
         {
           id: "throws",
           validate() {
-            throw new Error("validator exploded");
+            throw new Error("validator exploded with example-secret-value");
           }
         }
       ]
@@ -445,14 +445,59 @@ describe("resolveConfig", () => {
       code: "validator_threw",
       severity: "error",
       sourceId: "throws",
-      message: "validator exploded"
+      message: "Validator throws threw an exception. Exception details were omitted from diagnostics."
     });
+    expect(JSON.stringify(validation)).not.toContain("example-secret-value");
     expect(validation.provenance).toContainEqual({
       path: [],
       action: "validated",
       sourceId: "throws",
       message: "Validator throws failed."
     });
+  });
+
+  it("omits free-form validator diagnostics that do not identify a non-root config path", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { database: { password: "example-secret-value" } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "root-check",
+          validate() {
+            return {
+              ok: false,
+              issues: [
+                {
+                  category: "validation",
+                  code: "root_invalid",
+                  severity: "error",
+                  path: [],
+                  message: "Rejected example-secret-value.",
+                  details: {
+                    received: "example-secret-value"
+                  }
+                }
+              ]
+            };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toEqual([
+      {
+        category: "validation",
+        code: "root_invalid",
+        severity: "error",
+        path: [],
+        sourceId: "root-check",
+        message: "Validator root-check reported a validation issue without a non-root config path."
+      }
+    ]);
+    expect(JSON.stringify(validation)).not.toContain("example-secret-value");
   });
 
   it("does not apply validator returned values to the pipeline config", async () => {
@@ -663,7 +708,7 @@ describe("resolveConfig", () => {
       code: "custom_error",
       severity: "error",
       sourceId: "true-with-error",
-      message: "Validator reported an error issue."
+      message: "Validator true-with-error reported a validation issue without a non-root config path."
     });
     expect(validation.provenance).toContainEqual({
       path: [],
@@ -727,7 +772,7 @@ describe("resolveConfig", () => {
         code: "first_failure",
         severity: "error",
         sourceId: "many-issues",
-        message: "First failure."
+        message: "Validator many-issues reported a validation issue without a non-root config path."
       },
       {
         category: "resource-limit",

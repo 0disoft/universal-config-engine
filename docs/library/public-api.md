@@ -62,6 +62,10 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 - Normalize malformed validator adapter results and malformed validator issues into
   `validation` issues instead of allowing broken adapter output to corrupt
   diagnostic reports.
+- Do not copy thrown validator exception text into diagnostics. Validator issues
+  without a non-root config path keep their structured code and severity, but core
+  replaces free-form messages and omits details because redaction metadata cannot
+  safely classify that text.
 - Normalize inconsistent validator status. A validator that returns `ok: false`
   without error issues produces a validation error issue, and any returned error
   issue makes the validator provenance status `error`.

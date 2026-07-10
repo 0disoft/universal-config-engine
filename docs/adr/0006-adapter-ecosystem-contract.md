@@ -37,6 +37,11 @@ Validator adapters interoperate through the existing `ValidatorAdapter` boundary
 - keep typed validator output adapter-local;
 - avoid replacing the pipeline output with validator-returned values.
 
+Core does not copy thrown validator exception text into diagnostics. Free-form
+messages and details are retained only for issues with a non-root normalized config
+path, where report redaction can classify the diagnostic against declared secret
+paths. Root and pathless issues retain structured status but use generalized text.
+
 Compatibility fixtures live under `docs/adapters/fixtures/` and are checked by
 `pnpm run check:adapter-fixtures`. Fixtures are contract examples for adapter
 authors; they are not executable parser implementations and do not introduce parser

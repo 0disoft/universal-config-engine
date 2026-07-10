@@ -57,6 +57,11 @@ It returns:
 `value` is not written back to the pipeline output. Later validators still receive
 the resolved config produced by core.
 
+Validator exceptions are normalized without copying exception text into diagnostic
+output. Issues should identify a non-root normalized config path when their message
+or details are useful; core generalizes root or pathless issue text because it cannot
+apply path-based redaction safely.
+
 ## Fixture Rules
 
 Fixtures under `docs/adapters/fixtures/` are checked by
