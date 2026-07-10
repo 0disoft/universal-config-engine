@@ -3,6 +3,7 @@ import {
   mkdtemp,
   readFile,
   rm,
+  symlink,
   writeFile
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -308,6 +309,57 @@ describe("runCli", () => {
           winningSourceId: "file"
         })
       );
+    });
+  });
+
+  it("rejects file sources that escape through a directory junction", async () => {
+    await withTempDir(async (dir) => {
+      const projectDir = join(dir, "project");
+      const outsideDir = join(dir, "outside");
+      await mkdir(projectDir);
+      await mkdir(outsideDir);
+      await writeFile(
+        join(outsideDir, "secret.json"),
+        JSON.stringify({ token: "junction-secret-value" }),
+        "utf8"
+      );
+      await symlink(outsideDir, join(projectDir, "linked"), "junction");
+      await writeFile(
+        join(projectDir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "file",
+              kind: "json-file",
+              priority: 0,
+              path: "linked/secret.json"
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json", "--json"], {
+        cwd: projectDir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly issues: readonly { readonly code: string; readonly sourceId?: string }[];
+      };
+
+      expect(result.exitCode).toBe(2);
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          code: "pipeline_file_source_path_outside_config_directory",
+          sourceId: "file"
+        })
+      );
+      expect(stdout).not.toContain("junction-secret-value");
     });
   });
 

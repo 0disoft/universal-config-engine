@@ -26,6 +26,9 @@ For `json-file` and `dotenv-file` sources:
   directory;
 - paths that resolve outside the declaration directory are rejected before file
   loading with `source-load/pipeline_file_source_path_outside_config_directory`;
+- the declaration and existing source paths are compared by canonical filesystem
+  path, so symbolic links and Windows junctions cannot redirect a source outside
+  the declaration directory;
 - rejected file source paths produce exit code `2`.
 
 This rule applies before JSON or dotenv parsing and before config merge.
@@ -58,6 +61,8 @@ workspace-root discovery rule.
   directory.
 - CLI tests must cover allowed absolute paths that stay inside the declaration
   directory.
+- CLI tests must cover symbolic-link or junction traversal to a canonical target
+  outside the declaration directory.
 - `pnpm run check` must pass before release.
 
 ## Review Blockers

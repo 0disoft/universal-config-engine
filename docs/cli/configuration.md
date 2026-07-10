@@ -30,7 +30,9 @@ JSON file and dotenv file paths are resolved from the pipeline declaration
 directory. The resolved path must stay inside that directory. Absolute file paths
 are accepted only when they still point inside the declaration directory. A file
 source path that escapes with `..` or points to another absolute location fails as
-a `source-load` issue with exit code `2`.
+a `source-load` issue with exit code `2`. Existing paths are checked by canonical
+filesystem path, so symbolic links and Windows junctions cannot redirect a source
+outside the declaration directory.
 
 The CLI validates the declaration shape before loading sources. Unsupported source
 kinds, unknown declaration fields, missing or duplicate source ids, missing file

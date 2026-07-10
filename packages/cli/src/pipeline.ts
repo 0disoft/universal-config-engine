@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import {
   dirname,
   isAbsolute,
@@ -91,7 +91,7 @@ export async function loadDeclaredSources(input: {
         break;
       case "json-file":
         {
-          const filePath = resolveConfigRelativePath({
+          const filePath = await resolveConfigRelativePath({
             configPath: input.configPath,
             cwd: input.cwd,
             sourceIndex: index,
@@ -118,7 +118,7 @@ export async function loadDeclaredSources(input: {
         break;
       case "dotenv-file":
         {
-          const filePath = resolveConfigRelativePath({
+          const filePath = await resolveConfigRelativePath({
             configPath: input.configPath,
             cwd: input.cwd,
             sourceIndex: index,
@@ -492,15 +492,16 @@ function mergeSourceRedactionWithSecretMappings(source: PipelineSourceDeclaratio
   };
 }
 
-function resolveConfigRelativePath(input: {
+async function resolveConfigRelativePath(input: {
   readonly configPath: string;
   readonly cwd: string;
   readonly sourceIndex: number;
   readonly sourceId: string;
   readonly targetPath: string;
-}): { readonly ok: true; readonly path: string } | { readonly ok: false; readonly issue: ConfigIssue } {
+}): Promise<{ readonly ok: true; readonly path: string } | { readonly ok: false; readonly issue: ConfigIssue }> {
   const absoluteConfigPath = resolveInputPath(input.configPath, input.cwd);
-  const configDirectory = dirname(absoluteConfigPath);
+  const canonicalConfigPath = await canonicalizeExistingPath(absoluteConfigPath);
+  const configDirectory = dirname(canonicalConfigPath);
   const resolvedTargetPath = input.targetPath === ""
     ? configDirectory
     : isAbsolute(input.targetPath)
@@ -508,20 +509,40 @@ function resolveConfigRelativePath(input: {
       : resolve(configDirectory, input.targetPath);
 
   if (!isInsideOrEqualPath(configDirectory, resolvedTargetPath)) {
-    return {
-      ok: false,
-      issue: pipelineDeclarationIssue({
-        code: "pipeline_file_source_path_outside_config_directory",
-        path: ["sources", input.sourceIndex, "path"],
-        sourceId: input.sourceId,
-        message: "File source paths must stay within the pipeline declaration directory."
-      })
-    };
+    return outsideConfigDirectoryResult(input);
+  }
+
+  const canonicalTargetPath = await canonicalizeExistingPath(resolvedTargetPath);
+  if (!isInsideOrEqualPath(configDirectory, canonicalTargetPath)) {
+    return outsideConfigDirectoryResult(input);
   }
 
   return {
     ok: true,
-    path: resolvedTargetPath
+    path: canonicalTargetPath
+  };
+}
+
+async function canonicalizeExistingPath(path: string): Promise<string> {
+  try {
+    return await realpath(path);
+  } catch {
+    return path;
+  }
+}
+
+function outsideConfigDirectoryResult(input: {
+  readonly sourceIndex: number;
+  readonly sourceId: string;
+}): { readonly ok: false; readonly issue: ConfigIssue } {
+  return {
+    ok: false,
+    issue: pipelineDeclarationIssue({
+      code: "pipeline_file_source_path_outside_config_directory",
+      path: ["sources", input.sourceIndex, "path"],
+      sourceId: input.sourceId,
+      message: "File source paths must stay within the pipeline declaration directory."
+    })
   };
 }
 
