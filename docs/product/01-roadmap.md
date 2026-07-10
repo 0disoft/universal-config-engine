@@ -65,6 +65,16 @@ Owner: UNASSIGNED
 - Documented how third-party validators attach error paths to normalized config
   objects.
 
+## Phase 5: 0.2.x Contract Hardening
+
+- Bounded CLI file sources to the pipeline declaration directory.
+- Rebuilt validated CLI declarations into typed runtime-owned objects.
+- Unified diagnostic overflow semantics so the marker counts toward
+  `maxDiagnostics`.
+- Generalized unscoped validator diagnostic text before it enters reports.
+- Fixed validator typed output as adapter-local behavior in ADR 0009.
+- Added a repeatable merge path trie benchmark near the 10,000-key resource limit.
+
 ## Explicitly Deferred
 
 - Remote config service.

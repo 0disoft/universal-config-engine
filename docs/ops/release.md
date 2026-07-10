@@ -4,7 +4,7 @@ Status: Draft
 
 ## Operational Contract
 
-Release preparation is validation-gated for the `0.1.x` baseline. Routine npm
+Release preparation is validation-gated for every `0.x` release. Routine npm
 publication uses GitHub Actions Trusted Publisher through
 `.github/workflows/release.yml`. GitHub release assets may be attached before or
 alongside npm publication when they are produced from the validated tag and contain
@@ -91,7 +91,8 @@ pnpm run clean:build
 The `v0.1.0` release includes pre-publication tarballs for core, node, CLI, Ajv
 validator, and Zod validator packages under the superseded package scope. The
 `v0.1.1` release is the first npm publication baseline under `@0disoft`. Later
-releases should be published by `.github/workflows/release.yml`.
+releases, including the `0.2.x` line, are published by
+`.github/workflows/release.yml`.
 
 ## Stop Conditions
 
