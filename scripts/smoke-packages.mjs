@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -150,50 +150,8 @@ function smokeConsumerInstall(tarballs) {
     )}\n`,
     "utf8"
   );
-  writeFileSync(
-    join(consumerDir, "uce.json"),
-    `${JSON.stringify(
-      {
-        sources: [
-          {
-            id: "defaults",
-            kind: "object",
-            priority: 0,
-            value: {
-              service: {
-                port: 3000
-              }
-            }
-          }
-        ],
-        validators: [
-          {
-            id: "schema:service",
-            kind: "json-schema-ajv",
-            schema: {
-              type: "object",
-              required: ["service"],
-              properties: {
-                service: {
-                  type: "object",
-                  required: ["port"],
-                  properties: {
-                    port: {
-                      type: "integer",
-                      minimum: 1
-                    }
-                  }
-                }
-              }
-            }
-          }
-        ]
-      },
-      null,
-      2
-    )}\n`,
-    "utf8"
-  );
+  copyFileSync(join(root, "examples", "uce.json"), join(consumerDir, "uce.json"));
+  copyFileSync(join(root, "examples", "basic-library.mjs"), join(consumerDir, "basic-library.mjs"));
   writeFileSync(
     join(consumerDir, "consumer-smoke.mjs"),
     [
@@ -223,6 +181,18 @@ function smokeConsumerInstall(tarballs) {
   );
 
   runNpm(["install", "--ignore-scripts"], consumerDir);
+  const basicLibraryOutput = execFileSync(process.execPath, [join(consumerDir, "basic-library.mjs")], {
+    cwd: consumerDir,
+    encoding: "utf8"
+  });
+  const basicLibraryResult = JSON.parse(basicLibraryOutput);
+  if (
+    basicLibraryResult.status !== "ok" ||
+    basicLibraryResult.port !== 8080 ||
+    basicLibraryResult.winningSourceId !== "local"
+  ) {
+    throw new Error("Installed basic library example failed.");
+  }
   execFileSync(process.execPath, [join(consumerDir, "consumer-smoke.mjs")], {
     cwd: consumerDir,
     stdio: "inherit"

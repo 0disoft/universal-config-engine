@@ -62,7 +62,86 @@ Not owned:
 .editorconfig, .gitattributes, and .gitignore keep line endings, binary diffs,
 local files, build outputs, caches, and secret files under control.
 
-## CLI MVP Usage
+## Install
+
+For library usage:
+
+```powershell
+pnpm add @0disoft/universal-config-engine-core
+```
+
+For the local inspection CLI:
+
+```powershell
+pnpm add --save-dev @0disoft/universal-config-engine-cli
+```
+
+These are package-consumer commands. Repository contributors should use the
+validation and release commands documented in `VALIDATION.md` and
+`docs/ops/release.md`.
+
+## Library Quickstart
+
+```javascript
+import {
+  buildDiagnosticReport,
+  resolveConfig
+} from "@0disoft/universal-config-engine-core";
+
+const result = resolveConfig({
+  sources: [
+    {
+      descriptor: {
+        id: "defaults",
+        kind: "object",
+        priority: 0,
+        displayName: "defaults"
+      },
+      value: { service: { port: 3000 } }
+    },
+    {
+      descriptor: {
+        id: "local",
+        kind: "object",
+        priority: 10,
+        displayName: "local"
+      },
+      value: { service: { port: 8080 } }
+    }
+  ]
+});
+
+const report = buildDiagnosticReport(result);
+console.log(result.config.service.port); // 8080
+console.log(report.resolvedPaths);
+```
+
+[`examples/basic-library.mjs`](examples/basic-library.mjs) is the executable form
+of this flow and is run against packed workspace tarballs by the package smoke test.
+
+## CLI Quickstart
+
+Create a JSON pipeline declaration such as [`examples/uce.json`](examples/uce.json),
+then run:
+
+```powershell
+pnpm exec uce explain --config examples/uce.json --json
+```
+
+Run validation with any validators declared in the pipeline:
+
+```powershell
+pnpm exec uce validate --config examples/uce.json --json
+```
+
+Pass CLI source values after `--` so they are treated as config input rather than
+UCE options:
+
+```powershell
+pnpm exec uce explain --config examples/uce.json --json -- --host 0.0.0.0
+```
+
+## Workspace Development
 
 Run `explain` with a JSON pipeline declaration:
 
