@@ -26,6 +26,11 @@ merge behavior, validator handoff, provenance, and redaction behavior explicit.
 - Deprecation and migration policy: deprecations must include migration examples before
   removal.
 
+## Migration Guides
+
+- `docs/library/migration-0.3.md`: migrate package consumers from `0.2.1` to
+  `0.3.0`.
+
 ## Review Blockers
 
 - Public exports change without semver and migration notes.

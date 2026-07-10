@@ -14,6 +14,7 @@ Status: Draft
 - Library public API source: docs/library/public-api.md
 - Library semver source: docs/library/semver.md
 - Library compatibility source: docs/library/compatibility.md
+- 0.3.0 migration guide: docs/library/migration-0.3.md
 - Adapter ecosystem source: docs/adapters/README.md
 - CLI command contract source: docs/cli/command-contract.md
 - CLI output and exit-code source: docs/cli/output-and-exit-codes.md

@@ -190,6 +190,9 @@ golden fixtures cover local precedence, opt-in coercion, declared Ajv validation
 validation failure, source-load failure, mapping policy failure, JSON usage errors,
 and secret-path redaction.
 
+Package consumers upgrading from `0.2.1` should follow
+[`docs/library/migration-0.3.md`](docs/library/migration-0.3.md).
+
 ADR 0009 keeps validator typed output adapter-local. ADR 0010 keeps expected config
 and adapter failures in domain result objects while reserving throws for strict
 parsers, low-level mutation helpers, and invariant failures.
