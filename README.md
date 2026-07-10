@@ -178,13 +178,16 @@ Initial validator adapters are `@0disoft/universal-config-engine-validator-zod` 
 `@0disoft/universal-config-engine-validator-ajv`. ADR 0005 selects the MIT license,
 the `@0disoft` npm scope, and a manual validation-gated release baseline. ADR 0007
 supersedes routine manual publication with tag-driven Trusted Publisher
-automation. The
-`v0.1.0` GitHub release carries pre-publication inspection assets; `v0.1.1` is the
+automation. The `v0.1.0` GitHub release carries pre-publication inspection assets;
+`v0.1.1` is the
 first npm publication baseline, and the current package version is `0.2.1`. CLI
-golden fixtures cover
-local precedence, opt-in coercion, declared
-Ajv validation, validation failure, source-load failure, mapping policy failure,
-JSON usage errors, and secret-path redaction.
+golden fixtures cover local precedence, opt-in coercion, declared Ajv validation,
+validation failure, source-load failure, mapping policy failure, JSON usage errors,
+and secret-path redaction.
+
+ADR 0009 keeps validator typed output adapter-local. ADR 0010 keeps expected config
+and adapter failures in domain result objects while reserving throws for strict
+parsers, low-level mutation helpers, and invariant failures.
 
 ## Current Structure Warning
 

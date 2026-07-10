@@ -94,7 +94,9 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 
 ## Decision State
 
-- Error class or Result-style return convention: UNDECIDED.
+- Expected config and adapter failures use domain-specific result objects and
+  `ConfigIssue`; strict parsers and low-level invariant helpers may throw. See ADR
+  0010.
 - TypeScript ESM, Node.js `>=24`, package ownership, validator packages, report
   schema `0.1`, adapter ownership, and validator typed output are decided in ADRs
   0003, 0004, 0006, and 0009.

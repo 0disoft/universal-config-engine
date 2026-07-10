@@ -21,6 +21,7 @@ These surfaces are public once implemented and released:
 - merge and coercion policy types;
 - provenance report shapes;
 - diagnostic and redaction report shapes;
+- documented throw-versus-result behavior;
 - CLI JSON output when shipped in the same package.
 
 ## Breaking Changes
