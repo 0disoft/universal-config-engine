@@ -104,11 +104,13 @@ export async function loadDeclaredSources(input: {
                   source.maxFileBytes === undefined
                     ? {
                         descriptor,
-                        filePath: filePath.path
+                        filePath: filePath.path,
+                        allowedRootPath: filePath.allowedRootPath
                       }
                     : {
                         descriptor,
                         filePath: filePath.path,
+                        allowedRootPath: filePath.allowedRootPath,
                         maxFileBytes: source.maxFileBytes
                       }
                 )
@@ -131,11 +133,13 @@ export async function loadDeclaredSources(input: {
                   source.maxFileBytes === undefined
                     ? {
                         descriptor,
-                        filePath: filePath.path
+                        filePath: filePath.path,
+                        allowedRootPath: filePath.allowedRootPath
                       }
                     : {
                         descriptor,
                         filePath: filePath.path,
+                        allowedRootPath: filePath.allowedRootPath,
                         maxFileBytes: source.maxFileBytes
                       }
                 )
@@ -498,7 +502,10 @@ async function resolveConfigRelativePath(input: {
   readonly sourceIndex: number;
   readonly sourceId: string;
   readonly targetPath: string;
-}): Promise<{ readonly ok: true; readonly path: string } | { readonly ok: false; readonly issue: ConfigIssue }> {
+}): Promise<
+  | { readonly ok: true; readonly path: string; readonly allowedRootPath: string }
+  | { readonly ok: false; readonly issue: ConfigIssue }
+> {
   const absoluteConfigPath = resolveInputPath(input.configPath, input.cwd);
   const canonicalConfigPath = await canonicalizeExistingPath(absoluteConfigPath);
   const configDirectory = dirname(canonicalConfigPath);
@@ -515,7 +522,8 @@ async function resolveConfigRelativePath(input: {
 
   return {
     ok: true,
-    path: canonicalTargetPath
+    path: canonicalTargetPath,
+    allowedRootPath: configDirectory
   };
 }
 

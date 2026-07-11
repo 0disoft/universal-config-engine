@@ -1,4 +1,5 @@
-import { open, stat } from "node:fs/promises";
+import { open, realpath, stat } from "node:fs/promises";
+import { isAbsolute, relative } from "node:path";
 import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
 
 export const DEFAULT_MAX_FILE_BYTES = 1024 * 1024;
@@ -7,6 +8,7 @@ const READ_CHUNK_BYTES = 64 * 1024;
 export interface FileReadPolicy {
   readonly maxFileBytes?: number;
   readonly encoding?: BufferEncoding;
+  readonly allowedRootPath?: string;
 }
 
 export type BoundedTextFileReadResult =
@@ -18,6 +20,7 @@ export async function readTextFileWithinLimit(input: {
   readonly sourceId: string;
   readonly maxFileBytes?: number;
   readonly encoding?: BufferEncoding;
+  readonly allowedRootPath?: string;
 }): Promise<BoundedTextFileReadResult> {
   const maxFileBytes = input.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
   const encoding = input.encoding ?? "utf8";
@@ -25,6 +28,20 @@ export async function readTextFileWithinLimit(input: {
 
   try {
     const stats = await fileHandle.stat();
+    const boundaryIssues = await openedFileBoundaryIssues({
+      filePath: input.filePath,
+      sourceId: input.sourceId,
+      allowedRootPath: input.allowedRootPath,
+      openedDevice: stats.dev,
+      openedInode: stats.ino
+    });
+    if (boundaryIssues.length > 0) {
+      return {
+        ok: false,
+        issues: boundaryIssues
+      };
+    }
+
     const sizeIssues = fileSizeIssues({
       sourceId: input.sourceId,
       fileBytes: stats.size,
@@ -52,6 +69,52 @@ export async function readTextFileWithinLimit(input: {
   } finally {
     await fileHandle.close();
   }
+}
+
+async function openedFileBoundaryIssues(input: {
+  readonly filePath: string;
+  readonly sourceId: string;
+  readonly allowedRootPath: string | undefined;
+  readonly openedDevice: number;
+  readonly openedInode: number;
+}): Promise<readonly ConfigIssue[]> {
+  if (input.allowedRootPath === undefined) {
+    return [];
+  }
+
+  try {
+    const [canonicalRootPath, canonicalFilePath] = await Promise.all([
+      realpath(input.allowedRootPath),
+      realpath(input.filePath)
+    ]);
+    if (!isInsideOrEqualPath(canonicalRootPath, canonicalFilePath)) {
+      return [fileBoundaryIssue(input.sourceId, "file_path_outside_allowed_root")];
+    }
+
+    const currentStats = await stat(canonicalFilePath);
+    if (currentStats.dev !== input.openedDevice || currentStats.ino !== input.openedInode) {
+      return [fileBoundaryIssue(input.sourceId, "file_identity_changed")];
+    }
+
+    return [];
+  } catch {
+    return [fileBoundaryIssue(input.sourceId, "file_boundary_verification_failed")];
+  }
+}
+
+function isInsideOrEqualPath(rootPath: string, targetPath: string): boolean {
+  const relativePath = relative(rootPath, targetPath);
+  return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
+}
+
+function fileBoundaryIssue(sourceId: string, code: string): ConfigIssue {
+  return {
+    category: "source-load",
+    code,
+    severity: "error",
+    sourceId,
+    message: "File source boundary verification failed before reading contents."
+  };
 }
 
 export async function checkFileSize(input: {

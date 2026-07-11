@@ -41,6 +41,10 @@ The 0.3 validator boundary adds `ValidatorIssue` while retaining optional legacy
 which structured fields core trusts requires a deliberate pre-1.0 minor or stable
 major-version review.
 
+The 0.3.1 Node loader adds optional `FileReadPolicy.allowedRootPath` to enforce the
+already documented CLI file boundary at open-handle time. Existing callers that do
+not configure a root retain their caller-owned path behavior.
+
 ## Patch Changes
 
 Patch versions may fix incorrect provenance, redaction, validation, or parsing

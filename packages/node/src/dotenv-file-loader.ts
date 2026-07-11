@@ -17,7 +17,8 @@ export async function loadDotenvFileSource(input: LoadDotenvFileSourceInput): Pr
       filePath: input.filePath,
       sourceId: input.descriptor.id,
       maxFileBytes,
-      encoding
+      encoding,
+      ...(input.allowedRootPath === undefined ? {} : { allowedRootPath: input.allowedRootPath })
     });
     if (!readResult.ok) {
       return {

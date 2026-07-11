@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -60,6 +60,66 @@ describe("node source loaders", () => {
           sourceId: "json"
         })
       );
+    } finally {
+      await rm(dir, { force: true, recursive: true });
+    }
+  });
+
+  it("refuses to read an opened file whose canonical path is outside the allowed root", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "uce-json-boundary-"));
+    try {
+      const allowedRootPath = join(dir, "project");
+      const outsideDirectory = join(dir, "outside");
+      await mkdir(allowedRootPath);
+      await mkdir(outsideDirectory);
+      await writeFile(
+        join(outsideDirectory, "config.json"),
+        JSON.stringify({ token: "opened-file-secret-value" }),
+        "utf8"
+      );
+      await symlink(outsideDirectory, join(allowedRootPath, "linked"), "junction");
+
+      const loaded = await loadJsonFileSource({
+        descriptor: descriptor("json", "json-file", 1),
+        filePath: join(allowedRootPath, "linked", "config.json"),
+        allowedRootPath
+      });
+
+      expect(loaded.issues).toEqual([
+        {
+          category: "source-load",
+          code: "file_path_outside_allowed_root",
+          severity: "error",
+          sourceId: "json",
+          message: "File source boundary verification failed before reading contents."
+        }
+      ]);
+      expect(JSON.stringify(loaded)).not.toContain("opened-file-secret-value");
+    } finally {
+      await rm(dir, { force: true, recursive: true });
+    }
+  });
+
+  it("fails closed when the allowed root cannot be canonicalized", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "uce-json-boundary-root-"));
+    try {
+      const filePath = join(dir, "config.json");
+      await writeFile(filePath, JSON.stringify({ server: { port: 3000 } }), "utf8");
+
+      const loaded = await loadJsonFileSource({
+        descriptor: descriptor("json", "json-file", 1),
+        filePath,
+        allowedRootPath: join(dir, "missing-root")
+      });
+
+      expect(loaded.issues).toContainEqual(
+        expect.objectContaining({
+          category: "source-load",
+          code: "file_boundary_verification_failed",
+          sourceId: "json"
+        })
+      );
+      expect(loaded.value).toEqual({});
     } finally {
       await rm(dir, { force: true, recursive: true });
     }

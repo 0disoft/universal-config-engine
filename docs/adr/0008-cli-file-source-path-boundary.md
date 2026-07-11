@@ -33,7 +33,9 @@ For `json-file` and `dotenv-file` sources:
   accepted;
 - rejected file source paths produce exit code `2`.
 
-This rule applies before JSON or dotenv parsing and before config merge.
+This rule applies before JSON or dotenv parsing and before config merge. The CLI
+also passes the canonical declaration directory to the Node loader so ADR 0012 can
+verify the opened file handle before reading contents.
 
 ## Rationale
 
@@ -65,6 +67,7 @@ workspace-root discovery rule.
   directory.
 - CLI tests must cover symbolic-link or junction traversal to a canonical target
   outside the declaration directory.
+- Node loader tests must verify the opened file boundary described by ADR 0012.
 - `pnpm run check` must pass before release.
 
 ## Review Blockers

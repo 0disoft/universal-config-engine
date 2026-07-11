@@ -28,8 +28,8 @@ merge behavior, validator handoff, provenance, and redaction behavior explicit.
 
 ## Migration Guides
 
-- `docs/library/migration-0.3.md`: migrate package consumers from `0.2.1` to
-  `0.3.0`.
+- `docs/library/migration-0.3.md`: migrate package consumers from `0.2.1` to the
+  current `0.3.x` release.
 
 ## Review Blockers
 

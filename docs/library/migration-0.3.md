@@ -1,15 +1,18 @@
-# Migrating from 0.2.1 to 0.3.0
+# Migrating from 0.2.1 to 0.3.x
+
+Use `0.3.1` or later. It retains the 0.3.0 consumer API and adds opened-file
+identity verification for bounded JSON and dotenv sources.
 
 ## Package Update
 
 Update all Universal Config Engine packages together:
 
 ```powershell
-pnpm update @0disoft/universal-config-engine-core@0.3.0 `
-  @0disoft/universal-config-engine-node@0.3.0 `
-  @0disoft/universal-config-engine-cli@0.3.0 `
-  @0disoft/universal-config-engine-validator-ajv@0.3.0 `
-  @0disoft/universal-config-engine-validator-zod@0.3.0
+pnpm update @0disoft/universal-config-engine-core@0.3.1 `
+  @0disoft/universal-config-engine-node@0.3.1 `
+  @0disoft/universal-config-engine-cli@0.3.1 `
+  @0disoft/universal-config-engine-validator-ajv@0.3.1 `
+  @0disoft/universal-config-engine-validator-zod@0.3.1
 ```
 
 Only list packages the project already uses. Node.js `>=24` and ESM remain the
@@ -69,6 +72,10 @@ directory. In 0.3.0, canonical filesystem paths are checked as well, so a symbol
 link or Windows junction cannot redirect a declared source outside that directory.
 Move the target file under the declaration directory instead of relying on a link
 to an outside location.
+
+Starting with 0.3.1, the CLI also passes the declaration directory to the Node
+loader. The loader verifies the canonical path and opened file identity before it
+reads JSON or dotenv contents.
 
 ## Unchanged Contracts
 

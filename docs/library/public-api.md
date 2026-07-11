@@ -52,6 +52,10 @@ Published package ownership is layered:
 The core package must not depend on parser libraries, validator libraries, Node.js
 file-system APIs, process env, argv parsing, or CLI presentation libraries.
 
+Node JSON and dotenv loaders accept `FileReadPolicy.allowedRootPath`. When set,
+they verify the canonical path and opened file identity before reading from the
+handle; see ADR 0012.
+
 The committed `docs/library/public-api.snapshot.txt` records normalized declaration
 files for every publishable package. `pnpm run check:api-snapshot` fails when the
 built declaration surface drifts. Intentional API changes require semver and

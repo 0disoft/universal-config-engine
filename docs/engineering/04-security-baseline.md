@@ -28,6 +28,8 @@ boundaries, hosted API security, database security, or remote secret delivery.
   prototypes.
 - Resource limits must bound file size, object depth, key count, diagnostics count,
   path length, and env var count.
+- Bounded file sources must verify configured canonical roots and opened file
+  identity before reading contents.
 - Parser and validator adapters are untrusted boundaries until tested by fixtures.
 - Validator issue codes are bounded machine identifiers, not a free-form text
   escape hatch around diagnostic redaction.

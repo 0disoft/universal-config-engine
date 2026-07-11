@@ -15,7 +15,8 @@ export async function loadJsonFileSource(input: LoadJsonFileSourceInput): Promis
       filePath: input.filePath,
       sourceId: input.descriptor.id,
       maxFileBytes,
-      encoding
+      encoding,
+      ...(input.allowedRootPath === undefined ? {} : { allowedRootPath: input.allowedRootPath })
     });
     if (!readResult.ok) {
       return {
