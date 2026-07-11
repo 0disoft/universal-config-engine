@@ -51,11 +51,13 @@ export interface DotenvFileSourceDeclaration extends BaseSourceDeclaration {
 export interface ProcessEnvSourceDeclaration extends BaseSourceDeclaration {
   readonly kind: "process-env";
   readonly mappings: readonly OverrideMapping[];
+  readonly maxEnvEntries?: number;
 }
 
 export interface ArgvSourceDeclaration extends BaseSourceDeclaration {
   readonly kind: "argv";
   readonly mappings: readonly OverrideMapping[];
+  readonly maxArgvEntries?: number;
 }
 
 export interface AjvJsonSchemaValidatorDeclaration {

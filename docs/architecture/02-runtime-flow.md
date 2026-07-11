@@ -16,7 +16,8 @@ manager behavior.
 3. Declared override mappings translate process env or argv source values into target
    config paths.
 4. Resource limits bound file size, object depth, key count, diagnostics count, path
-   length, and env var count.
+   length, environment entry count, and argument entry count. Environment and argv
+   limits are enforced before declared mappings are evaluated.
 5. Unsafe path segments are rejected or escaped before object mutation.
 6. The merge engine resolves values in deterministic priority order and emits
    provenance events as values are defined, overridden, defaulted, or rejected.

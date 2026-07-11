@@ -301,10 +301,12 @@ export declare function flattenConfigObject(sourceId: string, value: unknown, li
 
 ### argv-source.d.ts
 import { type ConfigSourceDescriptor, type LoadedSource, type OverrideMapping } from "@0disoft/universal-config-engine-core";
+export declare const DEFAULT_MAX_ARGV_ENTRIES = 4096;
 export interface CreateArgvSourceInput {
     readonly descriptor: ConfigSourceDescriptor;
     readonly argv: readonly string[];
     readonly mappings: readonly OverrideMapping[];
+    readonly maxArgvEntries?: number;
 }
 export declare function createArgvSource(input: CreateArgvSourceInput): LoadedSource;
 
@@ -350,8 +352,8 @@ export declare function checkFileSize(input: {
 export { DEFAULT_MAX_FILE_BYTES, checkFileSize, readTextFileWithinLimit } from "./file.js";
 export { loadJsonFileSource } from "./json-file-loader.js";
 export { loadDotenvFileSource, parseSimpleDotenv } from "./dotenv-file-loader.js";
-export { createProcessEnvSource } from "./process-env-source.js";
-export { createArgvSource } from "./argv-source.js";
+export { DEFAULT_MAX_ENV_ENTRIES, createProcessEnvSource } from "./process-env-source.js";
+export { DEFAULT_MAX_ARGV_ENTRIES, createArgvSource } from "./argv-source.js";
 export type { BoundedTextFileReadResult, FileReadPolicy } from "./file.js";
 export type { LoadJsonFileSourceInput } from "./json-file-loader.js";
 export type { LoadDotenvFileSourceInput } from "./dotenv-file-loader.js";
@@ -369,10 +371,12 @@ export declare function loadJsonFileSource(input: LoadJsonFileSourceInput): Prom
 
 ### process-env-source.d.ts
 import { type ConfigSourceDescriptor, type LoadedSource, type OverrideMapping } from "@0disoft/universal-config-engine-core";
+export declare const DEFAULT_MAX_ENV_ENTRIES = 4096;
 export interface CreateProcessEnvSourceInput {
     readonly descriptor: ConfigSourceDescriptor;
     readonly env: NodeJS.ProcessEnv;
     readonly mappings: readonly OverrideMapping[];
+    readonly maxEnvEntries?: number;
 }
 export declare function createProcessEnvSource(input: CreateProcessEnvSourceInput): LoadedSource;
 
@@ -484,10 +488,12 @@ export interface DotenvFileSourceDeclaration extends BaseSourceDeclaration {
 export interface ProcessEnvSourceDeclaration extends BaseSourceDeclaration {
     readonly kind: "process-env";
     readonly mappings: readonly OverrideMapping[];
+    readonly maxEnvEntries?: number;
 }
 export interface ArgvSourceDeclaration extends BaseSourceDeclaration {
     readonly kind: "argv";
     readonly mappings: readonly OverrideMapping[];
+    readonly maxArgvEntries?: number;
 }
 export interface AjvJsonSchemaValidatorDeclaration {
     readonly id: string;

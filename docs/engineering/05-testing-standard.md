@@ -26,7 +26,8 @@ Testing standard defines merge-blocking expectations for unit, integration, cont
 - Redaction fixtures prove report structures and snapshots do not contain raw secret
   values.
 - Resource-limit fixtures cover oversized files, excessive depth, excessive key
-  count, excessive path length, excessive env var count, and bounded diagnostics.
+  count, excessive path length, excessive environment and argument entry counts,
+  and bounded diagnostics.
 - Validator adapter fixtures map external error paths to normalized config paths.
 - CLI fixtures verify stdout, stderr, JSON output, exit codes, and shared pipeline
   behavior with the library.

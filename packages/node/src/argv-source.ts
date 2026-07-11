@@ -6,13 +6,37 @@ import {
   type OverrideMapping
 } from "@0disoft/universal-config-engine-core";
 
+export const DEFAULT_MAX_ARGV_ENTRIES = 4096;
+
 export interface CreateArgvSourceInput {
   readonly descriptor: ConfigSourceDescriptor;
   readonly argv: readonly string[];
   readonly mappings: readonly OverrideMapping[];
+  readonly maxArgvEntries?: number;
 }
 
 export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
+  const maxArgvEntries = input.maxArgvEntries ?? DEFAULT_MAX_ARGV_ENTRIES;
+  if (input.argv.length > maxArgvEntries) {
+    return {
+      descriptor: input.descriptor,
+      value: {},
+      issues: [
+        {
+          category: "resource-limit",
+          code: "max_argv_entries_exceeded",
+          severity: "error",
+          sourceId: input.descriptor.id,
+          message: `Argument source exceeds the maximum of ${maxArgvEntries} entries.`,
+          details: {
+            argvEntries: input.argv.length,
+            maxArgvEntries
+          }
+        }
+      ]
+    };
+  }
+
   const values: Record<string, string> = {};
   const issues: ConfigIssue[] = [];
 

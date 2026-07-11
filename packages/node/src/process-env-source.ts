@@ -6,13 +6,38 @@ import {
   type OverrideMapping
 } from "@0disoft/universal-config-engine-core";
 
+export const DEFAULT_MAX_ENV_ENTRIES = 4096;
+
 export interface CreateProcessEnvSourceInput {
   readonly descriptor: ConfigSourceDescriptor;
   readonly env: NodeJS.ProcessEnv;
   readonly mappings: readonly OverrideMapping[];
+  readonly maxEnvEntries?: number;
 }
 
 export function createProcessEnvSource(input: CreateProcessEnvSourceInput): LoadedSource {
+  const maxEnvEntries = input.maxEnvEntries ?? DEFAULT_MAX_ENV_ENTRIES;
+  const envEntries = Object.keys(input.env).length;
+  if (envEntries > maxEnvEntries) {
+    return {
+      descriptor: input.descriptor,
+      value: {},
+      issues: [
+        {
+          category: "resource-limit",
+          code: "max_env_entries_exceeded",
+          severity: "error",
+          sourceId: input.descriptor.id,
+          message: `Environment source exceeds the maximum of ${maxEnvEntries} entries.`,
+          details: {
+            envEntries,
+            maxEnvEntries
+          }
+        }
+      ]
+    };
+  }
+
   const values: Record<string, string> = {};
   const issues: ConfigIssue[] = [];
 

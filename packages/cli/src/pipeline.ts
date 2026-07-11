@@ -43,8 +43,8 @@ const SOURCE_KIND_FIELDS: Readonly<Record<string, ReadonlySet<string>>> = {
   object: new Set(["value"]),
   "json-file": new Set(["path", "maxFileBytes"]),
   "dotenv-file": new Set(["path", "maxFileBytes"]),
-  "process-env": new Set(["mappings"]),
-  argv: new Set(["mappings"])
+  "process-env": new Set(["mappings", "maxEnvEntries"]),
+  argv: new Set(["mappings", "maxArgvEntries"])
 };
 const OVERRIDE_MAPPING_FIELDS = new Set(["externalName", "targetPath", "sourceKind", "parseAs", "secret"]);
 const COERCION_RULE_FIELDS = new Set(["path", "from", "to", "onFailure"]);
@@ -163,7 +163,8 @@ export async function loadDeclaredSources(input: {
           createProcessEnvSource({
             descriptor,
             env: input.env,
-            mappings: source.mappings
+            mappings: source.mappings,
+            ...(source.maxEnvEntries === undefined ? {} : { maxEnvEntries: source.maxEnvEntries })
           })
         );
         break;
@@ -172,7 +173,8 @@ export async function loadDeclaredSources(input: {
           createArgvSource({
             descriptor,
             argv: input.argv,
-            mappings: source.mappings
+            mappings: source.mappings,
+            ...(source.maxArgvEntries === undefined ? {} : { maxArgvEntries: source.maxArgvEntries })
           })
         );
         break;
@@ -259,13 +261,15 @@ function normalizeSourceDeclaration(source: unknown): PipelineSourceDeclaration 
       return {
         ...base,
         kind: "process-env",
-        mappings: arrayField(source, "mappings").map((mapping) => normalizeOverrideMapping(mapping, "process-env"))
+        mappings: arrayField(source, "mappings").map((mapping) => normalizeOverrideMapping(mapping, "process-env")),
+        ...optionalPositiveIntegerField(source, "maxEnvEntries")
       };
     case "argv":
       return {
         ...base,
         kind: "argv",
-        mappings: arrayField(source, "mappings").map((mapping) => normalizeOverrideMapping(mapping, "argv"))
+        mappings: arrayField(source, "mappings").map((mapping) => normalizeOverrideMapping(mapping, "argv")),
+        ...optionalPositiveIntegerField(source, "maxArgvEntries")
       };
     default:
       throw new Error(`Unsupported source kind ${source.kind} reached normalization.`);
@@ -777,6 +781,21 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
       break;
     case "process-env":
     case "argv":
+      {
+        const limitField = source.kind === "process-env" ? "maxEnvEntries" : "maxArgvEntries";
+        if (source[limitField] !== undefined && !isPositiveInteger(source[limitField])) {
+          issues.push(
+            pipelineDeclarationIssue({
+              code: source.kind === "process-env"
+                ? "pipeline_process_env_max_entries_invalid"
+                : "pipeline_argv_max_entries_invalid",
+              path: sourcePath(limitField),
+              sourceId,
+              message: `${limitField} must be a positive integer when provided.`
+            })
+          );
+        }
+      }
       if (!Array.isArray(source.mappings)) {
         issues.push(
           pipelineDeclarationIssue({

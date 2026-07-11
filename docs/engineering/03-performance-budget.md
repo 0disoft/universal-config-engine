@@ -5,9 +5,14 @@ Status: Draft
 ## Contract
 
 Performance budgets track local resolution cost, source size, object depth, key
-count, path length, diagnostics count, env var count, package size, and CLI
+count, path length, diagnostics count, environment entry count, argument entry
+count, package size, and CLI
 execution behavior. Query count, cache behavior, background jobs, and hosted runtime
 SLOs are out of scope until a future ADR adds a service surface.
+
+The Node process-env and argv adapters default to at most 4096 input entries. Their
+per-source `maxEnvEntries` and `maxArgvEntries` options may lower or raise that bound.
+An oversized input is rejected before mapping.
 
 ## Required Evidence
 

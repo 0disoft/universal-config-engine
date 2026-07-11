@@ -60,6 +60,11 @@ The Node package exports `readTextFileWithinLimit` for bounded consumers such as
 the CLI pipeline declaration loader. It reads through an open handle and returns a
 resource-limit issue instead of allocating beyond the configured byte limit.
 
+The Node process-env and argv helpers default to 4096 entries and export
+`DEFAULT_MAX_ENV_ENTRIES` and `DEFAULT_MAX_ARGV_ENTRIES`. Callers may select a
+per-source `maxEnvEntries` or `maxArgvEntries`; oversized inputs return an empty
+source value plus a `resource-limit` issue before mapping.
+
 The committed `docs/library/public-api.snapshot.txt` records normalized declaration
 files for every publishable package. `pnpm run check:api-snapshot` fails when the
 built declaration surface drifts. Intentional API changes require semver and

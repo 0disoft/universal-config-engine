@@ -62,6 +62,13 @@ or override sources, but it must not silently change source priority.
 Env var and CLI argument mapping must be declared. Automatic name-to-path inference is
 out of MVP scope because it hides typos and collisions.
 
+Process environment and argv sources accept optional positive-integer entry limits:
+`maxEnvEntries` and `maxArgvEntries`. Both default to 4096 in the Node adapter.
+When the complete input exceeds its limit, the source is rejected before mapping and
+returns `resource-limit/max_env_entries_exceeded` or
+`resource-limit/max_argv_entries_exceeded`; the CLI exits with code `3`. The limit
+counts the complete input, not only names referenced by mappings.
+
 Within a single process-env or argv source, two mappings must not target the same
 config path. Duplicate mapping targets are declaration errors rather than
 last-writer-wins overrides.

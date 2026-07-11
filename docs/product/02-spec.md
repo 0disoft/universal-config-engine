@@ -54,7 +54,7 @@ of why each final value exists.
 - CLI command to explain resolved config and validation results.
 - Prototype-pollution-safe path handling.
 - Configurable resource limits for file size, object depth, key count, diagnostics
-  count, path length, and env var count.
+  count, path length, environment entry count, and argument entry count.
 
 ## Deferred Scope
 

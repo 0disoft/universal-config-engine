@@ -27,7 +27,8 @@ boundaries, hosted API security, database security, or remote secret delivery.
 - `__proto__`, `prototype`, and `constructor` path segments must not mutate object
   prototypes.
 - Resource limits must bound file size, object depth, key count, diagnostics count,
-  path length, and env var count.
+  path length, environment entry count, and argument entry count. Oversized process
+  inputs must fail before mapping rather than produce partial configuration.
 - Bounded file sources must verify configured canonical roots and opened file
   identity before reading contents.
 - The CLI pipeline declaration must be byte-bounded before JSON parsing.

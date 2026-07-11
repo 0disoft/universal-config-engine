@@ -318,6 +318,38 @@ describe("node source loaders", () => {
     expect(result.config).toEqual({ server: { port: 8080 } });
   });
 
+  it("rejects process env sources that exceed the entry limit before mapping", () => {
+    const loaded = createProcessEnvSource({
+      descriptor: descriptor("env", "process-env", 10),
+      env: {
+        APP_PORT: "8080",
+        EXTRA: "ignored"
+      },
+      mappings: [
+        {
+          externalName: "APP_PORT",
+          sourceKind: "process-env",
+          targetPath: ["server", "port"],
+          parseAs: "number"
+        }
+      ],
+      maxEnvEntries: 1
+    });
+
+    expect(loaded.value).toEqual({});
+    expect(loaded.issues).toEqual([
+      expect.objectContaining({
+        category: "resource-limit",
+        code: "max_env_entries_exceeded",
+        sourceId: "env",
+        details: {
+          envEntries: 2,
+          maxEnvEntries: 1
+        }
+      })
+    ]);
+  });
+
   it("maps argv values from explicit flags and assignments", () => {
     const loaded = createArgvSource({
       descriptor: descriptor("argv", "argv", 20),
@@ -343,6 +375,35 @@ describe("node source loaders", () => {
       server: { port: 9000 },
       app: { mode: "prod" }
     });
+  });
+
+  it("rejects argv sources that exceed the entry limit before mapping", () => {
+    const loaded = createArgvSource({
+      descriptor: descriptor("argv", "argv", 20),
+      argv: ["--port", "9000"],
+      mappings: [
+        {
+          externalName: "--port",
+          sourceKind: "argv",
+          targetPath: ["server", "port"],
+          parseAs: "number"
+        }
+      ],
+      maxArgvEntries: 1
+    });
+
+    expect(loaded.value).toEqual({});
+    expect(loaded.issues).toEqual([
+      expect.objectContaining({
+        category: "resource-limit",
+        code: "max_argv_entries_exceeded",
+        sourceId: "argv",
+        details: {
+          argvEntries: 2,
+          maxArgvEntries: 1
+        }
+      })
+    ]);
   });
 
   it("reports missing argv values instead of guessing booleans", () => {

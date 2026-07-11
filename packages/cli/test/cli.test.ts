@@ -954,6 +954,20 @@ describe("runCli", () => {
               priority: 1,
               path: ".env",
               maxFileBytes: 0
+            },
+            {
+              id: "process-env",
+              kind: "process-env",
+              priority: 2,
+              mappings: [],
+              maxEnvEntries: 0
+            },
+            {
+              id: "argv",
+              kind: "argv",
+              priority: 3,
+              mappings: [],
+              maxArgvEntries: "many"
             }
           ],
           limits: {
@@ -991,6 +1005,8 @@ describe("runCli", () => {
       expect(issueCodes).toEqual(
         expect.arrayContaining([
           "pipeline_file_source_max_file_bytes_invalid",
+          "pipeline_process_env_max_entries_invalid",
+          "pipeline_argv_max_entries_invalid",
           "pipeline_limit_value_invalid"
         ])
       );
@@ -1016,11 +1032,73 @@ describe("runCli", () => {
       );
       expect(report.issues).toContainEqual(
         expect.objectContaining({
+          code: "pipeline_process_env_max_entries_invalid",
+          sourceId: "process-env",
+          path: ["sources", 2, "maxEnvEntries"]
+        })
+      );
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          code: "pipeline_argv_max_entries_invalid",
+          sourceId: "argv",
+          path: ["sources", 3, "maxArgvEntries"]
+        })
+      );
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
           code: "pipeline_limit_value_invalid",
           path: ["limits", "maxDiagnostics"]
         })
       );
       expect(report.issues.every((issue) => issue.category === "source-load")).toBe(true);
+    });
+  });
+
+  it("returns resource-limit failures when env and argv sources exceed declared entry limits", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "env",
+              kind: "process-env",
+              priority: 10,
+              maxEnvEntries: 1,
+              mappings: []
+            },
+            {
+              id: "argv",
+              kind: "argv",
+              priority: 20,
+              maxArgvEntries: 1,
+              mappings: []
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json", "--json", "--", "--one", "two"], {
+        cwd: dir,
+        env: { ONE: "1", TWO: "2" },
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly issues: readonly { readonly category: string; readonly code: string }[];
+      };
+
+      expect(result.exitCode).toBe(3);
+      expect(report.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ category: "resource-limit", code: "max_env_entries_exceeded" }),
+          expect.objectContaining({ category: "resource-limit", code: "max_argv_entries_exceeded" })
+        ])
+      );
     });
   });
 

@@ -11,9 +11,11 @@ export {
   parseSimpleDotenv
 } from "./dotenv-file-loader.js";
 export {
+  DEFAULT_MAX_ENV_ENTRIES,
   createProcessEnvSource
 } from "./process-env-source.js";
 export {
+  DEFAULT_MAX_ARGV_ENTRIES,
   createArgvSource
 } from "./argv-source.js";
 export type {
