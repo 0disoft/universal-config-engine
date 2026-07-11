@@ -36,7 +36,8 @@ export async function runConfigPipeline<TContext = undefined>(
 ): Promise<RunConfigPipelineResult> {
   const loaded = await loadConfigSources({
     loaders: input.loaders,
-    context: input.context
+    context: input.context,
+    ...(input.limits === undefined ? {} : { limits: input.limits })
   });
   const resolved = resolveConfig({
     sources: loaded.sources,
@@ -122,4 +123,3 @@ function replaceLastIssueWithOverflowMarker(issues: ConfigIssue[], maxDiagnostic
 function isDiagnosticsOverflowMarker(issue: ConfigIssue): boolean {
   return issue.category === "resource-limit" && issue.code === "max_diagnostics_exceeded";
 }
-

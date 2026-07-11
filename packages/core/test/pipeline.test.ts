@@ -168,4 +168,33 @@ describe("runConfigPipeline", () => {
     ]);
     expect(pipeline.report.issues).toHaveLength(2);
   });
+
+  it("applies maxDiagnostics while retaining loader output", async () => {
+    const pipeline = await runConfigPipeline({
+      loaders: [
+        loader(
+          "noisy",
+          0,
+          {},
+          ["first", "second", "third"].map((code) => ({
+            category: "source-load",
+            code,
+            severity: "warning",
+            sourceId: "noisy",
+            message: `${code} issue.`
+          }))
+        )
+      ],
+      context: undefined,
+      limits: { maxDiagnostics: 2 }
+    });
+
+    expect(pipeline.result.issues).toHaveLength(2);
+    expect(pipeline.result.issues.at(-1)).toEqual(
+      expect.objectContaining({
+        category: "resource-limit",
+        code: "max_diagnostics_exceeded"
+      })
+    );
+  });
 });

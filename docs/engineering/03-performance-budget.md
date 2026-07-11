@@ -14,6 +14,10 @@ The Node process-env and argv adapters default to at most 4096 input entries. Th
 per-source `maxEnvEntries` and `maxArgvEntries` options may lower or raise that bound.
 An oversized input is rejected before mapping.
 
+Loader issue retention uses `maxDiagnostics` from the loader boundary onward. The
+default limit is 200, and both per-source and aggregate issue arrays include the
+overflow marker within that bound.
+
 ## Required Evidence
 
 - Source of truth: `docs/product/02-spec.md`, `docs/architecture/03-quality-attributes.md`,

@@ -13,6 +13,8 @@ manager behavior.
 1. A caller declares sources with ids, kinds, priorities, display names, and redaction
    policy input.
 2. Loaders return normalized config values, source locations, and loader issues.
+   Loader issue arrays are bounded as they enter the pipeline, both per source and
+   in aggregate.
 3. Declared override mappings translate process env or argv source values into target
    config paths.
 4. Resource limits bound file size, object depth, key count, diagnostics count, path

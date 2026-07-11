@@ -34,10 +34,11 @@ export type { CreateMappedOverrideSourceInput } from "./mapping.js";
 export type { RunValidatorsInput, RunValidatorsResult } from "./validation.js";
 
 ### loader.d.ts
-import type { ConfigIssue, ConfigLoader, LoadedSource } from "./types.js";
+import type { ConfigIssue, ConfigLoader, LoadedSource, ResourceLimitPolicy } from "./types.js";
 export interface LoadConfigSourcesInput<TContext = undefined> {
     readonly loaders: readonly ConfigLoader<TContext>[];
     readonly context: TContext;
+    readonly limits?: Partial<ResourceLimitPolicy>;
 }
 export interface LoadConfigSourcesResult {
     readonly sources: readonly LoadedSource[];

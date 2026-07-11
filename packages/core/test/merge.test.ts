@@ -899,6 +899,44 @@ describe("loadConfigSources", () => {
       status: "failed"
     });
   });
+
+  it("bounds retained source and aggregate loader issues", async () => {
+    const loaderIssues = ["first", "second", "third"].map((code) => ({
+      category: "source-load" as const,
+      code,
+      severity: "warning" as const,
+      sourceId: "noisy-loader",
+      message: `${code} issue.`
+    }));
+    const loaded = await loadConfigSources({
+      loaders: [
+        {
+          descriptor: {
+            id: "noisy-loader",
+            kind: "adapter",
+            priority: 0,
+            displayName: "noisy-loader"
+          },
+          load() {
+            return { value: {}, issues: loaderIssues };
+          }
+        }
+      ],
+      context: undefined,
+      limits: { maxDiagnostics: 2 }
+    });
+
+    expect(loaded.sources[0]?.issues).toEqual([
+      expect.objectContaining({ code: "first" }),
+      {
+        category: "resource-limit",
+        code: "max_diagnostics_exceeded",
+        severity: "error",
+        message: "Diagnostics exceeded the maximum of 2."
+      }
+    ]);
+    expect(loaded.issues).toEqual(loaded.sources[0]?.issues);
+  });
 });
 
 describe("buildDiagnosticReport", () => {

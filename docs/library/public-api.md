@@ -52,6 +52,12 @@ Published package ownership is layered:
 The core package must not depend on parser libraries, validator libraries, Node.js
 file-system APIs, process env, argv parsing, or CLI presentation libraries.
 
+`loadConfigSources` accepts an optional partial `ResourceLimitPolicy`. Its
+`maxDiagnostics` value defaults to 200 and bounds both each retained
+`LoadedSource.issues` array and the aggregate loader issues. When more issues exist,
+the final retained entry is `resource-limit/max_diagnostics_exceeded` rather than
+an unbounded tail. `runConfigPipeline` forwards its limits into this loading stage.
+
 Node JSON and dotenv loaders accept `FileReadPolicy.allowedRootPath`. When set,
 they verify the canonical path and opened file identity before reading from the
 handle; see ADR 0012.

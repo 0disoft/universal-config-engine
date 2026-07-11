@@ -33,6 +33,8 @@ boundaries, hosted API security, database security, or remote secret delivery.
   identity before reading contents.
 - The CLI pipeline declaration must be byte-bounded before JSON parsing.
 - Parser and validator adapters are untrusted boundaries until tested by fixtures.
+- Loader adapter issue arrays are bounded before they are retained on loaded sources
+  or aggregated for merge.
 - Validator issue codes are bounded machine identifiers, not a free-form text
   escape hatch around diagnostic redaction.
 - Exception messages and malformed parser or CLI input are untrusted text. Public
