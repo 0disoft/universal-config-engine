@@ -22,6 +22,10 @@ Runtime limit values must be positive safe integers. Invalid direct-library valu
 fall back to defaults; `NaN` and `Infinity` must never bypass a comparison-based
 bound.
 
+CLI override mapping target-path uniqueness is indexed by canonical path key, so
+declaration validation scales linearly with mapping count while preserving the
+first-declaration error reference.
+
 ## Required Evidence
 
 - Source of truth: `docs/product/02-spec.md`, `docs/architecture/03-quality-attributes.md`,

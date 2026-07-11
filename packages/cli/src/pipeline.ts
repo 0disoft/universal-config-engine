@@ -25,7 +25,7 @@ import type {
   ResourceLimitPolicy,
   SourceKind
 } from "@0disoft/universal-config-engine-core";
-import { pathsEqual } from "@0disoft/universal-config-engine-core";
+import { pathToKey, pathsEqual } from "@0disoft/universal-config-engine-core";
 import type {
   PipelineDeclaration,
   PipelineValidatorDeclaration,
@@ -1254,7 +1254,7 @@ function validateUniqueMappingTargetPaths(
   path: ConfigPath,
   sourceId: string | undefined
 ): readonly ConfigIssue[] {
-  const seenTargetPaths: { readonly index: number; readonly targetPath: ConfigPath }[] = [];
+  const firstIndexByTargetPath = new Map<string, number>();
   const issues: ConfigIssue[] = [];
 
   for (const [index, mapping] of mappings.entries()) {
@@ -1263,10 +1263,11 @@ function validateUniqueMappingTargetPaths(
     }
 
     const targetPath = mapping.targetPath;
-    const existing = seenTargetPaths.find((candidate) => pathsEqual(candidate.targetPath, targetPath));
+    const targetPathKey = pathToKey(targetPath);
+    const existingIndex = firstIndexByTargetPath.get(targetPathKey);
 
-    if (existing === undefined) {
-      seenTargetPaths.push({ index, targetPath });
+    if (existingIndex === undefined) {
+      firstIndexByTargetPath.set(targetPathKey, index);
       continue;
     }
 
@@ -1275,7 +1276,7 @@ function validateUniqueMappingTargetPaths(
         code: "pipeline_override_mapping_target_path_duplicate",
         path: [...path, index, "targetPath"],
         sourceId,
-        message: `Override mapping targetPath duplicates mappings.${existing.index}.targetPath.`
+        message: `Override mapping targetPath duplicates mappings.${existingIndex}.targetPath.`
       })
     );
   }
