@@ -37,6 +37,8 @@ boundaries, hosted API security, database security, or remote secret delivery.
 - Parser and validator adapters are untrusted boundaries until tested by fixtures.
 - Loader adapter issue arrays are bounded before they are retained on loaded sources
   or aggregated for merge.
+- Loader result issue and location structures are validated, copied, and bound to
+  the loader descriptor source id before entering merge or redaction.
 - Validator issue codes are bounded machine identifiers, not a free-form text
   escape hatch around diagnostic redaction.
 - Exception messages and malformed parser or CLI input are untrusted text. Public

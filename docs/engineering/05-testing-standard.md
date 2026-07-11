@@ -35,6 +35,8 @@ Testing standard defines merge-blocking expectations for unit, integration, cont
   verify public exports and compatibility types, and execute the installed CLI binary.
 - Adapter compatibility fixtures under `docs/adapters/fixtures/` must pass
   `pnpm run check:adapter-fixtures`.
+- Loader boundary tests cover thrown adapters, malformed result structures, bounded
+  issue retention, and descriptor-owned issue/location source identity.
 
 ## Review Blockers
 

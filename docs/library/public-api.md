@@ -58,6 +58,12 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 the final retained entry is `resource-limit/max_diagnostics_exceeded` rather than
 an unbounded tail. `runConfigPipeline` forwards its limits into this loading stage.
 
+Loader results are runtime-checked before becoming `LoadedSource` objects. Invalid
+issue arrays, issue entries, location arrays, or location entries reject that source
+with `source-load/invalid_loader_result`. Valid loader issue and location entries
+are copied, and their `sourceId` is set from the loader descriptor so an adapter
+cannot attribute its output to another source.
+
 Direct library resource-limit options are runtime-normalized as well as typed.
 Only positive safe integers are accepted. Missing or invalid values such as zero,
 negative numbers, `NaN`, `Infinity`, or unsafe integers fall back to the documented

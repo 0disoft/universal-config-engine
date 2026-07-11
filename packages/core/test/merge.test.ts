@@ -8,7 +8,7 @@ import {
   resolveConfig,
   setConfigValueAtPath
 } from "../src/index.js";
-import type { ConfigLoader, LoadedSource, ValidatorResult } from "../src/index.js";
+import type { ConfigLoader, ConfigLoaderResult, LoadedSource, ValidatorResult } from "../src/index.js";
 
 function source(id: string, priority: number, value: unknown): LoadedSource {
   return {
@@ -918,6 +918,107 @@ describe("loadConfigSources", () => {
       priority: 0,
       status: "failed"
     });
+  });
+
+  it.each([
+    {
+      name: "non-array issues",
+      result: { value: {}, issues: {} }
+    },
+    {
+      name: "malformed issue entries",
+      result: { value: {}, issues: [null] }
+    },
+    {
+      name: "malformed locations",
+      result: {
+        value: {},
+        locations: [
+          {
+            path: ["service"],
+            location: { sourceId: "adapter", line: 0 }
+          }
+        ]
+      }
+    }
+  ])("rejects $name in loader results", async ({ result }) => {
+    const loaded = await loadConfigSources({
+      loaders: [
+        {
+          descriptor: {
+            id: "invalid-loader",
+            kind: "adapter",
+            priority: 0,
+            displayName: "invalid-loader"
+          },
+          load() {
+            return result as unknown as ConfigLoaderResult;
+          }
+        }
+      ],
+      context: undefined
+    });
+
+    expect(loaded.sources).toEqual([
+      {
+        descriptor: expect.objectContaining({ id: "invalid-loader" }),
+        value: {},
+        issues: [
+          {
+            category: "source-load",
+            code: "invalid_loader_result",
+            severity: "error",
+            sourceId: "invalid-loader",
+            message: "Loader invalid-loader returned an invalid result."
+          }
+        ]
+      }
+    ]);
+    expect(loaded.issues).toEqual(loaded.sources[0]?.issues);
+  });
+
+  it("binds loader issue and location source identity to the descriptor", async () => {
+    const loaded = await loadConfigSources({
+      loaders: [
+        {
+          descriptor: {
+            id: "owned-source",
+            kind: "adapter",
+            priority: 0,
+            displayName: "owned-source"
+          },
+          load() {
+            return {
+              value: {},
+              issues: [
+                {
+                  category: "parse",
+                  code: "adapter_parse_failed",
+                  severity: "error",
+                  sourceId: "spoofed-source",
+                  message: "Adapter parse failed."
+                }
+              ],
+              locations: [
+                {
+                  path: ["service", "port"],
+                  location: {
+                    sourceId: "spoofed-source",
+                    sourcePath: "config.example",
+                    line: 2,
+                    column: 3
+                  }
+                }
+              ]
+            };
+          }
+        }
+      ],
+      context: undefined
+    });
+
+    expect(loaded.sources[0]?.issues?.[0]?.sourceId).toBe("owned-source");
+    expect(loaded.sources[0]?.locations?.[0]?.location.sourceId).toBe("owned-source");
   });
 
   it("bounds retained source and aggregate loader issues", async () => {

@@ -105,6 +105,35 @@ describe("runConfigPipeline", () => {
     expect(JSON.stringify(pipeline)).not.toContain("pipeline-loader-secret-value");
   });
 
+  it("returns malformed loader results as data instead of rejecting", async () => {
+    const malformedLoader = {
+      descriptor: {
+        id: "malformed",
+        kind: "adapter" as const,
+        priority: 0,
+        displayName: "malformed"
+      },
+      load() {
+        return { value: {}, issues: [null] } as unknown as Awaited<ReturnType<ConfigLoader["load"]>>;
+      }
+    };
+
+    const pipeline = await runConfigPipeline({
+      loaders: [malformedLoader],
+      context: undefined
+    });
+
+    expect(pipeline.result.ok).toBe(false);
+    expect(pipeline.result.issues).toContainEqual(
+      expect.objectContaining({
+        category: "source-load",
+        code: "invalid_loader_result",
+        sourceId: "malformed"
+      })
+    );
+    expect(pipeline.report.status).toBe("error");
+  });
+
   it("keeps combined resolution and validation diagnostics within maxDiagnostics", async () => {
     const pipeline = await runConfigPipeline({
       loaders: [

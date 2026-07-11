@@ -27,6 +27,9 @@ Parser adapters interoperate through the existing `ConfigLoader` boundary:
 - return a normalized config value;
 - preserve source identity through `ConfigSourceDescriptor`;
 - attach source locations when the parser can report them;
+- return structurally valid `ConfigLoaderResult` issue and location entries; core
+  rejects malformed result shapes and binds their source identity to the loader
+  descriptor rather than trusting adapter-supplied `sourceId` values;
 - convert parse or source failures into bounded `ConfigIssue` objects;
 - keep parser-specific raw AST or token shapes out of core results.
 
