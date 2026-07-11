@@ -75,7 +75,7 @@ Owner: UNASSIGNED
 - Fixed validator typed output as adapter-local behavior in ADR 0009.
 - Added a repeatable merge path trie benchmark near the 10,000-key resource limit.
 
-## Phase 6: 0.3.0 Consumer API
+## Phase 6: 0.3.x Consumer API
 
 - Added executable package-consumer quickstarts.
 - Added `runConfigPipeline` as a high-level load, resolve, validate, and report
@@ -83,6 +83,8 @@ Owner: UNASSIGNED
 - Added Windows package verification to hosted CI.
 - Replaced validator-provided diagnostic prose with structured validator issues
   normalized by core.
+- Verified configured file roots against the opened file handle before reading
+  JSON or dotenv contents.
 
 ## Explicitly Deferred
 
