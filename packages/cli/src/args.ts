@@ -54,7 +54,7 @@ export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
       continue;
     }
 
-    throw new Error(`Unknown CLI option ${arg}.`);
+    throw new Error("Unknown CLI option.");
   }
 
   if (configPath === undefined || configPath.length === 0) {

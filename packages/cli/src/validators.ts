@@ -37,13 +37,13 @@ export function createDeclaredValidators(declaration: PipelineDeclaration): Crea
           schema: validator.schema
         })
       );
-    } catch (error) {
+    } catch {
       issues.push({
         category: "validation",
         code: "validator_compile_failed",
         severity: "error",
         sourceId: validator.id,
-        message: error instanceof Error ? error.message : `Validator ${validator.id} failed to compile.`
+        message: `Validator ${validator.id} failed to compile. Exception details were omitted from diagnostics.`
       });
     }
   }

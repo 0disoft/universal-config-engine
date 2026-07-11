@@ -65,6 +65,32 @@ describe("node source loaders", () => {
     }
   });
 
+  it("omits malformed JSON parser exception text from issues", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "uce-json-invalid-"));
+    try {
+      const filePath = join(dir, "config.json");
+      await writeFile(filePath, '{"token":"json-parser-secret-value", invalid', "utf8");
+
+      const loaded = await loadJsonFileSource({
+        descriptor: descriptor("json", "json-file", 1),
+        filePath
+      });
+
+      expect(loaded.issues).toEqual([
+        {
+          category: "parse",
+          code: "json_parse_failed",
+          severity: "error",
+          sourceId: "json",
+          message: "Failed to read or parse JSON source. Exception details were omitted from diagnostics."
+        }
+      ]);
+      expect(JSON.stringify(loaded)).not.toContain("json-parser-secret-value");
+    } finally {
+      await rm(dir, { force: true, recursive: true });
+    }
+  });
+
   it("refuses to read an opened file whose canonical path is outside the allowed root", async () => {
     const dir = await mkdtemp(join(tmpdir(), "uce-json-boundary-"));
     try {
@@ -148,6 +174,27 @@ describe("node source loaders", () => {
         code: "dotenv_invalid_name"
       })
     );
+  });
+
+  it("does not echo malformed dotenv variable names", () => {
+    const loaded = parseSimpleDotenv(
+      descriptor("dotenv", "dotenv-file", 1),
+      "dotenv-secret-value!=ignored"
+    );
+
+    expect(loaded.issues).toEqual([
+      {
+        category: "parse",
+        code: "dotenv_invalid_name",
+        severity: "error",
+        sourceId: "dotenv",
+        message: "Invalid dotenv variable name.",
+        details: {
+          line: 1
+        }
+      }
+    ]);
+    expect(JSON.stringify(loaded)).not.toContain("dotenv-secret-value");
   });
 
   it("loads dotenv files and lets declared mappings control paths", async () => {

@@ -65,13 +65,13 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
         sourceId: "core:coercion",
         message: `Path was coerced from ${rule.from} to ${rule.to}.`
       });
-    } catch (error) {
+    } catch {
       issues.push({
         category: "coercion",
         code: "coercion_set_failed",
         severity: "error",
         path: rule.path,
-        message: error instanceof Error ? error.message : "Failed to set coerced config value."
+        message: "Failed to set coerced config value. Internal exception details were omitted from diagnostics."
       });
     }
   }

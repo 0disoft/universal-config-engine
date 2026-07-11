@@ -25,6 +25,9 @@ JSON output should be stable enough for CI and agent usage. It may include paths
 source names, diagnostics, and redaction reasons. It must not include raw secret
 values by default.
 
+Pipeline parser errors, validator compiler errors, and unknown option values must
+not echo raw exception or user-controlled text into JSON output.
+
 Secret redaction applies to resolved path metadata, validation/source issues, and
 provenance messages. If an issue or provenance event is associated with a secret
 path or secret source, human-readable message text and issue details are replaced

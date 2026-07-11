@@ -75,7 +75,7 @@ describe("runConfigPipeline", () => {
         displayName: "broken"
       },
       load() {
-        throw new Error("loader failed");
+        throw new Error("loader failed with pipeline-loader-secret-value");
       }
     };
     const validator: ValidatorAdapter = {
@@ -102,6 +102,7 @@ describe("runConfigPipeline", () => {
     );
     expect(validatorCalled).toBe(false);
     expect(pipeline.report.status).toBe("error");
+    expect(JSON.stringify(pipeline)).not.toContain("pipeline-loader-secret-value");
   });
 
   it("keeps combined resolution and validation diagnostics within maxDiagnostics", async () => {
@@ -168,4 +169,3 @@ describe("runConfigPipeline", () => {
     expect(pipeline.report.issues).toHaveLength(2);
   });
 });
-

@@ -1103,7 +1103,7 @@ export function sourceLoadFailedIssues(error: unknown): readonly ConfigIssue[] {
       category: "source-load",
       code: "pipeline_declaration_load_failed",
       severity: "error",
-      message: error instanceof Error ? error.message : "Failed to load pipeline declaration."
+      message: "Failed to load pipeline declaration. Exception details were omitted from diagnostics."
     }
   ];
 }

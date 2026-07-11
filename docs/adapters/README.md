@@ -41,6 +41,10 @@ Adapter failures must become `ConfigIssue` objects. Throwing from a loader is st
 normalized by core as `source-load`, but parser adapters should prefer explicit
 `parse` issues when the parser can identify a dialect failure.
 
+Core never copies a thrown loader exception message into diagnostics. Parser
+adapters must also avoid copying provider exception text or malformed raw input
+into issue messages or details.
+
 ## Validator Adapter Contract
 
 A validator adapter receives normalized config:

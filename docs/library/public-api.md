@@ -75,6 +75,8 @@ migration review before running `pnpm run update:api-snapshot`.
   known command.
 - Normalize loader exceptions into `source-load` issues instead of throwing raw
   adapter failures through the pipeline.
+- Do not copy loader, parser, filesystem, or internal mutation exception text into
+  public issues. Use stable codes and fixed messages at each boundary.
 - Normalize malformed validator adapter results and malformed validator issues into
   `validation` issues instead of allowing broken adapter output to corrupt
   diagnostic reports.

@@ -27,8 +27,8 @@ export async function loadConfigSources<TContext = undefined>(
       const source = toLoadedSource(loader, result);
       sources.push(source);
       issues.push(...(source.issues ?? []));
-    } catch (error) {
-      const issue = loaderThrewIssue(loader, error);
+    } catch {
+      const issue = loaderThrewIssue(loader);
       const source: LoadedSource = {
         descriptor: loader.descriptor,
         value: {},
@@ -57,12 +57,12 @@ function toLoadedSource<TContext>(
   };
 }
 
-function loaderThrewIssue<TContext>(loader: ConfigLoader<TContext>, error: unknown): ConfigIssue {
+function loaderThrewIssue<TContext>(loader: ConfigLoader<TContext>): ConfigIssue {
   return {
     category: "source-load",
     code: "loader_threw",
     severity: "error",
     sourceId: loader.descriptor.id,
-    message: error instanceof Error ? error.message : `Loader ${loader.descriptor.id} failed.`
+    message: `Loader ${loader.descriptor.id} threw an exception. Exception details were omitted from diagnostics.`
   };
 }

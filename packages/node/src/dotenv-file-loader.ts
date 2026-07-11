@@ -29,7 +29,7 @@ export async function loadDotenvFileSource(input: LoadDotenvFileSourceInput): Pr
     }
 
     return parseSimpleDotenv(input.descriptor, readResult.raw);
-  } catch (error) {
+  } catch {
     return {
       descriptor: input.descriptor,
       value: {},
@@ -39,7 +39,7 @@ export async function loadDotenvFileSource(input: LoadDotenvFileSourceInput): Pr
           code: "dotenv_read_failed",
           severity: "error",
           sourceId: input.descriptor.id,
-          message: error instanceof Error ? error.message : "Failed to read dotenv source."
+          message: "Failed to read dotenv source. Exception details were omitted from diagnostics."
         }
       ]
     };
@@ -66,7 +66,7 @@ export function parseSimpleDotenv(descriptor: ConfigSourceDescriptor, raw: strin
     const name = trimmed.slice(0, separatorIndex).trim();
     const rawValue = trimmed.slice(separatorIndex + 1);
     if (!DOTENV_NAME_PATTERN.test(name)) {
-      issues.push(dotenvIssue(descriptor.id, index + 1, "dotenv_invalid_name", `Invalid dotenv name ${name}.`));
+      issues.push(dotenvIssue(descriptor.id, index + 1, "dotenv_invalid_name", "Invalid dotenv variable name."));
       continue;
     }
 

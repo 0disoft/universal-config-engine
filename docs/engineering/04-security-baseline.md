@@ -33,6 +33,8 @@ boundaries, hosted API security, database security, or remote secret delivery.
 - Parser and validator adapters are untrusted boundaries until tested by fixtures.
 - Validator issue codes are bounded machine identifiers, not a free-form text
   escape hatch around diagnostic redaction.
+- Exception messages and malformed parser or CLI input are untrusted text. Public
+  diagnostics use fixed messages rather than copying those strings.
 - No telemetry, persistence, or report upload is in MVP scope.
 
 ## Review Blockers

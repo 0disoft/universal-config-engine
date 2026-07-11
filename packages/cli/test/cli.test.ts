@@ -70,6 +70,103 @@ describe("loadPipelineDeclaration", () => {
 });
 
 describe("runCli", () => {
+  it("omits malformed pipeline parser exception text from JSON output", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, "uce.json"), '{"secret":"pipeline-parser-secret-value", invalid', "utf8");
+
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly issues: readonly { readonly code: string; readonly message: string }[];
+      };
+
+      expect(result.exitCode).toBe(2);
+      expect(report.issues).toEqual([
+        expect.objectContaining({
+          code: "pipeline_declaration_load_failed",
+          message: "Failed to load pipeline declaration. Exception details were omitted from diagnostics."
+        })
+      ]);
+      expect(stdout).not.toContain("pipeline-parser-secret-value");
+    });
+  });
+
+  it("omits validator compiler exception text from JSON output", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "defaults",
+              kind: "object",
+              priority: 0,
+              value: {}
+            }
+          ],
+          validators: [
+            {
+              id: "schema",
+              kind: "json-schema-ajv",
+              schema: {
+                type: "validator-compiler-secret-value"
+              }
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly issues: readonly { readonly code: string; readonly message: string }[];
+      };
+
+      expect(result.exitCode).toBe(1);
+      expect(report.issues).toEqual([
+        expect.objectContaining({
+          code: "validator_compile_failed",
+          message: "Validator schema failed to compile. Exception details were omitted from diagnostics."
+        })
+      ]);
+      expect(stdout).not.toContain("validator-compiler-secret-value");
+    });
+  });
+
+  it("does not echo unknown CLI option text into usage reports", async () => {
+    let stdout = "";
+    const result = await runCli(
+      ["validate", "--json", "--unknown=cli-option-secret-value"],
+      {
+        cwd: process.cwd(),
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      }
+    );
+
+    expect(result.exitCode).toBe(4);
+    expect(stdout).toContain('"message": "Unknown CLI option."');
+    expect(stdout).not.toContain("cli-option-secret-value");
+  });
+
   it("matches the local precedence golden explain report", async () => {
     const fixtureRoot = new URL("../fixtures/local-precedence/", import.meta.url);
     const expected = JSON.parse(

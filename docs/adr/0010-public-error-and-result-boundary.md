@@ -44,6 +44,9 @@ the boundary:
 Raw third-party exception text is never part of a public diagnostic contract. An
 adapter may retain a cause privately for local debugging, but issues, reports, CLI
 output, fixtures, and thrown boundary errors must not copy secret-bearing causes.
+Core loader exceptions, Node parser and filesystem exceptions, CLI declaration
+parse failures, and validator compiler exceptions use stable issue codes and fixed
+messages. User-controlled unknown option text is not echoed into usage reports.
 
 ## Rationale
 
@@ -72,7 +75,10 @@ versus caller or invariant failure, not a blanket ban on exceptions.
 ## Validation
 
 - Core tests cover loader and validator exception normalization.
+- Node tests cover JSON parser and dotenv input text omission.
 - CLI tests cover conversion of parsing and declaration failures into exit codes.
+- CLI tests cover declaration parser, validator compiler, and unknown option text
+  omission from JSON output.
 - Package smoke tests cover high-level consumer behavior without exception-based
   control flow for expected failures.
 

@@ -869,7 +869,7 @@ describe("loadConfigSources", () => {
           displayName: "broken-loader"
         },
         load() {
-          throw new Error("adapter exploded");
+          throw new Error("adapter exploded with loader-secret-value");
         }
       }
     ];
@@ -887,9 +887,10 @@ describe("loadConfigSources", () => {
       code: "loader_threw",
       severity: "error",
       sourceId: "broken-loader",
-      message: "adapter exploded"
+      message: "Loader broken-loader threw an exception. Exception details were omitted from diagnostics."
     });
     expect(result.ok).toBe(false);
+    expect(JSON.stringify({ loaded, report })).not.toContain("loader-secret-value");
     expect(report.sources).toContainEqual({
       id: "broken-loader",
       kind: "adapter",

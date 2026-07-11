@@ -71,14 +71,14 @@ export function createMappedOverrideSource(input: CreateMappedOverrideSourceInpu
 
     try {
       setConfigValueAtPath(value, mapping.targetPath, parsed.value);
-    } catch (error) {
+    } catch {
       issues.push({
         category: "mapping",
         code: "mapping_set_failed",
         severity: "error",
         sourceId: input.descriptor.id,
         path: mapping.targetPath,
-        message: error instanceof Error ? error.message : "Failed to apply override mapping."
+        message: "Failed to apply override mapping. Internal exception details were omitted from diagnostics."
       });
     }
   }

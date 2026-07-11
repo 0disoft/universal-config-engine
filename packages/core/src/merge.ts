@@ -185,7 +185,7 @@ function applyEntry(input: {
 
   try {
     setConfigValueAtPath(input.config, input.entryPath, input.entryValue);
-  } catch (error) {
+  } catch {
     pushBoundedIssue(
       input.issues,
       {
@@ -194,7 +194,7 @@ function applyEntry(input: {
         severity: "error",
         path: input.entryPath,
         sourceId: input.descriptor.id,
-        message: error instanceof Error ? error.message : "Failed to set config path."
+        message: "Failed to set config path. Internal exception details were omitted from diagnostics."
       },
       input.limits
     );

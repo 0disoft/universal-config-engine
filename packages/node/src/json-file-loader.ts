@@ -30,7 +30,7 @@ export async function loadJsonFileSource(input: LoadJsonFileSourceInput): Promis
       descriptor: input.descriptor,
       value: JSON.parse(readResult.raw) as unknown
     };
-  } catch (error) {
+  } catch {
     return {
       descriptor: input.descriptor,
       value: {},
@@ -40,7 +40,7 @@ export async function loadJsonFileSource(input: LoadJsonFileSourceInput): Promis
           code: "json_parse_failed",
           severity: "error",
           sourceId: input.descriptor.id,
-          message: error instanceof Error ? error.message : "Failed to parse JSON source."
+          message: "Failed to read or parse JSON source. Exception details were omitted from diagnostics."
         }
       ]
     };
