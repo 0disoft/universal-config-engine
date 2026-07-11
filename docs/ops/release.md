@@ -109,5 +109,6 @@ releases, including the `0.2.x` and `0.3.x` lines, are published by
 - Required validation names: check, smoke, docs.
 - Release blocker status: failing local validation, failed smoke package checks,
   mismatched Trusted Publisher registration, or secret exposure.
-- Remaining operational risk: hosted CI currently covers one Ubuntu runner;
-  cross-platform release verification remains future work.
+- Remaining operational risk: hosted CI verifies package behavior and packed
+  installation on Ubuntu and Windows, but the Trusted Publisher release job itself
+  runs only on Ubuntu.
