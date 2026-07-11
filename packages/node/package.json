@@ -1,6 +1,6 @@
 {
   "name": "@0disoft/universal-config-engine-node",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,

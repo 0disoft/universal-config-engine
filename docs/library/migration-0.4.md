@@ -1,14 +1,13 @@
 # Migration to 0.4
 
-Status: Release target
+Status: Current
 
 `0.4.0` is an additive API release with stricter runtime enforcement at loader,
-resource-limit, and CLI declaration boundaries. Package versions remain `0.3.1`
-until the release preparation commit is validated and tagged.
+resource-limit, and CLI declaration boundaries.
 
 ## Package Update
 
-After `0.4.0` is published, update the packages used by the consumer together:
+Update the packages used by the consumer together:
 
 ```powershell
 pnpm update @0disoft/universal-config-engine-core@0.4.0 `

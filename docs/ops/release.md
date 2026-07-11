@@ -92,7 +92,7 @@ pnpm run clean:build
 The `v0.1.0` release includes pre-publication tarballs for core, node, CLI, Ajv
 validator, and Zod validator packages under the superseded package scope. The
 `v0.1.1` release is the first npm publication baseline under `@0disoft`. Later
-releases, including the `0.2.x` and `0.3.x` lines, are published by
+releases, including the `0.2.x`, `0.3.x`, and `0.4.x` lines, are published by
 `.github/workflows/release.yml`.
 
 ## Stop Conditions
