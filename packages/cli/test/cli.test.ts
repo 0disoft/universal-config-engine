@@ -67,6 +67,52 @@ describe("loadPipelineDeclaration", () => {
       }
     });
   });
+
+  it("rejects oversized declarations before JSON parsing", async () => {
+    await withTempDir(async (dir) => {
+      const configPath = join(dir, "uce.json");
+      await writeFile(configPath, `{"padding":"${"x".repeat(1024 * 1024)}"}`, "utf8");
+      const parse = vi.spyOn(JSON, "parse");
+
+      try {
+        await expect(loadPipelineDeclaration(configPath, dir)).rejects.toMatchObject({
+          issues: [
+            expect.objectContaining({
+              category: "resource-limit",
+              code: "max_file_bytes_exceeded",
+              sourceId: "cli:pipeline-declaration"
+            })
+          ]
+        });
+        let stdout = "";
+        const result = await runCli(["explain", "--config", "uce.json", "--json"], {
+          cwd: dir,
+          env: {},
+          stdout: (text) => {
+            stdout += text;
+          },
+          stderr: () => {}
+        });
+
+        expect(result.exitCode).toBe(3);
+        expect(parse).not.toHaveBeenCalled();
+        parse.mockRestore();
+        expect(JSON.parse(stdout)).toMatchObject({
+          status: "error",
+          issues: [
+            {
+              category: "resource-limit",
+              code: "max_file_bytes_exceeded",
+              severity: "error",
+              sourceId: "cli:pipeline-declaration"
+            }
+          ]
+        });
+      } finally {
+        parse.mockRestore();
+      }
+    });
+  });
 });
 
 describe("runCli", () => {

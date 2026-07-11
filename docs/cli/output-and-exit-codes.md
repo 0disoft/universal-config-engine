@@ -77,6 +77,9 @@ When declared validator output exceeds `limits.maxDiagnostics`, the report inclu
 policy failure exit code `3`. The overflow marker counts toward `maxDiagnostics`, so
 the report never emits more issues than the declared limit.
 
+An oversized pipeline declaration is rejected before JSON parsing with
+`resource-limit/max_file_bytes_exceeded` and exit code `3`.
+
 CLI usage errors use category `usage` and exit code `4` when the command is known
 and JSON output was requested. Unknown commands still write the usage error to
 stderr because no command-specific JSON report can be attributed safely.

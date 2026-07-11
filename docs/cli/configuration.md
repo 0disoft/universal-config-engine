@@ -34,6 +34,10 @@ a `source-load` issue with exit code `2`. Existing paths are checked by canonica
 filesystem path, so symbolic links and Windows junctions cannot redirect a source
 outside the declaration directory.
 
+The pipeline declaration itself is read through the bounded Node file reader and
+must not exceed 1 MiB. Oversized declarations fail before JSON parsing with
+`resource-limit/max_file_bytes_exceeded` and exit code `3`.
+
 The CLI validates the declaration shape before loading sources. Unsupported source
 kinds, unknown declaration fields, missing or duplicate source ids, missing file
 paths, malformed redaction policies, malformed override mappings, malformed

@@ -1,6 +1,7 @@
 export {
   DEFAULT_MAX_FILE_BYTES,
-  checkFileSize
+  checkFileSize,
+  readTextFileWithinLimit
 } from "./file.js";
 export {
   loadJsonFileSource
@@ -16,6 +17,7 @@ export {
   createArgvSource
 } from "./argv-source.js";
 export type {
+  BoundedTextFileReadResult,
   FileReadPolicy
 } from "./file.js";
 export type {

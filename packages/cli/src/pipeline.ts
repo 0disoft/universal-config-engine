@@ -1,4 +1,4 @@
-import { readFile, realpath } from "node:fs/promises";
+import { realpath } from "node:fs/promises";
 import {
   dirname,
   isAbsolute,
@@ -9,8 +9,10 @@ import {
 import {
   createArgvSource,
   createProcessEnvSource,
+  DEFAULT_MAX_FILE_BYTES,
   loadDotenvFileSource,
-  loadJsonFileSource
+  loadJsonFileSource,
+  readTextFileWithinLimit
 } from "@0disoft/universal-config-engine-node";
 import type {
   CoercionRule,
@@ -60,8 +62,16 @@ export class PipelineDeclarationError extends Error {
 }
 
 export async function loadPipelineDeclaration(configPath: string, cwd = process.cwd()): Promise<PipelineDeclaration> {
-  const raw = await readFile(resolveInputPath(configPath, cwd), "utf8");
-  const parsed = JSON.parse(raw) as unknown;
+  const readResult = await readTextFileWithinLimit({
+    filePath: resolveInputPath(configPath, cwd),
+    sourceId: "cli:pipeline-declaration",
+    maxFileBytes: DEFAULT_MAX_FILE_BYTES
+  });
+  if (!readResult.ok) {
+    throw new PipelineDeclarationError(readResult.issues);
+  }
+
+  const parsed = JSON.parse(readResult.raw) as unknown;
   const issues = validatePipelineDeclaration(parsed);
 
   if (issues.length > 0) {

@@ -61,6 +61,9 @@ After declaration validation succeeds, the CLI rebuilds a typed declaration obje
 from the validated JSON fields instead of passing the parsed JSON object through by
 type assertion. Runtime code should consume only that normalized declaration shape.
 
+The declaration file is limited to 1 MiB before JSON parsing. An oversized
+declaration produces `resource-limit/max_file_bytes_exceeded` and exit code `3`.
+
 CLI argv source values must appear after `--`, so CLI options do not get mixed with
 configuration override arguments.
 

@@ -6,7 +6,6 @@ import {
 } from "@0disoft/universal-config-engine-core";
 import { getCliUsageContext, parseCliArgs } from "./args.js";
 import {
-  EXIT_SOURCE_FAILED,
   EXIT_USAGE_ERROR,
   exitCodeForResult
 } from "./exit-codes.js";
@@ -61,7 +60,7 @@ export async function runCli(args: readonly string[], runtime: CliRuntime): Prom
     return { exitCode: exitCodeForResult(finalResult) };
   } catch (error) {
     const issues = sourceLoadFailedIssues(error);
-    const report = buildDiagnosticReport({
+    const failureResult = {
       ok: false,
       config: {},
       sources: [],
@@ -74,13 +73,14 @@ export async function runCli(args: readonly string[], runtime: CliRuntime): Prom
         maxPathLength: 0,
         maxDiagnostics: Math.max(1, issues.length)
       }
-    });
+    } as const;
+    const report = buildDiagnosticReport(failureResult);
     const output =
       parsed.output === "json"
         ? formatJsonReport(parsed.command, report)
         : formatHumanReport(parsed.command, report);
     runtime.stdout(output);
-    return { exitCode: EXIT_SOURCE_FAILED };
+    return { exitCode: exitCodeForResult(failureResult) };
   }
 }
 

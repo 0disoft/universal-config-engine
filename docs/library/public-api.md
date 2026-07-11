@@ -56,6 +56,10 @@ Node JSON and dotenv loaders accept `FileReadPolicy.allowedRootPath`. When set,
 they verify the canonical path and opened file identity before reading from the
 handle; see ADR 0012.
 
+The Node package exports `readTextFileWithinLimit` for bounded consumers such as
+the CLI pipeline declaration loader. It reads through an open handle and returns a
+resource-limit issue instead of allocating beyond the configured byte limit.
+
 The committed `docs/library/public-api.snapshot.txt` records normalized declaration
 files for every publishable package. `pnpm run check:api-snapshot` fails when the
 built declaration surface drifts. Intentional API changes require semver and

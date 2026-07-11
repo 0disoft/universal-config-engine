@@ -30,6 +30,7 @@ boundaries, hosted API security, database security, or remote secret delivery.
   path length, and env var count.
 - Bounded file sources must verify configured canonical roots and opened file
   identity before reading contents.
+- The CLI pipeline declaration must be byte-bounded before JSON parsing.
 - Parser and validator adapters are untrusted boundaries until tested by fixtures.
 - Validator issue codes are bounded machine identifiers, not a free-form text
   escape hatch around diagnostic redaction.
