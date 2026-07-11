@@ -82,10 +82,33 @@ describe("node source loaders", () => {
           code: "json_parse_failed",
           severity: "error",
           sourceId: "json",
-          message: "Failed to read or parse JSON source. Exception details were omitted from diagnostics."
+          message: "Failed to parse JSON source. Exception details were omitted from diagnostics."
         }
       ]);
       expect(JSON.stringify(loaded)).not.toContain("json-parser-secret-value");
+    } finally {
+      await rm(dir, { force: true, recursive: true });
+    }
+  });
+
+  it("distinguishes JSON read failures from parse failures without exposing paths", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "uce-json-missing-"));
+    try {
+      const loaded = await loadJsonFileSource({
+        descriptor: descriptor("json", "json-file", 1),
+        filePath: join(dir, "json-read-secret-value.json")
+      });
+
+      expect(loaded.issues).toEqual([
+        {
+          category: "source-load",
+          code: "json_read_failed",
+          severity: "error",
+          sourceId: "json",
+          message: "Failed to read JSON source. Exception details were omitted from diagnostics."
+        }
+      ]);
+      expect(JSON.stringify(loaded)).not.toContain("json-read-secret-value");
     } finally {
       await rm(dir, { force: true, recursive: true });
     }

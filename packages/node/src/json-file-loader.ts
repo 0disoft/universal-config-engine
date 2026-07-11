@@ -9,23 +9,41 @@ export interface LoadJsonFileSourceInput extends FileReadPolicy {
 export async function loadJsonFileSource(input: LoadJsonFileSourceInput): Promise<LoadedSource> {
   const maxFileBytes = input.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
   const encoding = input.encoding ?? "utf8";
+  let readResult: Awaited<ReturnType<typeof readTextFileWithinLimit>>;
 
   try {
-    const readResult = await readTextFileWithinLimit({
+    readResult = await readTextFileWithinLimit({
       filePath: input.filePath,
       sourceId: input.descriptor.id,
       maxFileBytes,
       encoding,
       ...(input.allowedRootPath === undefined ? {} : { allowedRootPath: input.allowedRootPath })
     });
-    if (!readResult.ok) {
-      return {
-        descriptor: input.descriptor,
-        value: {},
-        issues: readResult.issues
-      };
-    }
+  } catch {
+    return {
+      descriptor: input.descriptor,
+      value: {},
+      issues: [
+        {
+          category: "source-load",
+          code: "json_read_failed",
+          severity: "error",
+          sourceId: input.descriptor.id,
+          message: "Failed to read JSON source. Exception details were omitted from diagnostics."
+        }
+      ]
+    };
+  }
 
+  if (!readResult.ok) {
+    return {
+      descriptor: input.descriptor,
+      value: {},
+      issues: readResult.issues
+    };
+  }
+
+  try {
     return {
       descriptor: input.descriptor,
       value: JSON.parse(readResult.raw) as unknown
@@ -40,7 +58,7 @@ export async function loadJsonFileSource(input: LoadJsonFileSourceInput): Promis
           code: "json_parse_failed",
           severity: "error",
           sourceId: input.descriptor.id,
-          message: "Failed to read or parse JSON source. Exception details were omitted from diagnostics."
+          message: "Failed to parse JSON source. Exception details were omitted from diagnostics."
         }
       ]
     };

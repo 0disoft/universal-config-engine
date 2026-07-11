@@ -77,6 +77,8 @@ migration review before running `pnpm run update:api-snapshot`.
   adapter failures through the pipeline.
 - Do not copy loader, parser, filesystem, or internal mutation exception text into
   public issues. Use stable codes and fixed messages at each boundary.
+- Distinguish JSON file access failures as `source-load/json_read_failed` from
+  malformed JSON as `parse/json_parse_failed`.
 - Normalize malformed validator adapter results and malformed validator issues into
   `validation` issues instead of allowing broken adapter output to corrupt
   diagnostic reports.

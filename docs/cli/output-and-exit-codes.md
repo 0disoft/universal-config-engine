@@ -69,6 +69,9 @@ validator execution and keep their more specific exit codes.
 CLI file source path boundary failures use category `source-load` and exit code
 `2`. They happen before the file is read or parsed.
 
+JSON file access failures use `source-load/json_read_failed`; malformed JSON after
+a successful read uses `parse/json_parse_failed`. Both use exit code `2`.
+
 When declared validator output exceeds `limits.maxDiagnostics`, the report includes
 `resource-limit/max_diagnostics_exceeded`; that bounded-output failure uses the
 policy failure exit code `3`. The overflow marker counts toward `maxDiagnostics`, so
