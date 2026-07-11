@@ -43,6 +43,32 @@ describe("resolveConfig", () => {
     });
   });
 
+  it("converts source value inspection exceptions into parse issues", () => {
+    const value = new Proxy(
+      {},
+      {
+        getPrototypeOf() {
+          throw new Error("source-value-secret-text");
+        }
+      }
+    );
+    const result = resolveConfig({
+      sources: [source("hostile", 0, value)]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual([
+      {
+        category: "parse",
+        code: "source_value_inspection_failed",
+        severity: "error",
+        sourceId: "hostile",
+        message: "Failed to inspect normalized source value. Exception details were omitted from diagnostics."
+      }
+    ]);
+    expect(JSON.stringify(result)).not.toContain("source-value-secret-text");
+  });
+
   it("deep merges objects and lets higher priority values win", () => {
     const result = resolveConfig({
       sources: [

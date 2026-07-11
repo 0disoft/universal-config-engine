@@ -39,6 +39,8 @@ boundaries, hosted API security, database security, or remote secret delivery.
   or aggregated for merge.
 - Loader result issue and location structures are validated, copied, and bound to
   the loader descriptor source id before entering merge or redaction.
+- Exceptions from getters, proxies, or other hostile source values are omitted from
+  diagnostics and reject the source before merge.
 - Validator issue codes are bounded machine identifiers, not a free-form text
   escape hatch around diagnostic redaction.
 - Exception messages and malformed parser or CLI input are untrusted text. Public

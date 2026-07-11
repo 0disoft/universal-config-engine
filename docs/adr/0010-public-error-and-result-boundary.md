@@ -29,6 +29,8 @@ Expected configuration failures are data:
 - malformed loader result objects are converted to
   `source-load/invalid_loader_result` rather than reaching merge as unchecked
   structures;
+- exceptions raised while inspecting a loader's normalized value are converted to
+  `parse/source_value_inspection_failed` with exception text omitted;
 - high-level pipeline orchestration returns a complete pipeline result and does not
   reject for expected source, config, or validation failures;
 - `runCli` converts expected failures into diagnostic output and documented exit
@@ -80,6 +82,8 @@ versus caller or invariant failure, not a blanket ban on exceptions.
 - Core tests cover loader and validator exception normalization.
 - Core tests cover malformed loader issue/location rejection and descriptor-owned
   source identity normalization.
+- Core tests cover throwing source values at both resolution and high-level pipeline
+  boundaries.
 - Node tests cover JSON parser and dotenv input text omission.
 - CLI tests cover conversion of parsing and declaration failures into exit codes.
 - CLI tests cover declaration parser, validator compiler, and unknown option text

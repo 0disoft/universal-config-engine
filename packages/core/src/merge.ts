@@ -58,7 +58,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
 
   for (const source of sources) {
     const sourceIssues = [...(source.issues ?? [])];
-    const flattened = flattenConfigObject(source.descriptor.id, source.value, limits);
+    const flattened = flattenSourceValue(source, limits);
     sourceIssues.push(...flattened.issues);
     pushBoundedIssues(issues, sourceIssues, limits);
 
@@ -111,6 +111,28 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     })),
     limits
   };
+}
+
+function flattenSourceValue(
+  source: LoadedSource,
+  limits: ResourceLimitPolicy
+): ReturnType<typeof flattenConfigObject> {
+  try {
+    return flattenConfigObject(source.descriptor.id, source.value, limits);
+  } catch {
+    return {
+      entries: [],
+      issues: [
+        {
+          category: "parse",
+          code: "source_value_inspection_failed",
+          severity: "error",
+          sourceId: source.descriptor.id,
+          message: "Failed to inspect normalized source value. Exception details were omitted from diagnostics."
+        }
+      ]
+    };
+  }
 }
 
 function sortSources(sources: readonly LoadedSource[]): readonly LoadedSource[] {

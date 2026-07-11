@@ -134,6 +134,32 @@ describe("runConfigPipeline", () => {
     expect(pipeline.report.status).toBe("error");
   });
 
+  it("returns hostile loader values as data instead of rejecting", async () => {
+    const value = new Proxy(
+      {},
+      {
+        ownKeys() {
+          throw new Error("pipeline-source-value-secret-text");
+        }
+      }
+    );
+    const pipeline = await runConfigPipeline({
+      loaders: [loader("hostile", 0, value)],
+      context: undefined
+    });
+
+    expect(pipeline.result.ok).toBe(false);
+    expect(pipeline.result.issues).toContainEqual(
+      expect.objectContaining({
+        category: "parse",
+        code: "source_value_inspection_failed",
+        sourceId: "hostile"
+      })
+    );
+    expect(pipeline.report.status).toBe("error");
+    expect(JSON.stringify(pipeline)).not.toContain("pipeline-source-value-secret-text");
+  });
+
   it("keeps combined resolution and validation diagnostics within maxDiagnostics", async () => {
     const pipeline = await runConfigPipeline({
       loaders: [

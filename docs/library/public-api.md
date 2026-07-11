@@ -63,6 +63,9 @@ issue arrays, issue entries, location arrays, or location entries reject that so
 with `source-load/invalid_loader_result`. Valid loader issue and location entries
 are copied, and their `sourceId` is set from the loader descriptor so an adapter
 cannot attribute its output to another source.
+Exceptions raised while core inspects the returned source value are represented as
+`parse/source_value_inspection_failed`; raw exception text is omitted and the source
+is rejected before merge.
 
 Direct library resource-limit options are runtime-normalized as well as typed.
 Only positive safe integers are accepted. Missing or invalid values such as zero,
