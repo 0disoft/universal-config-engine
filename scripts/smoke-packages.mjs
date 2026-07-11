@@ -259,10 +259,12 @@ function runPnpm(args, cwd = root) {
 }
 
 function runNpm(args, cwd) {
+  const env = npmCompatibleEnvironment();
   const npmCliPath = join(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
   if (existsSync(npmCliPath)) {
     execFileSync(process.execPath, [npmCliPath, ...args], {
       cwd,
+      env,
       stdio: "inherit"
     });
     return;
@@ -270,7 +272,15 @@ function runNpm(args, cwd) {
 
   execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", args, {
     cwd,
+    env,
     stdio: "inherit",
     shell: process.platform === "win32"
   });
+}
+
+function npmCompatibleEnvironment() {
+  const env = { ...process.env };
+  delete env.npm_config_manage_package_manager_versions;
+  delete env.NPM_CONFIG_MANAGE_PACKAGE_MANAGER_VERSIONS;
+  return env;
 }
