@@ -23,6 +23,26 @@ function source(id: string, priority: number, value: unknown): LoadedSource {
 }
 
 describe("resolveConfig", () => {
+  it("falls back to bounded defaults for invalid runtime resource limits", () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { enabled: true })],
+      limits: {
+        maxDepth: Number.NaN,
+        maxKeyCount: Number.POSITIVE_INFINITY,
+        maxPathLength: 0,
+        maxDiagnostics: Number.MAX_SAFE_INTEGER + 1
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.limits).toEqual({
+      maxDepth: 32,
+      maxKeyCount: 10_000,
+      maxPathLength: 32,
+      maxDiagnostics: 200
+    });
+  });
+
   it("deep merges objects and lets higher priority values win", () => {
     const result = resolveConfig({
       sources: [
@@ -936,6 +956,42 @@ describe("loadConfigSources", () => {
       }
     ]);
     expect(loaded.issues).toEqual(loaded.sources[0]?.issues);
+  });
+
+  it("keeps invalid loader diagnostic limits bounded by the default", async () => {
+    const loaded = await loadConfigSources({
+      loaders: [
+        {
+          descriptor: {
+            id: "noisy-loader",
+            kind: "adapter",
+            priority: 0,
+            displayName: "noisy-loader"
+          },
+          load() {
+            return {
+              value: {},
+              issues: Array.from({ length: 201 }, (_, index) => ({
+                category: "source-load" as const,
+                code: `issue_${index}`,
+                severity: "warning" as const,
+                message: "Loader issue."
+              }))
+            };
+          }
+        }
+      ],
+      context: undefined,
+      limits: { maxDiagnostics: Number.NaN }
+    });
+
+    expect(loaded.issues).toHaveLength(200);
+    expect(loaded.issues.at(-1)).toEqual(
+      expect.objectContaining({
+        category: "resource-limit",
+        code: "max_diagnostics_exceeded"
+      })
+    );
   });
 });
 

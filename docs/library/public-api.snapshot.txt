@@ -33,6 +33,11 @@ export type { BuildDiagnosticReportOptions } from "./redaction.js";
 export type { CreateMappedOverrideSourceInput } from "./mapping.js";
 export type { RunValidatorsInput, RunValidatorsResult } from "./validation.js";
 
+### limits.d.ts
+import type { ResourceLimitPolicy } from "./types.js";
+export declare const DEFAULT_RESOURCE_LIMITS: ResourceLimitPolicy;
+export declare function normalizeResourceLimits(input: Partial<ResourceLimitPolicy> | undefined): ResourceLimitPolicy;
+
 ### loader.d.ts
 import type { ConfigIssue, ConfigLoader, LoadedSource, ResourceLimitPolicy } from "./types.js";
 export interface LoadConfigSourcesInput<TContext = undefined> {
@@ -56,9 +61,9 @@ export interface CreateMappedOverrideSourceInput {
 export declare function createMappedOverrideSource(input: CreateMappedOverrideSourceInput): LoadedSource;
 
 ### merge.d.ts
-import type { ConfigResult, MergePolicy, ResolveConfigInput, ResourceLimitPolicy } from "./types.js";
+import type { ConfigResult, MergePolicy, ResolveConfigInput } from "./types.js";
 export declare const DEFAULT_MERGE_POLICY: MergePolicy;
-export declare const DEFAULT_RESOURCE_LIMITS: ResourceLimitPolicy;
+export { DEFAULT_RESOURCE_LIMITS } from "./limits.js";
 export declare function resolveConfig(input: ResolveConfigInput): ConfigResult;
 
 ### path.d.ts
@@ -369,6 +374,9 @@ export interface LoadJsonFileSourceInput extends FileReadPolicy {
     readonly filePath: string;
 }
 export declare function loadJsonFileSource(input: LoadJsonFileSourceInput): Promise<LoadedSource>;
+
+### limits.d.ts
+export declare function positiveSafeIntegerLimit(value: number | undefined, fallback: number): number;
 
 ### process-env-source.d.ts
 import { type ConfigSourceDescriptor, type LoadedSource, type OverrideMapping } from "@0disoft/universal-config-engine-core";

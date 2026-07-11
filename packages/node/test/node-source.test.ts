@@ -65,6 +65,30 @@ describe("node source loaders", () => {
     }
   });
 
+  it("uses the default file bound when a runtime byte limit is invalid", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "uce-json-invalid-limit-"));
+    try {
+      const filePath = join(dir, "config.json");
+      await writeFile(filePath, `"${"x".repeat(1024 * 1024)}"`, "utf8");
+
+      const loaded = await loadJsonFileSource({
+        descriptor: descriptor("json", "json-file", 1),
+        filePath,
+        maxFileBytes: Number.NaN
+      });
+
+      expect(loaded.issues).toContainEqual(
+        expect.objectContaining({
+          category: "resource-limit",
+          code: "max_file_bytes_exceeded",
+          details: expect.objectContaining({ maxFileBytes: 1024 * 1024 })
+        })
+      );
+    } finally {
+      await rm(dir, { force: true, recursive: true });
+    }
+  });
+
   it("omits malformed JSON parser exception text from issues", async () => {
     const dir = await mkdtemp(join(tmpdir(), "uce-json-invalid-"));
     try {
@@ -350,6 +374,26 @@ describe("node source loaders", () => {
     ]);
   });
 
+  it("uses the default environment bound when a runtime entry limit is invalid", () => {
+    const env = Object.fromEntries(
+      Array.from({ length: 4097 }, (_, index) => [`KEY_${index}`, String(index)])
+    );
+    const loaded = createProcessEnvSource({
+      descriptor: descriptor("env", "process-env", 10),
+      env,
+      mappings: [],
+      maxEnvEntries: Number.NaN
+    });
+
+    expect(loaded.issues).toContainEqual(
+      expect.objectContaining({
+        category: "resource-limit",
+        code: "max_env_entries_exceeded",
+        details: expect.objectContaining({ maxEnvEntries: 4096 })
+      })
+    );
+  });
+
   it("maps argv values from explicit flags and assignments", () => {
     const loaded = createArgvSource({
       descriptor: descriptor("argv", "argv", 20),
@@ -404,6 +448,23 @@ describe("node source loaders", () => {
         }
       })
     ]);
+  });
+
+  it("uses the default argument bound when a runtime entry limit is invalid", () => {
+    const loaded = createArgvSource({
+      descriptor: descriptor("argv", "argv", 20),
+      argv: Array.from({ length: 4097 }, (_, index) => String(index)),
+      mappings: [],
+      maxArgvEntries: Number.POSITIVE_INFINITY
+    });
+
+    expect(loaded.issues).toContainEqual(
+      expect.objectContaining({
+        category: "resource-limit",
+        code: "max_argv_entries_exceeded",
+        details: expect.objectContaining({ maxArgvEntries: 4096 })
+      })
+    );
   });
 
   it("reports missing argv values instead of guessing booleans", () => {

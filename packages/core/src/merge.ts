@@ -1,6 +1,7 @@
 import { applyCoercionRules } from "./coercion.js";
 import { getConfigValueAtPath, pathToKey, setConfigValueAtPath } from "./path.js";
 import { flattenConfigObject } from "./value.js";
+import { DEFAULT_RESOURCE_LIMITS, normalizeResourceLimits } from "./limits.js";
 import type {
   ConfigIssue,
   ConfigResult,
@@ -25,12 +26,7 @@ export const DEFAULT_MERGE_POLICY: MergePolicy = {
   samePriorityPolicy: "issue-and-later-source-wins"
 };
 
-export const DEFAULT_RESOURCE_LIMITS: ResourceLimitPolicy = {
-  maxDepth: 32,
-  maxKeyCount: 10_000,
-  maxPathLength: 32,
-  maxDiagnostics: 200
-};
+export { DEFAULT_RESOURCE_LIMITS } from "./limits.js";
 
 interface MutableResolvedPath {
   path: ConfigPath;
@@ -52,7 +48,7 @@ interface ResolvedPathTrieNode {
 
 export function resolveConfig(input: ResolveConfigInput): ConfigResult {
   const policy: MergePolicy = { ...DEFAULT_MERGE_POLICY, ...input.mergePolicy };
-  const limits: ResourceLimitPolicy = { ...DEFAULT_RESOURCE_LIMITS, ...input.limits };
+  const limits = normalizeResourceLimits(input.limits);
   const sources = sortSources(input.sources);
   const descriptors = sources.map((source) => source.descriptor);
   const config: Record<string, ConfigValue> = {};

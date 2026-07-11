@@ -5,7 +5,7 @@ import type {
   LoadedSource,
   ResourceLimitPolicy
 } from "./types.js";
-import { DEFAULT_RESOURCE_LIMITS } from "./merge.js";
+import { normalizeResourceLimits } from "./limits.js";
 
 export interface LoadConfigSourcesInput<TContext = undefined> {
   readonly loaders: readonly ConfigLoader<TContext>[];
@@ -23,10 +23,7 @@ export async function loadConfigSources<TContext = undefined>(
 ): Promise<LoadConfigSourcesResult> {
   const sources: LoadedSource[] = [];
   const issues: ConfigIssue[] = [];
-  const maxDiagnostics = Math.max(
-    1,
-    input.limits?.maxDiagnostics ?? DEFAULT_RESOURCE_LIMITS.maxDiagnostics
-  );
+  const maxDiagnostics = normalizeResourceLimits(input.limits).maxDiagnostics;
 
   for (const loader of input.loaders) {
     try {

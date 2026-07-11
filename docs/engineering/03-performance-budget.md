@@ -18,6 +18,10 @@ Loader issue retention uses `maxDiagnostics` from the loader boundary onward. Th
 default limit is 200, and both per-source and aggregate issue arrays include the
 overflow marker within that bound.
 
+Runtime limit values must be positive safe integers. Invalid direct-library values
+fall back to defaults; `NaN` and `Infinity` must never bypass a comparison-based
+bound.
+
 ## Required Evidence
 
 - Source of truth: `docs/product/02-spec.md`, `docs/architecture/03-quality-attributes.md`,

@@ -1,4 +1,4 @@
-import { DEFAULT_RESOURCE_LIMITS } from "./merge.js";
+import { normalizeResourceLimits } from "./limits.js";
 import { cloneConfigValue } from "./path.js";
 import type {
   ConfigIssue,
@@ -28,7 +28,7 @@ export interface RunValidatorsResult {
 export async function runValidators(input: RunValidatorsInput): Promise<RunValidatorsResult> {
   const issues: ConfigIssue[] = [];
   const provenance: ProvenanceEvent[] = [];
-  const maxDiagnostics = Math.max(1, input.limits?.maxDiagnostics ?? DEFAULT_RESOURCE_LIMITS.maxDiagnostics);
+  const maxDiagnostics = normalizeResourceLimits(input.limits).maxDiagnostics;
   const validatorConfig = freezeConfigValue(cloneConfigValue(input.config));
 
   for (const validator of input.validators) {

@@ -27,7 +27,7 @@ Testing standard defines merge-blocking expectations for unit, integration, cont
   values.
 - Resource-limit fixtures cover oversized files, excessive depth, excessive key
   count, excessive path length, excessive environment and argument entry counts,
-  and bounded diagnostics.
+  bounded diagnostics, and malformed runtime limits that must fall back to defaults.
 - Validator adapter fixtures map external error paths to normalized config paths.
 - CLI fixtures verify stdout, stderr, JSON output, exit codes, and shared pipeline
   behavior with the library.

@@ -5,6 +5,7 @@ import {
   type LoadedSource,
   type OverrideMapping
 } from "@0disoft/universal-config-engine-core";
+import { positiveSafeIntegerLimit } from "./limits.js";
 
 export const DEFAULT_MAX_ENV_ENTRIES = 4096;
 
@@ -16,7 +17,7 @@ export interface CreateProcessEnvSourceInput {
 }
 
 export function createProcessEnvSource(input: CreateProcessEnvSourceInput): LoadedSource {
-  const maxEnvEntries = input.maxEnvEntries ?? DEFAULT_MAX_ENV_ENTRIES;
+  const maxEnvEntries = positiveSafeIntegerLimit(input.maxEnvEntries, DEFAULT_MAX_ENV_ENTRIES);
   const envEntries = Object.keys(input.env).length;
   if (envEntries > maxEnvEntries) {
     return {

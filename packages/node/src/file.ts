@@ -1,6 +1,7 @@
 import { open, realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, sep } from "node:path";
 import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
+import { positiveSafeIntegerLimit } from "./limits.js";
 
 export const DEFAULT_MAX_FILE_BYTES = 1024 * 1024;
 const READ_CHUNK_BYTES = 64 * 1024;
@@ -22,7 +23,7 @@ export async function readTextFileWithinLimit(input: {
   readonly encoding?: BufferEncoding;
   readonly allowedRootPath?: string;
 }): Promise<BoundedTextFileReadResult> {
-  const maxFileBytes = input.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
+  const maxFileBytes = positiveSafeIntegerLimit(input.maxFileBytes, DEFAULT_MAX_FILE_BYTES);
   const encoding = input.encoding ?? "utf8";
   const fileHandle = await open(input.filePath, "r");
 
@@ -125,7 +126,7 @@ export async function checkFileSize(input: {
   readonly sourceId: string;
   readonly maxFileBytes?: number;
 }): Promise<readonly ConfigIssue[]> {
-  const maxFileBytes = input.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
+  const maxFileBytes = positiveSafeIntegerLimit(input.maxFileBytes, DEFAULT_MAX_FILE_BYTES);
   const stats = await stat(input.filePath);
   return fileSizeIssues({
     sourceId: input.sourceId,

@@ -58,6 +58,12 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 the final retained entry is `resource-limit/max_diagnostics_exceeded` rather than
 an unbounded tail. `runConfigPipeline` forwards its limits into this loading stage.
 
+Direct library resource-limit options are runtime-normalized as well as typed.
+Only positive safe integers are accepted. Missing or invalid values such as zero,
+negative numbers, `NaN`, `Infinity`, or unsafe integers fall back to the documented
+default instead of disabling the bound. The CLI declaration layer remains stricter:
+an explicitly malformed limit is a declaration error rather than a fallback.
+
 Node JSON and dotenv loaders accept `FileReadPolicy.allowedRootPath`. When set,
 they verify the canonical path and opened file identity before reading from the
 handle; see ADR 0012.
@@ -70,6 +76,9 @@ The Node process-env and argv helpers default to 4096 entries and export
 `DEFAULT_MAX_ENV_ENTRIES` and `DEFAULT_MAX_ARGV_ENTRIES`. Callers may select a
 per-source `maxEnvEntries` or `maxArgvEntries`; oversized inputs return an empty
 source value plus a `resource-limit` issue before mapping.
+The Node file, process-env, and argv helpers apply the same positive-safe-integer
+normalization to direct JavaScript calls, so malformed numeric options cannot turn
+their default bounds into unbounded comparisons.
 
 The committed `docs/library/public-api.snapshot.txt` records normalized declaration
 files for every publishable package. `pnpm run check:api-snapshot` fails when the

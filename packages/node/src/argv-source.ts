@@ -5,6 +5,7 @@ import {
   type LoadedSource,
   type OverrideMapping
 } from "@0disoft/universal-config-engine-core";
+import { positiveSafeIntegerLimit } from "./limits.js";
 
 export const DEFAULT_MAX_ARGV_ENTRIES = 4096;
 
@@ -16,7 +17,7 @@ export interface CreateArgvSourceInput {
 }
 
 export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
-  const maxArgvEntries = input.maxArgvEntries ?? DEFAULT_MAX_ARGV_ENTRIES;
+  const maxArgvEntries = positiveSafeIntegerLimit(input.maxArgvEntries, DEFAULT_MAX_ARGV_ENTRIES);
   if (input.argv.length > maxArgvEntries) {
     return {
       descriptor: input.descriptor,

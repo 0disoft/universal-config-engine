@@ -29,6 +29,8 @@ boundaries, hosted API security, database security, or remote secret delivery.
 - Resource limits must bound file size, object depth, key count, diagnostics count,
   path length, environment entry count, and argument entry count. Oversized process
   inputs must fail before mapping rather than produce partial configuration.
+- Runtime limit values must be normalized before comparison so `NaN`, infinity,
+  non-positive values, and unsafe integers cannot disable a configured boundary.
 - Bounded file sources must verify configured canonical roots and opened file
   identity before reading contents.
 - The CLI pipeline declaration must be byte-bounded before JSON parsing.
