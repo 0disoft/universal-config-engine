@@ -506,6 +506,42 @@ describe("runCli", () => {
     });
   });
 
+  it("allows internal directory names that begin with two dots", async () => {
+    await withTempDir(async (dir) => {
+      const dottedDirectory = join(dir, "..config");
+      await mkdir(dottedDirectory);
+      await writeFile(join(dottedDirectory, "config.json"), JSON.stringify({ server: { port: 3000 } }), "utf8");
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "file",
+              kind: "json-file",
+              priority: 0,
+              path: "..config/config.json"
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as { readonly status: string };
+
+      expect(result.exitCode).toBe(0);
+      expect(report.status).toBe("ok");
+    });
+  });
+
   it("passes argv source values only after the separator", async () => {
     await withTempDir(async (dir) => {
       await writeFile(

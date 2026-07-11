@@ -3,7 +3,8 @@ import {
   dirname,
   isAbsolute,
   relative,
-  resolve
+  resolve,
+  sep
 } from "node:path";
 import {
   createArgvSource,
@@ -556,7 +557,10 @@ function resolveInputPath(inputPath: string, cwd: string): string {
 
 function isInsideOrEqualPath(rootPath: string, targetPath: string): boolean {
   const relativePath = relative(rootPath, targetPath);
-  return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
+  return (
+    relativePath === "" ||
+    (relativePath !== ".." && !relativePath.startsWith(`..${sep}`) && !isAbsolute(relativePath))
+  );
 }
 
 function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {

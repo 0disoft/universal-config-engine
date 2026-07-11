@@ -31,6 +31,8 @@ For `json-file` and `dotenv-file` sources:
   the declaration directory;
 - equivalent filesystem aliases for the same canonical declaration directory are
   accepted;
+- ordinary child names such as `..config` are accepted; only the `..` path segment
+  crosses the boundary;
 - rejected file source paths produce exit code `2`.
 
 This rule applies before JSON or dotenv parsing and before config merge. The CLI
@@ -67,6 +69,7 @@ workspace-root discovery rule.
   directory.
 - CLI tests must cover symbolic-link or junction traversal to a canonical target
   outside the declaration directory.
+- CLI tests must cover valid child directory names beginning with two dots.
 - Node loader tests must verify the opened file boundary described by ADR 0012.
 - `pnpm run check` must pass before release.
 

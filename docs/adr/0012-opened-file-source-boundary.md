@@ -55,6 +55,8 @@ handle prevents a later path replacement from redirecting the read.
 - Node tests reject an opened source whose canonical path escapes through a
   symbolic link or Windows junction.
 - Node tests fail closed when the allowed root cannot be canonicalized.
+- Node tests distinguish parent traversal from valid child names beginning with
+  two dots.
 - CLI tests continue to cover outside traversal, junction traversal, internal
   absolute paths, and equivalent directory aliases.
 

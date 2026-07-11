@@ -1,5 +1,5 @@
 import { open, realpath, stat } from "node:fs/promises";
-import { isAbsolute, relative } from "node:path";
+import { isAbsolute, relative, sep } from "node:path";
 import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
 
 export const DEFAULT_MAX_FILE_BYTES = 1024 * 1024;
@@ -104,7 +104,10 @@ async function openedFileBoundaryIssues(input: {
 
 function isInsideOrEqualPath(rootPath: string, targetPath: string): boolean {
   const relativePath = relative(rootPath, targetPath);
-  return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
+  return (
+    relativePath === "" ||
+    (relativePath !== ".." && !relativePath.startsWith(`..${sep}`) && !isAbsolute(relativePath))
+  );
 }
 
 function fileBoundaryIssue(sourceId: string, code: string): ConfigIssue {

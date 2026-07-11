@@ -174,6 +174,27 @@ describe("node source loaders", () => {
     }
   });
 
+  it("accepts bounded files in directory names that begin with two dots", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "uce-json-dotted-directory-"));
+    try {
+      const dottedDirectory = join(dir, "..config");
+      await mkdir(dottedDirectory);
+      const filePath = join(dottedDirectory, "config.json");
+      await writeFile(filePath, JSON.stringify({ server: { port: 3000 } }), "utf8");
+
+      const loaded = await loadJsonFileSource({
+        descriptor: descriptor("json", "json-file", 1),
+        filePath,
+        allowedRootPath: dir
+      });
+
+      expect(loaded.issues ?? []).toEqual([]);
+      expect(loaded.value).toEqual({ server: { port: 3000 } });
+    } finally {
+      await rm(dir, { force: true, recursive: true });
+    }
+  });
+
   it("parses only simple dotenv KEY=VALUE lines", () => {
     const loaded = parseSimpleDotenv(
       descriptor("dotenv", "dotenv-file", 1),
