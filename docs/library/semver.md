@@ -45,6 +45,11 @@ The 0.3.1 Node loader adds optional `FileReadPolicy.allowedRootPath` to enforce 
 already documented CLI file boundary at open-handle time. Existing callers that do
 not configure a root retain their caller-owned path behavior.
 
+The 0.4 release target adds optional loader and source limits, new stable failure
+diagnostics, and stricter runtime validation of adapter results. Existing typed
+adapters remain source-compatible when they already return valid `ConfigIssue` and
+`ValueLocation` structures. See `docs/library/migration-0.4.md`.
+
 ## Patch Changes
 
 Patch versions may fix incorrect provenance, redaction, validation, or parsing

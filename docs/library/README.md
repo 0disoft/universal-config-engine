@@ -30,6 +30,8 @@ merge behavior, validator handoff, provenance, and redaction behavior explicit.
 
 - `docs/library/migration-0.3.md`: migrate package consumers from `0.2.1` to the
   current `0.3.x` release.
+- `docs/library/migration-0.4.md`: prepare consumers for the `0.4.0` runtime
+  boundary hardening release.
 
 ## Review Blockers
 

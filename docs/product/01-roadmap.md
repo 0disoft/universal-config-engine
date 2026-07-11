@@ -86,6 +86,21 @@ Owner: UNASSIGNED
 - Verified configured file roots against the opened file handle before reading
   JSON or dotenv contents.
 
+## Phase 7: 0.4.x Runtime Boundary Hardening
+
+- Omitted raw exception text across loader, parser, mapping, coercion, validator,
+  and CLI declaration failure paths.
+- Distinguished JSON file read failures from parse failures.
+- Bounded pipeline declaration bytes before parsing and process environment or argv
+  entry counts before mapping.
+- Added optional per-source `maxEnvEntries` and `maxArgvEntries` policies.
+- Bounded loader issue retention per source and in aggregate from the loader boundary.
+- Normalized invalid direct-library resource limits to safe documented defaults.
+- Validated loader issue and location result structures and bound their source identity
+  to the loader descriptor.
+- Converted hostile source value inspection exceptions into stable parse issues.
+- Indexed duplicate CLI mapping target paths for linear declaration validation.
+
 ## Explicitly Deferred
 
 - Remote config service.
