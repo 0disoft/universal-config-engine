@@ -23,6 +23,7 @@ Testing standard defines merge-blocking expectations for unit, integration, cont
   ordering.
 - Provenance fixtures assert winning source, overridden sources, defaulting,
   coercion, validation, and redaction events.
+- Coercion fixtures assert both transformed output and unchanged caller input.
 - Redaction fixtures prove report structures and snapshots do not contain raw secret
   values.
 - Resource-limit fixtures cover oversized files, excessive depth, excessive key

@@ -1,4 +1,4 @@
-import { getConfigValueAtPath, setConfigValueAtPath } from "./path.js";
+import { cloneConfigValue, getConfigValueAtPath, setConfigValueAtPath } from "./path.js";
 import { isConfigValue } from "./value.js";
 import type { CoercionRule, ConfigIssue, ConfigValue, ProvenanceEvent } from "./types.js";
 
@@ -8,6 +8,7 @@ export interface ApplyCoercionRulesInput {
 }
 
 export interface ApplyCoercionRulesResult {
+  readonly config: ConfigValue;
   readonly issues: readonly ConfigIssue[];
   readonly provenance: readonly ProvenanceEvent[];
 }
@@ -15,13 +16,15 @@ export interface ApplyCoercionRulesResult {
 export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercionRulesResult {
   const issues: ConfigIssue[] = [];
   const provenance: ProvenanceEvent[] = [];
+  const config = cloneConfigValue(input.config);
 
   if (input.rules.length === 0) {
-    return { issues, provenance };
+    return { config, issues, provenance };
   }
 
-  if (input.config === null || typeof input.config !== "object" || Array.isArray(input.config)) {
+  if (config === null || typeof config !== "object" || Array.isArray(config)) {
     return {
+      config,
       issues: [
         {
           category: "coercion",
@@ -35,7 +38,7 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
   }
 
   for (const rule of input.rules) {
-    const currentValue = getConfigValueAtPath(input.config, rule.path);
+    const currentValue = getConfigValueAtPath(config, rule.path);
     if (currentValue === undefined) {
       continue;
     }
@@ -58,7 +61,7 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
     }
 
     try {
-      setConfigValueAtPath(input.config as Record<string, ConfigValue>, rule.path, coerced.value);
+      setConfigValueAtPath(config as Record<string, ConfigValue>, rule.path, coerced.value);
       provenance.push({
         path: rule.path,
         action: "coerced",
@@ -76,7 +79,7 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
     }
   }
 
-  return { issues, provenance };
+  return { config, issues, provenance };
 }
 
 function coerceString(

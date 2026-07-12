@@ -57,6 +57,10 @@ pre-1.0 minor release with migration notes.
 Adding canonical-path metadata to bounded file reads and the declaration-context
 loader is additive public API work for the same pre-1.0 minor release.
 
+Returning coerced config from `applyCoercionRules` while removing its undocumented
+input mutation is a pre-1.0 minor compatibility change. Consumers must read the
+returned `config` instead of observing side effects.
+
 ## Patch Changes
 
 Patch versions may fix incorrect provenance, redaction, validation, or parsing

@@ -10,6 +10,7 @@ export interface ApplyCoercionRulesInput {
     readonly rules: readonly CoercionRule[];
 }
 export interface ApplyCoercionRulesResult {
+    readonly config: ConfigValue;
     readonly issues: readonly ConfigIssue[];
     readonly provenance: readonly ProvenanceEvent[];
 }

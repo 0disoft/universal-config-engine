@@ -51,7 +51,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
   const limits = normalizeResourceLimits(input.limits);
   const sources = sortSources(input.sources);
   const descriptors = sources.map((source) => source.descriptor);
-  const config: Record<string, ConfigValue> = {};
+  let config: Record<string, ConfigValue> = {};
   const issues: ConfigIssue[] = [];
   const provenance: ProvenanceEvent[] = [];
   const resolvedIndex = createResolvedPathIndex();
@@ -104,6 +104,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
       config,
       rules: input.coercionRules
     });
+    config = coercionResult.config as Record<string, ConfigValue>;
     pushBoundedIssues(issues, coercionResult.issues, limits);
     provenance.push(...coercionResult.provenance);
   }

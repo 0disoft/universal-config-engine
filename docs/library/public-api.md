@@ -24,6 +24,8 @@ Repository Type: library
 - `OverrideMapping`: explicit env var or CLI flag mapping into config paths.
 - `MergePolicy`: deterministic object merge and conflict handling.
 - `CoercionPolicy`: opt-in type conversion rules.
+- `applyCoercionRules`: immutable coercion stage that returns a cloned `config`
+  together with issues and provenance; caller input is never modified.
 - `ValidatorAdapter`: validation boundary for consumer-selected validators.
 - `ValidatorIssue`: structured validator output containing a stable code, severity,
   and optional normalized config path.
@@ -122,6 +124,8 @@ migration review before running `pnpm run update:api-snapshot`.
 - Do not expose parser-specific raw shapes as core output.
 - Do not require one schema validator library.
 - Do not silently coerce values.
+- Do not mutate public coercion inputs. Pipeline orchestration must explicitly adopt
+  the returned coerced config.
 - Do not print or serialize secret values through diagnostic helpers.
 - Preserve source identity for source-load, parse, merge, override, validation, and
   redaction failures.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyCoercionRules,
   buildDiagnosticReport,
   createMappedOverrideSource,
   getConfigValueAtPath,
@@ -610,6 +611,26 @@ describe("resolveConfig", () => {
       sourceId: "core:coercion",
       message: "Path was coerced from string to number."
     });
+  });
+
+  it("returns coerced config without mutating the public API input", () => {
+    const config = { threshold: "41" } as const;
+    const coercion = applyCoercionRules({
+      config,
+      rules: [
+        {
+          path: ["threshold"],
+          from: "string",
+          to: "number",
+          onFailure: "issue"
+        }
+      ]
+    });
+
+    expect(config).toEqual({ threshold: "41" });
+    expect(coercion.config).toEqual({ threshold: 41 });
+    expect(coercion.config).not.toBe(config);
+    expect(coercion.issues).toEqual([]);
   });
 
   it("rejects non-finite JSON coercion results", () => {

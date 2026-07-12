@@ -25,6 +25,9 @@ Every validator in one run receives an isolated, read-only view of the same reso
 config. Validator ordering therefore affects issue and provenance order only; it
 does not create an implicit transformation pipeline.
 
+The separate public coercion stage clones its input and returns the transformed
+config as output. Readonly caller data is not an implicit mutation channel.
+
 A future feature that intentionally transforms resolved config must use a separate
 stage and public API with its own ordering, provenance, failure, redaction, and type
 ownership contract. It must not be introduced by changing validator behavior in
@@ -64,4 +67,3 @@ construction.
 - Core replaces resolved config with `ValidatorResult.value`.
 - A validator's typed value becomes another validator's input.
 - Validator-returned transforms bypass coercion provenance or redaction policy.
-
