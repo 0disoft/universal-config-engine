@@ -16,6 +16,17 @@ export interface CreateArgvSourceInput {
   readonly maxArgvEntries?: number;
 }
 
+interface ArgObservation {
+  matchCount: number;
+  hasInvalidMatch: boolean;
+  value?: string;
+}
+
+interface AssignmentPrefixNode {
+  readonly children: Map<string, AssignmentPrefixNode>;
+  readonly externalNames: string[];
+}
+
 export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
   const maxArgvEntries = positiveSafeIntegerLimit(input.maxArgvEntries, DEFAULT_MAX_ARGV_ENTRIES);
   if (input.argv.length > maxArgvEntries) {
@@ -40,13 +51,14 @@ export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
 
   const values: Record<string, string> = {};
   const issues: ConfigIssue[] = [];
+  const observations = scanArgv(input.argv, input.mappings);
 
   for (const mapping of input.mappings) {
     if (mapping.sourceKind !== "argv") {
       continue;
     }
 
-    const parsed = findArgValue(input.argv, mapping.externalName);
+    const parsed = observationToArgValue(observations.get(mapping.externalName));
     if (parsed.status === "missing") {
       continue;
     }
@@ -90,51 +102,114 @@ export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
   };
 }
 
-function findArgValue(
-  argv: readonly string[],
-  externalName: string
-):
+function observationToArgValue(observation: ArgObservation | undefined):
   | { readonly status: "found"; readonly value: string }
   | { readonly status: "missing" }
   | { readonly status: "invalid" }
   | { readonly status: "duplicate" } {
-  let foundValue: string | undefined;
-  let matchCount = 0;
-  let hasInvalidMatch = false;
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === externalName) {
-      matchCount += 1;
-      const next = argv[index + 1];
-      if (next === undefined || !isArgValueToken(next)) {
-        hasInvalidMatch = true;
-        continue;
-      }
-      foundValue = next;
-      continue;
-    }
-
-    const assignmentPrefix = `${externalName}=`;
-    if (arg?.startsWith(assignmentPrefix) === true) {
-      matchCount += 1;
-      foundValue = arg.slice(assignmentPrefix.length);
-    }
+  if (observation === undefined || observation.matchCount === 0) {
+    return { status: "missing" };
   }
-
-  if (matchCount > 1) {
+  if (observation.matchCount > 1) {
     return { status: "duplicate" };
   }
-
-  if (hasInvalidMatch) {
+  if (observation.hasInvalidMatch) {
     return { status: "invalid" };
   }
+  if (observation.value !== undefined) {
+    return { status: "found", value: observation.value };
+  }
+  return { status: "missing" };
+}
 
-  if (foundValue !== undefined) {
-    return { status: "found", value: foundValue };
+function scanArgv(
+  argv: readonly string[],
+  mappings: readonly OverrideMapping[]
+): ReadonlyMap<string, ArgObservation> {
+  const exactNames = new Set<string>();
+  const assignmentPrefixes = createAssignmentPrefixNode();
+  for (const mapping of mappings) {
+    if (mapping.sourceKind !== "argv") {
+      continue;
+    }
+    exactNames.add(mapping.externalName);
+    addAssignmentPrefix(assignmentPrefixes, mapping.externalName);
   }
 
-  return { status: "missing" };
+  const observations = new Map<string, ArgObservation>();
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index]!;
+    if (exactNames.has(arg)) {
+      const next = argv[index + 1];
+      recordArgObservation(
+        observations,
+        arg,
+        next !== undefined && isArgValueToken(next) ? next : undefined,
+        next === undefined || !isArgValueToken(next)
+      );
+    }
+
+    for (const match of matchAssignmentPrefixes(assignmentPrefixes, arg)) {
+      recordArgObservation(observations, match.externalName, match.value, false);
+    }
+  }
+  return observations;
+}
+
+function createAssignmentPrefixNode(): AssignmentPrefixNode {
+  return { children: new Map(), externalNames: [] };
+}
+
+function addAssignmentPrefix(root: AssignmentPrefixNode, externalName: string): void {
+  let node = root;
+  for (const character of `${externalName}=`) {
+    let child = node.children.get(character);
+    if (child === undefined) {
+      child = createAssignmentPrefixNode();
+      node.children.set(character, child);
+    }
+    node = child;
+  }
+  if (!node.externalNames.includes(externalName)) {
+    node.externalNames.push(externalName);
+  }
+}
+
+function matchAssignmentPrefixes(
+  root: AssignmentPrefixNode,
+  arg: string
+): readonly { readonly externalName: string; readonly value: string }[] {
+  const matches: { externalName: string; value: string }[] = [];
+  let node = root;
+  for (let index = 0; index < arg.length; index += 1) {
+    const child = node.children.get(arg[index]!);
+    if (child === undefined) {
+      break;
+    }
+    node = child;
+    for (const externalName of node.externalNames) {
+      matches.push({ externalName, value: arg.slice(index + 1) });
+    }
+  }
+  return matches;
+}
+
+function recordArgObservation(
+  observations: Map<string, ArgObservation>,
+  externalName: string,
+  value: string | undefined,
+  invalid: boolean
+): void {
+  const observation = observations.get(externalName) ?? {
+    matchCount: 0,
+    hasInvalidMatch: false
+  };
+  observation.matchCount += 1;
+  observation.hasInvalidMatch ||= invalid;
+  if (value !== undefined) {
+    observation.value = value;
+  }
+  observations.set(externalName, observation);
 }
 
 function isArgValueToken(value: string): boolean {

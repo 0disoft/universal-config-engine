@@ -443,6 +443,23 @@ describe("node source loaders", () => {
     });
   });
 
+  it("scans large declared argv mappings without repeated full-array searches", () => {
+    const count = 4096;
+    const loaded = createArgvSource({
+      descriptor: descriptor("argv", "argv", 20),
+      argv: Array.from({ length: count }, (_, index) => `--key-${index}=${index}`),
+      mappings: Array.from({ length: count }, (_, index) => ({
+        externalName: `--key-${index}`,
+        sourceKind: "argv" as const,
+        targetPath: [`key${index}`],
+        parseAs: "number" as const
+      }))
+    });
+
+    expect(loaded.issues).toEqual([]);
+    expect(loaded.value).toMatchObject({ key0: 0, key4095: 4095 });
+  });
+
   it("rejects argv sources that exceed the entry limit before mapping", () => {
     const loaded = createArgvSource({
       descriptor: descriptor("argv", "argv", 20),
