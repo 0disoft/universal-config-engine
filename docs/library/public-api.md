@@ -84,6 +84,10 @@ have an ancestor/descendant relationship. Exact duplicates use
 `overlapping_mapping_target_path`. The source is rejected during resolution instead
 of applying an order-dependent partial value.
 
+Source descriptor ids are resolution identities and must be unique. A duplicate id
+returns `source-load/duplicate_source_id` before any source value or source issue is
+merged, preventing ambiguous provenance and redaction-policy lookup.
+
 Node JSON and dotenv loaders accept `FileReadPolicy.allowedRootPath`. When set,
 they verify the canonical path and opened file identity before reading from the
 handle; see ADR 0012.
@@ -139,6 +143,8 @@ migration review before running `pnpm run update:api-snapshot`.
   values to later validators; see ADR 0009.
 - Isolate validator inputs from the resolved config. Validators must not be able to
   mutate the pipeline output or affect later validators by modifying `input.config`.
+- Copy and deeply freeze validator provenance input, including event paths, so
+  adapters cannot rewrite the provenance later consumed by reports.
 - Bound validator issues with the same diagnostics limit used by merge/source
   reporting. When validator output exceeds `maxDiagnostics`, emit
   `resource-limit/max_diagnostics_exceeded` instead of unbounded validation output.

@@ -27,6 +27,10 @@ Core converts each valid `ValidatorIssue` into a public `ConfigIssue`. Core assi
 the `validation` category, uses the registered validator id as `sourceId`, and
 constructs a stable generic message from the validator id and issue code.
 
+Validator input provenance is copied and frozen, including event paths, before
+adapter execution. It is observation-only input just like the cloned and frozen
+config; a validator cannot rewrite report provenance through shared references.
+
 For compatibility with adapters built against the pre-0.3 `ConfigIssue`-shaped
 contract, `ValidatorIssue` temporarily accepts optional `category`, `message`,
 `sourceId`, and `details` fields. Core validates their basic shape but never copies

@@ -138,6 +138,42 @@ describe("resolveConfig", () => {
     expect(JSON.stringify(result)).not.toContain("source-value-secret-text");
   });
 
+  it("rejects duplicate source ids before merge", () => {
+    const result = resolveConfig({
+      sources: [
+        {
+          ...source("duplicate", 0, { database: { password: "duplicate-source-secret" } }),
+          descriptor: {
+            ...source("duplicate", 0, {}).descriptor,
+            redaction: { secretSource: true }
+          },
+          issues: [
+            {
+              category: "source-load",
+              code: "secret_warning",
+              severity: "warning",
+              sourceId: "duplicate",
+              message: "duplicate-source-secret"
+            }
+          ]
+        },
+        source("duplicate", 1, { public: true })
+      ]
+    });
+    const report = buildDiagnosticReport(result);
+
+    expect(result.ok).toBe(false);
+    expect(result.config).toEqual({});
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        category: "source-load",
+        code: "duplicate_source_id",
+        sourceId: "duplicate"
+      })
+    );
+    expect(JSON.stringify(report)).not.toContain("duplicate-source-secret");
+  });
+
   it("deep merges objects and lets higher priority values win", () => {
     const result = resolveConfig({
       sources: [
@@ -794,6 +830,36 @@ describe("resolveConfig", () => {
       })
     );
     expect(getConfigValueAtPath(result.config, ["server", "port"])).toBe(3000);
+  });
+
+  it("blocks validators from mutating pipeline provenance", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { public: true })]
+    });
+    const originalProvenance = structuredClone(result.provenance);
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "mutating-provenance",
+          validate(input) {
+            (input.provenance[0] as { message: string }).message = "validator-provenance-secret";
+            return { ok: true, issues: [] };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toContainEqual(
+      expect.objectContaining({
+        category: "validation",
+        code: "validator_threw",
+        sourceId: "mutating-provenance"
+      })
+    );
+    expect(result.provenance).toEqual(originalProvenance);
+    expect(JSON.stringify({ result, validation })).not.toContain("validator-provenance-secret");
   });
 
   it("normalizes malformed validator results and issues", async () => {

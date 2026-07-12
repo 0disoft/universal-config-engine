@@ -94,6 +94,10 @@ of why each final value exists.
     merged and coercion rules run, not only for each source independently.
 15. Override mappings within one source must not use equal, ancestor, or descendant
     target paths because application order must not change the resolved value.
+16. Source ids must be unique within one resolution. Duplicate identities must fail
+    before source issues, values, provenance, or redaction policies are combined.
+17. Validators must receive immutable snapshots of config and provenance so adapter
+    code cannot mutate the pipeline result or its report inputs.
 
 ## Public Surfaces
 

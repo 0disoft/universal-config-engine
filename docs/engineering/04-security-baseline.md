@@ -39,6 +39,9 @@ boundaries, hosted API security, database security, or remote secret delivery.
   or aggregated for merge.
 - Loader result issue and location structures are validated, copied, and bound to
   the loader descriptor source id before entering merge or redaction.
+- Duplicate source ids fail before merge so redaction policies cannot overwrite one
+  another through ambiguous string identity.
+- Validator config and provenance inputs are isolated and frozen before execution.
 - Exceptions from getters, proxies, or other hostile source values are omitted from
   diagnostics and reject the source before merge.
 - Validator issue codes are bounded machine identifiers, not a free-form text

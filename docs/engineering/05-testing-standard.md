@@ -41,6 +41,8 @@ Testing standard defines merge-blocking expectations for unit, integration, cont
   `pnpm run check:adapter-fixtures`.
 - Loader boundary tests cover thrown adapters, malformed result structures, bounded
   issue retention, and descriptor-owned issue/location source identity.
+- Validator boundary tests cover config and provenance mutation attempts, and source
+  identity tests cover duplicate-id fail-closed behavior before reporting.
 
 ## Review Blockers
 

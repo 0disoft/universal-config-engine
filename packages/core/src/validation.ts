@@ -30,6 +30,7 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
   const provenance: ProvenanceEvent[] = [];
   const maxDiagnostics = normalizeResourceLimits(input.limits).maxDiagnostics;
   const validatorConfig = freezeConfigValue(cloneConfigValue(input.config));
+  const validatorProvenance = freezeProvenance(input.provenance);
 
   for (const validator of input.validators) {
     if (isDiagnosticsLimitReached(issues, maxDiagnostics)) {
@@ -39,7 +40,7 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
     try {
       const result = await validator.validate({
         config: validatorConfig,
-        provenance: input.provenance
+        provenance: validatorProvenance
       });
       if (!isValidatorResult(result)) {
         pushBoundedIssues(issues, [invalidValidatorResultIssue(validator.id)], maxDiagnostics);
@@ -91,6 +92,20 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
   }
 
   return { issues, provenance };
+}
+
+function freezeProvenance(input: readonly ProvenanceEvent[]): readonly ProvenanceEvent[] {
+  return Object.freeze(
+    input.map((event) =>
+      Object.freeze({
+        path: Object.freeze([...event.path]),
+        action: event.action,
+        sourceId: event.sourceId,
+        ...(event.previousSourceId === undefined ? {} : { previousSourceId: event.previousSourceId }),
+        message: event.message
+      })
+    )
+  );
 }
 
 function freezeConfigValue(value: ConfigValue): ConfigValue {
