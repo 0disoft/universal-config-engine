@@ -96,6 +96,9 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     provenance.push(...coercionResult.provenance);
   }
 
+  const finalStructure = flattenConfigObject("core:resolved-config", config, limits);
+  pushBoundedIssues(issues, finalStructure.issues, limits);
+
   return {
     ok: !issues.some((issue) => issue.severity === "error"),
     config,

@@ -52,7 +52,7 @@ export function flattenConfigObject(
     entries: [],
     keyCount: 0
   };
-  const seen = new WeakSet<object>();
+  const ancestors = new WeakSet<object>();
 
   if (!isPlainConfigObject(value)) {
     state.issues.push({
@@ -65,7 +65,7 @@ export function flattenConfigObject(
     return state;
   }
 
-  walk(sourceId, value, [], 0, limits, state, seen, true);
+  walk(sourceId, value, [], 0, limits, state, ancestors, true);
   return state;
 }
 
@@ -76,7 +76,7 @@ function walk(
   depth: number,
   limits: ResourceLimitPolicy,
   state: ValidationState,
-  seen: WeakSet<object>,
+  ancestors: WeakSet<object>,
   emitEntries: boolean
 ): void {
   if (state.issues.length >= limits.maxDiagnostics) {
@@ -108,7 +108,7 @@ function walk(
   }
 
   if (value !== null && typeof value === "object") {
-    if (seen.has(value)) {
+    if (ancestors.has(value)) {
       state.issues.push({
         category: "parse",
         code: "cyclic_value",
@@ -119,11 +119,39 @@ function walk(
       });
       return;
     }
-    seen.add(value);
+    ancestors.add(value);
+    try {
+      walkObject(sourceId, value, path, depth, limits, state, ancestors, emitEntries);
+    } finally {
+      ancestors.delete(value);
+    }
+    return;
   }
 
+  if (!isConfigValue(value)) {
+    state.issues.push({
+      category: "parse",
+      code: "invalid_value",
+      severity: "error",
+      sourceId,
+      path,
+      message: `Config value at ${formatPath(path)} is not JSON-compatible.`
+    });
+  }
+}
+
+function walkObject(
+  sourceId: string,
+  value: object,
+  path: ConfigPath,
+  depth: number,
+  limits: ResourceLimitPolicy,
+  state: ValidationState,
+  ancestors: WeakSet<object>,
+  emitEntries: boolean
+): void {
   if (Array.isArray(value)) {
-    validateArray(sourceId, value, path, depth, limits, state, seen);
+    validateArray(sourceId, value, path, depth, limits, state, ancestors);
     if (emitEntries) {
       state.entries.push({ path, value });
     }
@@ -166,9 +194,9 @@ function walk(
       }
 
       if (isPlainConfigObject(child)) {
-        walk(sourceId, child, childPath, depth + 1, limits, state, seen, emitEntries);
+        walk(sourceId, child, childPath, depth + 1, limits, state, ancestors, emitEntries);
       } else if (Array.isArray(child)) {
-        walk(sourceId, child, childPath, depth + 1, limits, state, seen, emitEntries);
+        walk(sourceId, child, childPath, depth + 1, limits, state, ancestors, emitEntries);
       } else if (isConfigValue(child)) {
         if (emitEntries) {
           state.entries.push({ path: childPath, value: child });
@@ -187,16 +215,14 @@ function walk(
     return;
   }
 
-  if (!isConfigValue(value)) {
-    state.issues.push({
-      category: "parse",
-      code: "invalid_value",
-      severity: "error",
-      sourceId,
-      path,
-      message: `Config value at ${formatPath(path)} is not JSON-compatible.`
-    });
-  }
+  state.issues.push({
+    category: "parse",
+    code: "invalid_value",
+    severity: "error",
+    sourceId,
+    path,
+    message: `Config value at ${formatPath(path)} is not JSON-compatible.`
+  });
 }
 
 function validateArray(
@@ -206,9 +232,9 @@ function validateArray(
   depth: number,
   limits: ResourceLimitPolicy,
   state: ValidationState,
-  seen: WeakSet<object>
+  ancestors: WeakSet<object>
 ): void {
   for (const [index, child] of value.entries()) {
-    walk(sourceId, child, [...path, index], depth + 1, limits, state, seen, false);
+    walk(sourceId, child, [...path, index], depth + 1, limits, state, ancestors, false);
   }
 }

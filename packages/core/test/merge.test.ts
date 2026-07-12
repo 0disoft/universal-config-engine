@@ -23,6 +23,75 @@ function source(id: string, priority: number, value: unknown): LoadedSource {
 }
 
 describe("resolveConfig", () => {
+  it("accepts shared object references that do not form a cycle", () => {
+    const shared = { enabled: true };
+    const result = resolveConfig({
+      sources: [source("shared", 0, { left: shared, right: shared })]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({
+      left: { enabled: true },
+      right: { enabled: true }
+    });
+    expect(result.issues).not.toContainEqual(expect.objectContaining({ code: "cyclic_value" }));
+  });
+
+  it("still rejects actual cyclic source values", () => {
+    const cyclic: Record<string, unknown> = {};
+    cyclic.self = cyclic;
+    const result = resolveConfig({
+      sources: [source("cyclic", 0, cyclic)]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "cyclic_value" }));
+  });
+
+  it("applies key limits to the aggregate resolved config", () => {
+    const result = resolveConfig({
+      sources: [
+        source("first", 0, { first: 1, second: 2 }),
+        source("second", 1, { third: 3, fourth: 4 })
+      ],
+      limits: { maxKeyCount: 2 }
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        category: "resource-limit",
+        code: "max_key_count_exceeded",
+        sourceId: "core:resolved-config"
+      })
+    );
+  });
+
+  it("applies structure limits after JSON coercion", () => {
+    const payload = Object.fromEntries(Array.from({ length: 4 }, (_, index) => [`key${index}`, index]));
+    const result = resolveConfig({
+      sources: [source("json", 0, { payload: JSON.stringify(payload) })],
+      coercionRules: [
+        {
+          path: ["payload"],
+          from: "string",
+          to: "json",
+          onFailure: "issue"
+        }
+      ],
+      limits: { maxKeyCount: 2 }
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        category: "resource-limit",
+        code: "max_key_count_exceeded",
+        sourceId: "core:resolved-config"
+      })
+    );
+  });
+
   it("falls back to bounded defaults for invalid runtime resource limits", () => {
     const result = resolveConfig({
       sources: [source("defaults", 0, { enabled: true })],
@@ -420,6 +489,68 @@ describe("resolveConfig", () => {
       }
     });
     expect(getConfigValueAtPath(result.config, ["UNMAPPED_VALUE"])).toBeUndefined();
+  });
+
+  it.each([
+    {
+      name: "child before parent",
+      mappings: [
+        {
+          externalName: "PORT",
+          sourceKind: "process-env" as const,
+          targetPath: ["service", "port"],
+          parseAs: "number" as const
+        },
+        {
+          externalName: "SERVICE",
+          sourceKind: "process-env" as const,
+          targetPath: ["service"],
+          parseAs: "json" as const
+        }
+      ]
+    },
+    {
+      name: "parent before child",
+      mappings: [
+        {
+          externalName: "SERVICE",
+          sourceKind: "process-env" as const,
+          targetPath: ["service"],
+          parseAs: "json" as const
+        },
+        {
+          externalName: "PORT",
+          sourceKind: "process-env" as const,
+          targetPath: ["service", "port"],
+          parseAs: "number" as const
+        }
+      ]
+    }
+  ])("rejects overlapping mapping target paths with $name", ({ mappings }) => {
+    const mapped = createMappedOverrideSource({
+      descriptor: {
+        id: "env",
+        kind: "process-env",
+        priority: 10,
+        displayName: "env"
+      },
+      values: {
+        PORT: "3000",
+        SERVICE: '{"host":"api.internal"}'
+      },
+      mappings
+    });
+    const result = resolveConfig({ sources: [mapped] });
+
+    expect(mapped.issues).toContainEqual(
+      expect.objectContaining({
+        category: "mapping",
+        code: "overlapping_mapping_target_path",
+        sourceId: "env"
+      })
+    );
+    expect(result.ok).toBe(false);
+    expect(result.config).toEqual({});
   });
 
   it("applies opt-in coercion rules and records provenance", () => {

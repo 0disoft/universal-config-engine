@@ -73,6 +73,17 @@ negative numbers, `NaN`, `Infinity`, or unsafe integers fall back to the documen
 default instead of disabling the bound. The CLI declaration layer remains stricter:
 an explicitly malformed limit is a declaration error rather than a fallback.
 
+`resolveConfig` checks source values early and rechecks the final config after merge
+and coercion. A final aggregate or coercion-expanded structure that exceeds depth,
+key-count, or path-length limits returns a `resource-limit` issue with source id
+`core:resolved-config` and cannot produce `ok: true`.
+
+`createMappedOverrideSource` rejects active mappings whose target paths are equal or
+have an ancestor/descendant relationship. Exact duplicates use
+`duplicate_mapping_target_path`; prefix collisions use
+`overlapping_mapping_target_path`. The source is rejected during resolution instead
+of applying an order-dependent partial value.
+
 Node JSON and dotenv loaders accept `FileReadPolicy.allowedRootPath`. When set,
 they verify the canonical path and opened file identity before reading from the
 handle; see ADR 0012.

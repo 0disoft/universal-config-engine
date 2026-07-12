@@ -87,9 +87,13 @@ of why each final value exists.
 11. Unsafe path segments must be rejected or escaped before merge or mapping can
    mutate object state.
 12. Resource limits must produce bounded issues instead of unbounded output or
-   process failure.
+    process failure.
 13. Loader exceptions must be converted into source-aware `source-load` issues
     before merge or diagnostic reporting.
+14. Structural limits must hold for the final resolved config after all sources are
+    merged and coercion rules run, not only for each source independently.
+15. Override mappings within one source must not use equal, ancestor, or descendant
+    target paths because application order must not change the resolved value.
 
 ## Public Surfaces
 

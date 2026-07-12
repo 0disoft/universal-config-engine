@@ -24,6 +24,8 @@ manager behavior.
 6. The merge engine resolves values in deterministic priority order and emits
    provenance events as values are defined, overridden, defaulted, or rejected.
 7. Optional coercion rules transform values and emit coercion provenance or issues.
+   The final resolved config is then checked again against depth, key-count, and
+   path-length limits so merge aggregation and JSON coercion cannot bypass them.
 8. Validator adapters receive the normalized config object and return normalized
    issues.
 9. The result builder returns resolved config to the caller and sends reportable data

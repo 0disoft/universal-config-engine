@@ -1,4 +1,4 @@
-import { isUnsafePathSegment, pathToKey, setConfigValueAtPath } from "./path.js";
+import { isUnsafePathSegment, setConfigValueAtPath } from "./path.js";
 import type {
   ConfigIssue,
   ConfigSourceDescriptor,
@@ -13,10 +13,20 @@ export interface CreateMappedOverrideSourceInput {
   readonly mappings: readonly OverrideMapping[];
 }
 
+interface MappingPathOwner {
+  readonly externalName: string;
+}
+
+interface MappingPathNode {
+  readonly children: Map<string, MappingPathNode>;
+  terminal?: MappingPathOwner;
+  firstTerminal?: MappingPathOwner;
+}
+
 export function createMappedOverrideSource(input: CreateMappedOverrideSourceInput): LoadedSource {
   const value: Record<string, ConfigValue> = {};
   const issues: ConfigIssue[] = [];
-  const firstMappingByTargetPath = new Map<string, string>();
+  const mappingPaths = createMappingPathNode();
 
   for (const mapping of input.mappings) {
     if (mapping.sourceKind !== input.descriptor.kind) {
@@ -28,20 +38,23 @@ export function createMappedOverrideSource(input: CreateMappedOverrideSourceInpu
       continue;
     }
 
-    const targetPathKey = pathToKey(mapping.targetPath);
-    const previousExternalName = firstMappingByTargetPath.get(targetPathKey);
-    if (previousExternalName !== undefined) {
+    const pathConflict = addMappingPath(mappingPaths, mapping.targetPath, {
+      externalName: mapping.externalName
+    });
+    if (pathConflict !== undefined) {
+      const exact = pathConflict.kind === "exact";
       issues.push({
         category: "mapping",
-        code: "duplicate_mapping_target_path",
+        code: exact ? "duplicate_mapping_target_path" : "overlapping_mapping_target_path",
         severity: "error",
         sourceId: input.descriptor.id,
         path: mapping.targetPath,
-        message: `Mapping ${mapping.externalName} targets the same path as ${previousExternalName}.`
+        message: exact
+          ? `Mapping ${mapping.externalName} targets the same path as ${pathConflict.owner.externalName}.`
+          : `Mapping ${mapping.externalName} overlaps the target path of ${pathConflict.owner.externalName}.`
       });
       continue;
     }
-    firstMappingByTargetPath.set(targetPathKey, mapping.externalName);
 
     const unsafeSegment = mapping.targetPath.find((segment) => isUnsafePathSegment(segment));
     if (unsafeSegment !== undefined) {
@@ -88,6 +101,46 @@ export function createMappedOverrideSource(input: CreateMappedOverrideSourceInpu
     value,
     issues
   };
+}
+
+function createMappingPathNode(): MappingPathNode {
+  return { children: new Map() };
+}
+
+function addMappingPath(
+  root: MappingPathNode,
+  path: readonly (string | number)[],
+  owner: MappingPathOwner
+): { readonly kind: "exact" | "overlap"; readonly owner: MappingPathOwner } | undefined {
+  const visited = [root];
+  let node = root;
+
+  for (const segment of path) {
+    if (node.terminal !== undefined) {
+      return { kind: "overlap", owner: node.terminal };
+    }
+    const segmentKey = JSON.stringify(segment);
+    let child = node.children.get(segmentKey);
+    if (child === undefined) {
+      child = createMappingPathNode();
+      node.children.set(segmentKey, child);
+    }
+    node = child;
+    visited.push(node);
+  }
+
+  if (node.terminal !== undefined) {
+    return { kind: "exact", owner: node.terminal };
+  }
+  if (node.firstTerminal !== undefined) {
+    return { kind: "overlap", owner: node.firstTerminal };
+  }
+
+  node.terminal = owner;
+  for (const visitedNode of visited) {
+    visitedNode.firstTerminal ??= owner;
+  }
+  return undefined;
 }
 
 function parseMappedValue(

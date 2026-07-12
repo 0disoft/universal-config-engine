@@ -11,6 +11,7 @@ Owner: UNASSIGNED
 | Redaction is implemented as final string replacement. | Secret values may already exist inside report objects, snapshots, or thrown errors. | Build diagnostic values from redaction metadata and never store raw secret values in report structures. |
 | Env var and CLI override precedence is implicit. | Debugging production config becomes guesswork. | Require declared mapping and ordered source priority. |
 | Env var and CLI mappings are inferred automatically. | Typos, collisions, and naming conventions become invisible behavior. | Require declared mappings and report unmapped inputs separately. |
+| Parent and child override mapping paths overlap. | Mapping order can silently replace or delete nested values. | Reject equal and ancestor/descendant target paths before applying mappings. |
 | Type coercion silently changes values. | Invalid config can look valid. | Make coercion policy explicit and visible in provenance. |
 | Deep merge behavior is ambiguous. | Nested config may be partially overwritten or accidentally retained. | Document merge policy and produce conflict diagnostics. |
 | Unsafe keys mutate prototypes during merge or mapping. | Config input can become a security vulnerability. | Reject or safely escape `__proto__`, `prototype`, and `constructor` path segments before mutation. |

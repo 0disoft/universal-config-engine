@@ -73,6 +73,11 @@ Within a single process-env or argv source, two mappings must not target the sam
 config path. Duplicate mapping targets are declaration errors rather than
 last-writer-wins overrides.
 
+Mapping target paths also must not overlap by ancestry. For example, `service` and
+`service.port` cannot coexist in one source because applying those mappings in a
+different order would change or delete values. Such declarations fail as
+`pipeline_override_mapping_target_path_overlap` before source loading.
+
 CLI argv source values are read only after the `--` separator. Example:
 
 ```text

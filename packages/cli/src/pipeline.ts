@@ -25,7 +25,7 @@ import type {
   ResourceLimitPolicy,
   SourceKind
 } from "@0disoft/universal-config-engine-core";
-import { pathToKey, pathsEqual } from "@0disoft/universal-config-engine-core";
+import { pathsEqual } from "@0disoft/universal-config-engine-core";
 import type {
   PipelineDeclaration,
   PipelineValidatorDeclaration,
@@ -1254,7 +1254,7 @@ function validateUniqueMappingTargetPaths(
   path: ConfigPath,
   sourceId: string | undefined
 ): readonly ConfigIssue[] {
-  const firstIndexByTargetPath = new Map<string, number>();
+  const mappingPaths = createDeclarationPathNode();
   const issues: ConfigIssue[] = [];
 
   for (const [index, mapping] of mappings.entries()) {
@@ -1263,25 +1263,73 @@ function validateUniqueMappingTargetPaths(
     }
 
     const targetPath = mapping.targetPath;
-    const targetPathKey = pathToKey(targetPath);
-    const existingIndex = firstIndexByTargetPath.get(targetPathKey);
-
-    if (existingIndex === undefined) {
-      firstIndexByTargetPath.set(targetPathKey, index);
+    const conflict = addDeclarationPath(mappingPaths, targetPath, index);
+    if (conflict === undefined) {
       continue;
     }
 
+    const exact = conflict.kind === "exact";
     issues.push(
       pipelineDeclarationIssue({
-        code: "pipeline_override_mapping_target_path_duplicate",
+        code: exact
+          ? "pipeline_override_mapping_target_path_duplicate"
+          : "pipeline_override_mapping_target_path_overlap",
         path: [...path, index, "targetPath"],
         sourceId,
-        message: `Override mapping targetPath duplicates mappings.${existingIndex}.targetPath.`
+        message: exact
+          ? `Override mapping targetPath duplicates mappings.${conflict.index}.targetPath.`
+          : `Override mapping targetPath overlaps mappings.${conflict.index}.targetPath.`
       })
     );
   }
 
   return issues;
+}
+
+interface DeclarationPathNode {
+  readonly children: Map<string, DeclarationPathNode>;
+  terminalIndex?: number;
+  firstTerminalIndex?: number;
+}
+
+function createDeclarationPathNode(): DeclarationPathNode {
+  return { children: new Map() };
+}
+
+function addDeclarationPath(
+  root: DeclarationPathNode,
+  path: ConfigPath,
+  index: number
+): { readonly kind: "exact" | "overlap"; readonly index: number } | undefined {
+  const visited = [root];
+  let node = root;
+
+  for (const segment of path) {
+    if (node.terminalIndex !== undefined) {
+      return { kind: "overlap", index: node.terminalIndex };
+    }
+    const segmentKey = JSON.stringify(segment);
+    let child = node.children.get(segmentKey);
+    if (child === undefined) {
+      child = createDeclarationPathNode();
+      node.children.set(segmentKey, child);
+    }
+    node = child;
+    visited.push(node);
+  }
+
+  if (node.terminalIndex !== undefined) {
+    return { kind: "exact", index: node.terminalIndex };
+  }
+  if (node.firstTerminalIndex !== undefined) {
+    return { kind: "overlap", index: node.firstTerminalIndex };
+  }
+
+  node.terminalIndex = index;
+  for (const visitedNode of visited) {
+    visitedNode.firstTerminalIndex ??= index;
+  }
+  return undefined;
 }
 
 function unionAllowedFields(left: ReadonlySet<string>, right: ReadonlySet<string>): ReadonlySet<string> {

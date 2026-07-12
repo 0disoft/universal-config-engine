@@ -935,6 +935,77 @@ describe("runCli", () => {
     });
   });
 
+  it("rejects ancestor and descendant override target paths before source loading", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "parent-first",
+              kind: "process-env",
+              priority: 10,
+              mappings: [
+                {
+                  externalName: "SERVICE",
+                  sourceKind: "process-env",
+                  targetPath: ["service"],
+                  parseAs: "json"
+                },
+                {
+                  externalName: "PORT",
+                  sourceKind: "process-env",
+                  targetPath: ["service", "port"],
+                  parseAs: "number"
+                }
+              ]
+            },
+            {
+              id: "child-first",
+              kind: "process-env",
+              priority: 20,
+              mappings: [
+                {
+                  externalName: "PORT",
+                  sourceKind: "process-env",
+                  targetPath: ["service", "port"],
+                  parseAs: "number"
+                },
+                {
+                  externalName: "SERVICE",
+                  sourceKind: "process-env",
+                  targetPath: ["service"],
+                  parseAs: "json"
+                }
+              ]
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly issues: readonly { readonly code: string; readonly sourceId?: string }[];
+      };
+
+      expect(result.exitCode).toBe(2);
+      expect(report.issues.filter((issue) => issue.code === "pipeline_override_mapping_target_path_overlap"))
+        .toEqual([
+          expect.objectContaining({ sourceId: "parent-first" }),
+          expect.objectContaining({ sourceId: "child-first" })
+        ]);
+    });
+  });
+
   it("rejects malformed resource limits and file size policies before source loading", async () => {
     await withTempDir(async (dir) => {
       await writeFile(
