@@ -54,6 +54,9 @@ Changing `secretNamePatterns` from regular-expression interpretation to literal
 substring matching is a consumer-visible security hardening and requires a
 pre-1.0 minor release with migration notes.
 
+Adding canonical-path metadata to bounded file reads and the declaration-context
+loader is additive public API work for the same pre-1.0 minor release.
+
 ## Patch Changes
 
 Patch versions may fix incorrect provenance, redaction, validation, or parsing

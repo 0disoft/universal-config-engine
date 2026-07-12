@@ -34,6 +34,8 @@ boundaries, hosted API security, database security, or remote secret delivery.
 - Bounded file sources must verify configured canonical roots and opened file
   identity before reading contents.
 - The CLI pipeline declaration must be byte-bounded before JSON parsing.
+- The opened declaration's canonical identity must remain the base for subsequent
+  relative sources; a later alias lookup must not choose a different directory.
 - Parser and validator adapters are untrusted boundaries until tested by fixtures.
 - Loader adapter issue arrays are bounded before they are retained on loaded sources
   or aggregated for merge.

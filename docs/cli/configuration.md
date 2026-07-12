@@ -37,6 +37,9 @@ outside the declaration directory.
 The pipeline declaration itself is read through the bounded Node file reader and
 must not exceed 1 MiB. Oversized declarations fail before JSON parsing with
 `resource-limit/max_file_bytes_exceeded` and exit code `3`.
+The CLI retains the canonical identity of the declaration file that was actually
+opened and uses its directory for every relative source. Retargeting a declaration
+symlink or junction after the read cannot switch the source directory.
 
 The CLI validates the declaration shape before loading sources. Unsupported source
 kinds, unknown declaration fields, missing or duplicate source ids, missing file

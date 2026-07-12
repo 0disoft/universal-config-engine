@@ -13,7 +13,7 @@ export interface FileReadPolicy {
 }
 
 export type BoundedTextFileReadResult =
-  | { readonly ok: true; readonly raw: string }
+  | { readonly ok: true; readonly raw: string; readonly canonicalPath: string }
   | { readonly ok: false; readonly issues: readonly ConfigIssue[] };
 
 export async function readTextFileWithinLimit(input: {
@@ -29,18 +29,15 @@ export async function readTextFileWithinLimit(input: {
 
   try {
     const stats = await fileHandle.stat();
-    const boundaryIssues = await openedFileBoundaryIssues({
+    const boundaryResult = await openedFileBoundaryResult({
       filePath: input.filePath,
       sourceId: input.sourceId,
       allowedRootPath: input.allowedRootPath,
       openedDevice: stats.dev,
       openedInode: stats.ino
     });
-    if (boundaryIssues.length > 0) {
-      return {
-        ok: false,
-        issues: boundaryIssues
-      };
+    if (!boundaryResult.ok) {
+      return boundaryResult;
     }
 
     const sizeIssues = fileSizeIssues({
@@ -58,7 +55,7 @@ export async function readTextFileWithinLimit(input: {
 
     const raw = await readFileHandleWithinLimit(fileHandle, maxFileBytes, encoding);
     return raw.ok
-      ? raw
+      ? { ...raw, canonicalPath: boundaryResult.canonicalPath }
       : {
           ok: false,
           issues: fileSizeIssues({
@@ -72,34 +69,42 @@ export async function readTextFileWithinLimit(input: {
   }
 }
 
-async function openedFileBoundaryIssues(input: {
+async function openedFileBoundaryResult(input: {
   readonly filePath: string;
   readonly sourceId: string;
   readonly allowedRootPath: string | undefined;
   readonly openedDevice: number;
   readonly openedInode: number;
-}): Promise<readonly ConfigIssue[]> {
-  if (input.allowedRootPath === undefined) {
-    return [];
-  }
-
+}): Promise<
+  | { readonly ok: true; readonly canonicalPath: string }
+  | { readonly ok: false; readonly issues: readonly ConfigIssue[] }
+> {
   try {
-    const [canonicalRootPath, canonicalFilePath] = await Promise.all([
-      realpath(input.allowedRootPath),
-      realpath(input.filePath)
-    ]);
-    if (!isInsideOrEqualPath(canonicalRootPath, canonicalFilePath)) {
-      return [fileBoundaryIssue(input.sourceId, "file_path_outside_allowed_root")];
-    }
-
+    const canonicalFilePath = await realpath(input.filePath);
     const currentStats = await stat(canonicalFilePath);
     if (currentStats.dev !== input.openedDevice || currentStats.ino !== input.openedInode) {
-      return [fileBoundaryIssue(input.sourceId, "file_identity_changed")];
+      return {
+        ok: false,
+        issues: [fileBoundaryIssue(input.sourceId, "file_identity_changed")]
+      };
     }
 
-    return [];
+    if (input.allowedRootPath !== undefined) {
+      const canonicalRootPath = await realpath(input.allowedRootPath);
+      if (!isInsideOrEqualPath(canonicalRootPath, canonicalFilePath)) {
+        return {
+          ok: false,
+          issues: [fileBoundaryIssue(input.sourceId, "file_path_outside_allowed_root")]
+        };
+      }
+    }
+
+    return { ok: true, canonicalPath: canonicalFilePath };
   } catch {
-    return [fileBoundaryIssue(input.sourceId, "file_boundary_verification_failed")];
+    return {
+      ok: false,
+      issues: [fileBoundaryIssue(input.sourceId, "file_boundary_verification_failed")]
+    };
   }
 }
 

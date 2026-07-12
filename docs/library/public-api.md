@@ -94,7 +94,13 @@ handle; see ADR 0012.
 
 The Node package exports `readTextFileWithinLimit` for bounded consumers such as
 the CLI pipeline declaration loader. It reads through an open handle and returns a
-resource-limit issue instead of allocating beyond the configured byte limit.
+resource-limit issue instead of allocating beyond the configured byte limit. A
+successful result includes `canonicalPath`, verified against the opened file
+identity before reading.
+
+The CLI package exports `loadPipelineDeclarationContext` for callers that need the
+normalized declaration together with its opened canonical path. The existing
+`loadPipelineDeclaration` API remains a declaration-only compatibility wrapper.
 
 The Node process-env and argv helpers default to 4096 entries and export
 `DEFAULT_MAX_ENV_ENTRIES` and `DEFAULT_MAX_ARGV_ENTRIES`. Callers may select a

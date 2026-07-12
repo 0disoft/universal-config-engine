@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -8,7 +8,8 @@ import {
   createProcessEnvSource,
   loadDotenvFileSource,
   loadJsonFileSource,
-  parseSimpleDotenv
+  parseSimpleDotenv,
+  readTextFileWithinLimit
 } from "../src/index.js";
 import type { ConfigSourceDescriptor } from "@0disoft/universal-config-engine-core";
 
@@ -22,6 +23,27 @@ function descriptor(id: string, kind: ConfigSourceDescriptor["kind"], priority: 
 }
 
 describe("node source loaders", () => {
+  it("returns the canonical identity of the opened bounded file", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "uce-file-canonical-"));
+    try {
+      const filePath = join(dir, "config.json");
+      await writeFile(filePath, "{}", "utf8");
+
+      const result = await readTextFileWithinLimit({
+        filePath,
+        sourceId: "config"
+      });
+
+      expect(result).toEqual({
+        ok: true,
+        raw: "{}",
+        canonicalPath: await realpath(filePath)
+      });
+    } finally {
+      await rm(dir, { force: true, recursive: true });
+    }
+  });
+
   it("loads JSON files as source values", async () => {
     const dir = await mkdtemp(join(tmpdir(), "uce-json-"));
     try {

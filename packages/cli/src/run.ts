@@ -12,7 +12,7 @@ import {
 import { formatHumanReport, formatJsonReport } from "./output.js";
 import {
   loadDeclaredSources,
-  loadPipelineDeclaration,
+  loadPipelineDeclarationContext,
   sourceLoadFailedIssues
 } from "./pipeline.js";
 import { createDeclaredValidators } from "./validators.js";
@@ -34,10 +34,11 @@ export async function runCli(args: readonly string[], runtime: CliRuntime): Prom
   }
 
   try {
-    const declaration = await loadPipelineDeclaration(parsed.configPath, runtime.cwd);
+    const declarationContext = await loadPipelineDeclarationContext(parsed.configPath, runtime.cwd);
+    const declaration = declarationContext.declaration;
     const sources = await loadDeclaredSources({
       declaration,
-      configPath: parsed.configPath,
+      configPath: declarationContext.canonicalConfigPath,
       cwd: runtime.cwd,
       env: runtime.env,
       argv: parsed.sourceArgv
@@ -110,7 +111,7 @@ function buildUsageErrorReport(message: string) {
 
 async function applyDeclaredValidation(
   result: ReturnType<typeof resolveConfig>,
-  declaration: Awaited<ReturnType<typeof loadPipelineDeclaration>>
+  declaration: Awaited<ReturnType<typeof loadPipelineDeclarationContext>>["declaration"]
 ): Promise<ReturnType<typeof resolveConfig>> {
   const declaredValidators = createDeclaredValidators(declaration);
   const setupIssues = declaredValidators.issues;

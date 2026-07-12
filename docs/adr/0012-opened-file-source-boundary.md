@@ -29,6 +29,10 @@ Boundary lookup failure, an outside canonical path, or changed file identity
 returns a bounded `source-load` issue without raw path or file content. The reader
 fails closed. JSON and dotenv loaders pass the policy to the shared file reader.
 
+Successful bounded reads return the verified canonical file path. The CLI retains
+that path as declaration context so later relative source resolution cannot perform
+a second, inconsistent symlink lookup.
+
 The CLI always supplies its canonical pipeline declaration directory as
 `allowedRootPath`. Lower-level Node package consumers opt into the boundary by
 supplying their own root; omitting it preserves caller-owned path behavior.
@@ -59,6 +63,8 @@ handle prevents a later path replacement from redirecting the read.
   two dots.
 - CLI tests continue to cover outside traversal, junction traversal, internal
   absolute paths, and equivalent directory aliases.
+- CLI tests retarget a declaration symlink after reading and prove relative sources
+  remain anchored to the opened declaration identity.
 
 ## Review Blockers
 

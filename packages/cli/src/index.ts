@@ -17,8 +17,10 @@ export {
 } from "./output.js";
 export {
   loadDeclaredSources,
-  loadPipelineDeclaration
+  loadPipelineDeclaration,
+  loadPipelineDeclarationContext
 } from "./pipeline.js";
+export type { LoadedPipelineDeclaration } from "./pipeline.js";
 export {
   runCli
 } from "./run.js";

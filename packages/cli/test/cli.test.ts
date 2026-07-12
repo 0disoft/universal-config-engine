@@ -11,7 +11,11 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { runCli } from "../src/index.js";
-import { loadPipelineDeclaration } from "../src/pipeline.js";
+import {
+  loadDeclaredSources,
+  loadPipelineDeclaration,
+  loadPipelineDeclarationContext
+} from "../src/pipeline.js";
 
 async function withTempDir<T>(callback: (dir: string) => Promise<T>): Promise<T> {
   const dir = await mkdtemp(join(tmpdir(), "uce-cli-"));
@@ -23,6 +27,45 @@ async function withTempDir<T>(callback: (dir: string) => Promise<T>): Promise<T>
 }
 
 describe("loadPipelineDeclaration", () => {
+  it("keeps relative sources bound to the declaration file that was opened", async () => {
+    await withTempDir(async (dir) => {
+      const directoryA = join(dir, "A");
+      const directoryB = join(dir, "B");
+      const aliasPath = join(dir, "uce.json");
+      await mkdir(directoryA);
+      await mkdir(directoryB);
+      const declaration = JSON.stringify({
+        sources: [
+          {
+            id: "payload",
+            kind: "json-file",
+            priority: 0,
+            path: "payload.json"
+          }
+        ]
+      });
+      await writeFile(join(directoryA, "uce.json"), declaration, "utf8");
+      await writeFile(join(directoryB, "uce.json"), declaration, "utf8");
+      await writeFile(join(directoryA, "payload.json"), JSON.stringify({ origin: "A" }), "utf8");
+      await writeFile(join(directoryB, "payload.json"), JSON.stringify({ origin: "B" }), "utf8");
+      await symlink(join(directoryA, "uce.json"), aliasPath, "file");
+
+      const context = await loadPipelineDeclarationContext(aliasPath, dir);
+      await rm(aliasPath);
+      await symlink(join(directoryB, "uce.json"), aliasPath, "file");
+      const sources = await loadDeclaredSources({
+        declaration: context.declaration,
+        configPath: context.canonicalConfigPath,
+        cwd: dir,
+        env: {},
+        argv: []
+      });
+
+      expect(sources[0]?.value).toEqual({ origin: "A" });
+      expect(context.canonicalConfigPath).toBe(join(directoryA, "uce.json"));
+    });
+  });
+
   it("rebuilds validated declarations instead of returning the parsed JSON object", async () => {
     await withTempDir(async (dir) => {
       const configPath = join(dir, "uce.json");

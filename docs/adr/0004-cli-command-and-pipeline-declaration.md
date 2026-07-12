@@ -63,6 +63,9 @@ type assertion. Runtime code should consume only that normalized declaration sha
 
 The declaration file is limited to 1 MiB before JSON parsing. An oversized
 declaration produces `resource-limit/max_file_bytes_exceeded` and exit code `3`.
+The bounded read also returns the canonical identity of the opened declaration
+file. Relative source paths stay anchored to that canonical directory even if a
+symlink or junction used to name the declaration is retargeted after reading.
 
 CLI argv source values must appear after `--`, so CLI options do not get mixed with
 configuration override arguments.

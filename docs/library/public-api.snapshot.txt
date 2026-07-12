@@ -337,6 +337,7 @@ export interface FileReadPolicy {
 export type BoundedTextFileReadResult = {
     readonly ok: true;
     readonly raw: string;
+    readonly canonicalPath: string;
 } | {
     readonly ok: false;
     readonly issues: readonly ConfigIssue[];
@@ -421,7 +422,8 @@ export declare function exitCodeForIssues(issues: readonly ConfigIssue[]): numbe
 export { parseCliArgs } from "./args.js";
 export { EXIT_POLICY_FAILED, EXIT_REDACTION_FAILED, EXIT_SOURCE_FAILED, EXIT_SUCCESS, EXIT_USAGE_ERROR, EXIT_VALIDATION_FAILED, exitCodeForIssues, exitCodeForResult } from "./exit-codes.js";
 export { formatHumanReport, formatJsonReport } from "./output.js";
-export { loadDeclaredSources, loadPipelineDeclaration } from "./pipeline.js";
+export { loadDeclaredSources, loadPipelineDeclaration, loadPipelineDeclarationContext } from "./pipeline.js";
+export type { LoadedPipelineDeclaration } from "./pipeline.js";
 export { runCli } from "./run.js";
 export { createDeclaredValidators } from "./validators.js";
 export type { ArgvSourceDeclaration, CliCommand, CliOutputMode, CliResult, CliRuntime, DotenvFileSourceDeclaration, JsonFileSourceDeclaration, ObjectSourceDeclaration, PipelineDeclaration, PipelineSourceDeclaration, ProcessEnvSourceDeclaration } from "./types.js";
@@ -447,7 +449,12 @@ export declare class PipelineDeclarationError extends Error {
     readonly issues: readonly ConfigIssue[];
     constructor(issues: readonly ConfigIssue[]);
 }
+export interface LoadedPipelineDeclaration {
+    readonly declaration: PipelineDeclaration;
+    readonly canonicalConfigPath: string;
+}
 export declare function loadPipelineDeclaration(configPath: string, cwd?: string): Promise<PipelineDeclaration>;
+export declare function loadPipelineDeclarationContext(configPath: string, cwd?: string): Promise<LoadedPipelineDeclaration>;
 export declare function loadDeclaredSources(input: {
     readonly declaration: PipelineDeclaration;
     readonly configPath: string;

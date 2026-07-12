@@ -61,7 +61,19 @@ export class PipelineDeclarationError extends Error {
   }
 }
 
+export interface LoadedPipelineDeclaration {
+  readonly declaration: PipelineDeclaration;
+  readonly canonicalConfigPath: string;
+}
+
 export async function loadPipelineDeclaration(configPath: string, cwd = process.cwd()): Promise<PipelineDeclaration> {
+  return (await loadPipelineDeclarationContext(configPath, cwd)).declaration;
+}
+
+export async function loadPipelineDeclarationContext(
+  configPath: string,
+  cwd = process.cwd()
+): Promise<LoadedPipelineDeclaration> {
   const readResult = await readTextFileWithinLimit({
     filePath: resolveInputPath(configPath, cwd),
     sourceId: "cli:pipeline-declaration",
@@ -78,7 +90,10 @@ export async function loadPipelineDeclaration(configPath: string, cwd = process.
     throw new PipelineDeclarationError(issues);
   }
 
-  return normalizePipelineDeclaration(parsed);
+  return {
+    declaration: normalizePipelineDeclaration(parsed),
+    canonicalConfigPath: readResult.canonicalPath
+  };
 }
 
 export async function loadDeclaredSources(input: {
