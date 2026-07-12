@@ -50,6 +50,7 @@ const OVERRIDE_MAPPING_FIELDS = new Set(["externalName", "targetPath", "sourceKi
 const COERCION_RULE_FIELDS = new Set(["path", "from", "to", "onFailure"]);
 const VALIDATOR_DECLARATION_FIELDS = new Set(["id", "kind", "schema"]);
 const REDACTION_POLICY_FIELDS = new Set(["secretSource", "secretPaths", "secretNamePatterns"]);
+const MAX_PIPELINE_DECLARATION_DIAGNOSTICS = 200;
 
 export class PipelineDeclarationError extends Error {
   readonly issues: readonly ConfigIssue[];
@@ -57,7 +58,7 @@ export class PipelineDeclarationError extends Error {
   constructor(issues: readonly ConfigIssue[]) {
     super("Pipeline declaration is invalid.");
     this.name = "PipelineDeclarationError";
-    this.issues = issues;
+    this.issues = boundPipelineDeclarationIssues(issues);
   }
 }
 
@@ -604,7 +605,12 @@ function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {
     ];
   }
 
-  issues.push(...validateAllowedFields(value, PIPELINE_DECLARATION_FIELDS, [], "pipeline_unknown_field"));
+  if (!appendDeclarationIssues(
+    issues,
+    validateAllowedFields(value, PIPELINE_DECLARATION_FIELDS, [], "pipeline_unknown_field")
+  )) {
+    return issues;
+  }
 
   if (!Array.isArray(value.sources)) {
     issues.push(
@@ -618,19 +624,26 @@ function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {
   }
 
   for (const [index, source] of value.sources.entries()) {
-    issues.push(...validateSourceDeclaration(source, index));
+    if (!appendDeclarationIssues(issues, validateSourceDeclaration(source, index))) {
+      return issues;
+    }
   }
-  issues.push(
-    ...validateUniqueDeclarationIds({
+  if (!appendDeclarationIssues(
+    issues,
+    validateUniqueDeclarationIds({
       entries: value.sources,
       collectionPath: "sources",
       duplicateCode: "pipeline_source_id_duplicate",
       duplicateMessage: "Pipeline source ids must be unique."
     })
-  );
+  )) {
+    return issues;
+  }
 
   if (value.limits !== undefined) {
-    issues.push(...validateResourceLimitsDeclaration(value.limits));
+    if (!appendDeclarationIssues(issues, validateResourceLimitsDeclaration(value.limits))) {
+      return issues;
+    }
   }
 
   if (value.validators !== undefined && !Array.isArray(value.validators)) {
@@ -643,17 +656,24 @@ function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {
     );
   } else if (Array.isArray(value.validators)) {
     for (const [index, validator] of value.validators.entries()) {
-      issues.push(...validateValidatorDeclaration(validator, index));
+      if (!appendDeclarationIssues(issues, validateValidatorDeclaration(validator, index))) {
+        return issues;
+      }
     }
-    issues.push(
-      ...validateUniqueDeclarationIds({
+    if (!appendDeclarationIssues(
+      issues,
+      validateUniqueDeclarationIds({
         entries: value.validators,
         collectionPath: "validators",
         duplicateCode: "pipeline_validator_id_duplicate",
         duplicateMessage: "Pipeline validator ids must be unique."
       })
-    );
-    issues.push(...validateDisjointDeclarationIds(value.sources, value.validators));
+    )) {
+      return issues;
+    }
+    if (!appendDeclarationIssues(issues, validateDisjointDeclarationIds(value.sources, value.validators))) {
+      return issues;
+    }
   }
 
   if (value.coercionRules !== undefined && !Array.isArray(value.coercionRules)) {
@@ -666,7 +686,9 @@ function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {
     );
   } else if (Array.isArray(value.coercionRules)) {
     for (const [index, rule] of value.coercionRules.entries()) {
-      issues.push(...validateCoercionRuleDeclaration(rule, index));
+      if (!appendDeclarationIssues(issues, validateCoercionRuleDeclaration(rule, index))) {
+        return issues;
+      }
     }
   }
 
@@ -822,9 +844,22 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
         );
       } else {
         for (const [mappingIndex, mapping] of source.mappings.entries()) {
-          issues.push(...validateOverrideMappingDeclaration(mapping, source.kind, [...sourcePath("mappings"), mappingIndex], sourceId));
+          if (!appendDeclarationIssues(
+            issues,
+            validateOverrideMappingDeclaration(
+              mapping,
+              source.kind,
+              [...sourcePath("mappings"), mappingIndex],
+              sourceId
+            )
+          )) {
+            return issues;
+          }
         }
-        issues.push(...validateUniqueMappingTargetPaths(source.mappings, sourcePath("mappings"), sourceId));
+        appendDeclarationIssues(
+          issues,
+          validateUniqueMappingTargetPaths(source.mappings, sourcePath("mappings"), sourceId)
+        );
       }
       break;
   }
@@ -1172,6 +1207,58 @@ function pipelineDeclarationIssue(input: {
   };
 }
 
+function appendDeclarationIssues(
+  destination: ConfigIssue[],
+  nextIssues: readonly ConfigIssue[]
+): boolean {
+  for (const [index, issue] of nextIssues.entries()) {
+    if (destination.length >= MAX_PIPELINE_DECLARATION_DIAGNOSTICS) {
+      replaceLastDeclarationIssueWithOverflowMarker(destination);
+      return false;
+    }
+    destination.push(issue);
+    if (
+      index < nextIssues.length - 1 &&
+      destination.length >= MAX_PIPELINE_DECLARATION_DIAGNOSTICS
+    ) {
+      replaceLastDeclarationIssueWithOverflowMarker(destination);
+      return false;
+    }
+  }
+  return !destination.some(isDeclarationDiagnosticsOverflowMarker);
+}
+
+function replaceLastDeclarationIssueWithOverflowMarker(issues: ConfigIssue[]): void {
+  if (issues.some(isDeclarationDiagnosticsOverflowMarker)) {
+    return;
+  }
+  const marker: ConfigIssue = {
+    category: "resource-limit",
+    code: "max_diagnostics_exceeded",
+    severity: "error",
+    message: `Pipeline declaration diagnostics exceeded the bootstrap maximum of ${MAX_PIPELINE_DECLARATION_DIAGNOSTICS}.`
+  };
+  if (issues.length === 0) {
+    issues.push(marker);
+  } else {
+    issues.length = Math.min(issues.length, MAX_PIPELINE_DECLARATION_DIAGNOSTICS);
+    issues[issues.length - 1] = marker;
+  }
+}
+
+function boundPipelineDeclarationIssues(issues: readonly ConfigIssue[]): readonly ConfigIssue[] {
+  if (issues.length <= MAX_PIPELINE_DECLARATION_DIAGNOSTICS) {
+    return issues;
+  }
+  const bounded = issues.slice(0, MAX_PIPELINE_DECLARATION_DIAGNOSTICS);
+  replaceLastDeclarationIssueWithOverflowMarker(bounded);
+  return bounded;
+}
+
+function isDeclarationDiagnosticsOverflowMarker(issue: ConfigIssue): boolean {
+  return issue.category === "resource-limit" && issue.code === "max_diagnostics_exceeded";
+}
+
 function validateAllowedFields(
   value: Readonly<Record<string, unknown>>,
   allowedFields: ReadonlySet<string>,
@@ -1179,16 +1266,24 @@ function validateAllowedFields(
   code: string,
   sourceId?: string | undefined
 ): readonly ConfigIssue[] {
-  return Object.keys(value)
-    .filter((field) => !allowedFields.has(field))
-    .map((field) =>
-      pipelineDeclarationIssue({
+  const issues: ConfigIssue[] = [];
+  for (const field of Object.keys(value)) {
+    if (allowedFields.has(field)) {
+      continue;
+    }
+    if (!appendDeclarationIssues(
+      issues,
+      [pipelineDeclarationIssue({
         code,
         path: [...path, field],
         sourceId,
         message: `Unknown pipeline declaration field ${formatConfigPath([...path, field])}.`
-      })
-    );
+      })]
+    )) {
+      break;
+    }
+  }
+  return issues;
 }
 
 function validateUniqueDeclarationIds(input: {
@@ -1211,14 +1306,17 @@ function validateUniqueDeclarationIds(input: {
       continue;
     }
 
-    issues.push(
-      pipelineDeclarationIssue({
+    if (!appendDeclarationIssues(
+      issues,
+      [pipelineDeclarationIssue({
         code: input.duplicateCode,
         path: [input.collectionPath, index, "id"],
         sourceId: entry.id,
         message: `${input.duplicateMessage} Duplicate id ${entry.id} was first declared at ${input.collectionPath}.${firstIndex}.id.`
-      })
-    );
+      })]
+    )) {
+      break;
+    }
   }
 
   return issues;
@@ -1251,14 +1349,17 @@ function validateDisjointDeclarationIds(
       continue;
     }
 
-    issues.push(
-      pipelineDeclarationIssue({
+    if (!appendDeclarationIssues(
+      issues,
+      [pipelineDeclarationIssue({
         code: "pipeline_declaration_id_namespace_collision",
         path: ["validators", index, "id"],
         sourceId: validator.id,
         message: `Pipeline validator id ${validator.id} conflicts with source id declared at sources.${sourceIndex}.id.`
-      })
-    );
+      })]
+    )) {
+      break;
+    }
   }
 
   return issues;
@@ -1284,8 +1385,9 @@ function validateUniqueMappingTargetPaths(
     }
 
     const exact = conflict.kind === "exact";
-    issues.push(
-      pipelineDeclarationIssue({
+    if (!appendDeclarationIssues(
+      issues,
+      [pipelineDeclarationIssue({
         code: exact
           ? "pipeline_override_mapping_target_path_duplicate"
           : "pipeline_override_mapping_target_path_overlap",
@@ -1294,8 +1396,10 @@ function validateUniqueMappingTargetPaths(
         message: exact
           ? `Override mapping targetPath duplicates mappings.${conflict.index}.targetPath.`
           : `Override mapping targetPath overlaps mappings.${conflict.index}.targetPath.`
-      })
-    );
+      })]
+    )) {
+      break;
+    }
   }
 
   return issues;

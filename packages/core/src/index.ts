@@ -13,6 +13,7 @@ export {
   loadConfigSources
 } from "./loader.js";
 export {
+  combineConfigIssues,
   runConfigPipeline
 } from "./pipeline.js";
 export {

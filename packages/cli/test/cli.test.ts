@@ -27,6 +27,35 @@ async function withTempDir<T>(callback: (dir: string) => Promise<T>): Promise<T>
 }
 
 describe("loadPipelineDeclaration", () => {
+  it("bounds malformed declaration diagnostics with a bootstrap limit", async () => {
+    await withTempDir(async (dir) => {
+      const configPath = join(dir, "uce.json");
+      const unknownFields = Object.fromEntries(
+        Array.from({ length: 10_000 }, (_, index) => [`x${index}`, true])
+      );
+      await writeFile(
+        configPath,
+        JSON.stringify({ sources: [], ...unknownFields }),
+        "utf8"
+      );
+
+      await expect(loadPipelineDeclaration(configPath, dir)).rejects.toMatchObject({
+        issues: expect.arrayContaining([
+          expect.objectContaining({
+            category: "resource-limit",
+            code: "max_diagnostics_exceeded"
+          })
+        ])
+      });
+      try {
+        await loadPipelineDeclaration(configPath, dir);
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect((error as { issues: readonly unknown[] }).issues).toHaveLength(200);
+      }
+    });
+  });
+
   it("keeps relative sources bound to the declaration file that was opened", async () => {
     await withTempDir(async (dir) => {
       const directoryA = join(dir, "A");
@@ -159,6 +188,52 @@ describe("loadPipelineDeclaration", () => {
 });
 
 describe("runCli", () => {
+  it("keeps validator setup failures within the declared diagnostics limit", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: "defaults",
+              kind: "object",
+              priority: 0,
+              value: {}
+            }
+          ],
+          validators: Array.from({ length: 3 }, (_, index) => ({
+            id: `schema-${index}`,
+            kind: "json-schema-ajv",
+            schema: { type: `invalid-type-${index}` }
+          })),
+          limits: { maxDiagnostics: 1 }
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as {
+        readonly issues: readonly { readonly category: string; readonly code: string }[];
+      };
+
+      expect(result.exitCode).toBe(3);
+      expect(report.issues).toEqual([
+        expect.objectContaining({
+          category: "resource-limit",
+          code: "max_diagnostics_exceeded"
+        })
+      ]);
+    });
+  });
+
   it("escapes line breaks and terminal control characters in human output", async () => {
     await withTempDir(async (dir) => {
       const maliciousId = "source\nstatus: forged\u001b]52;c;YW5hbHlzaXM=\u0007";

@@ -80,6 +80,11 @@ When declared validator output exceeds `limits.maxDiagnostics`, the report inclu
 `resource-limit/max_diagnostics_exceeded`; that bounded-output failure uses the
 policy failure exit code `3`. The overflow marker counts toward `maxDiagnostics`, so
 the report never emits more issues than the declared limit.
+Validator setup failures use the same core bounded combiner, so compiler and runtime
+validator issues share one declared budget rather than being concatenated afterward.
+
+Malformed pipeline declaration diagnostics use a separate bootstrap cap of 200.
+This cap applies before a declaration is trusted and includes its overflow marker.
 
 An oversized pipeline declaration is rejected before JSON parsing with
 `resource-limit/max_file_bytes_exceeded` and exit code `3`.

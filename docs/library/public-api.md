@@ -19,6 +19,8 @@ Repository Type: library
 - `runConfigPipeline`: high-level facade that loads sources, resolves config, skips
   validation after resolution failure, runs validators, bounds combined issues, and
   returns both `ConfigResult` and `DiagnosticReport`.
+- `combineConfigIssues`: core-owned issue combination that preserves the declared
+  diagnostic cap and counts `max_diagnostics_exceeded` within that cap.
 - `OverrideMapping`: explicit env var or CLI flag mapping into config paths.
 - `MergePolicy`: deterministic object merge and conflict handling.
 - `CoercionPolicy`: opt-in type conversion rules.
@@ -125,6 +127,8 @@ migration review before running `pnpm run update:api-snapshot`.
   redaction failures.
 - Keep `runConfigPipeline` thin: it orchestrates existing public stages and does not
   introduce a second merge, validation, or redaction implementation.
+- Use `combineConfigIssues` at orchestration boundaries instead of concatenating
+  independently bounded issue arrays.
 - Report CLI usage errors as `usage` issues when JSON output is requested for a
   known command.
 - Normalize loader exceptions into `source-load` issues instead of throwing raw

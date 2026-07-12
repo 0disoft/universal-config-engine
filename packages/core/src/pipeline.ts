@@ -67,7 +67,7 @@ async function applyPipelineValidators(
     validators,
     limits: result.limits
   });
-  const issues = combineBoundedIssues(
+  const issues = combineConfigIssues(
     result.issues,
     validation.issues,
     result.limits.maxDiagnostics
@@ -81,7 +81,7 @@ async function applyPipelineValidators(
   };
 }
 
-function combineBoundedIssues(
+export function combineConfigIssues(
   existing: readonly ConfigIssue[],
   next: readonly ConfigIssue[],
   declaredMaxDiagnostics: number

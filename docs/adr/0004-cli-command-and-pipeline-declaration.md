@@ -57,6 +57,10 @@ source/validator id namespace collisions, malformed resource limits, and malform
 file size policies are source-loading failures. The CLI must not silently ignore
 unknown source kinds or unknown declaration fields.
 
+Declaration validation uses a fixed bootstrap maximum of 200 diagnostics because a
+malformed declaration cannot safely control its own diagnostic budget. The overflow
+marker counts within that cap and validation stops once it is emitted.
+
 After declaration validation succeeds, the CLI rebuilds a typed declaration object
 from the validated JSON fields instead of passing the parsed JSON object through by
 type assertion. Runtime code should consume only that normalized declaration shape.

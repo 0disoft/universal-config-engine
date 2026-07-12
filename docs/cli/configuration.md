@@ -50,6 +50,9 @@ file size policies fail as `source-load` issues with exit code `2`; they are not
 silently skipped. File source path boundary failures are also `source-load` issues.
 After this validation succeeds, the runtime pipeline uses a normalized declaration
 object rebuilt from the validated fields rather than the raw parsed JSON object.
+Malformed declaration diagnostics are capped at a fixed bootstrap maximum of 200,
+independent of declaration-provided limits. The final retained diagnostic is
+`resource-limit/max_diagnostics_exceeded` when additional errors are omitted.
 
 Source `displayName` values must be omitted or non-empty strings. Override mapping
 `targetPath` and coercion rule `path` declarations are write paths, so they must be

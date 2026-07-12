@@ -1,5 +1,6 @@
 import {
   buildDiagnosticReport,
+  combineConfigIssues,
   type ConfigIssue,
   runValidators,
   resolveConfig
@@ -115,13 +116,17 @@ async function applyDeclaredValidation(
 ): Promise<ReturnType<typeof resolveConfig>> {
   const declaredValidators = createDeclaredValidators(declaration);
   const setupIssues = declaredValidators.issues;
+  const setupCombinedIssues = combineConfigIssues(
+    result.issues,
+    setupIssues,
+    result.limits.maxDiagnostics
+  );
 
   if (!result.ok || setupIssues.some((issue) => issue.severity === "error")) {
-    const issues = [...result.issues, ...setupIssues];
     return {
       ...result,
-      ok: !issues.some((issue) => issue.severity === "error"),
-      issues
+      ok: !setupCombinedIssues.some((issue) => issue.severity === "error"),
+      issues: setupCombinedIssues
     };
   }
 
@@ -131,7 +136,11 @@ async function applyDeclaredValidation(
     validators: declaredValidators.validators,
     ...(declaration.limits === undefined ? {} : { limits: declaration.limits })
   });
-  const issues = [...result.issues, ...setupIssues, ...validation.issues];
+  const issues = combineConfigIssues(
+    setupCombinedIssues,
+    validation.issues,
+    result.limits.maxDiagnostics
+  );
 
   return {
     ...result,

@@ -35,6 +35,8 @@ Testing standard defines merge-blocking expectations for unit, integration, cont
 - Validator adapter fixtures map external error paths to normalized config paths.
 - CLI fixtures verify stdout, stderr, JSON output, exit codes, and shared pipeline
   behavior with the library.
+- CLI limit fixtures cover bounded validator setup failures and declaration error
+  amplification independently of declaration-provided policy.
 - Security fixtures cover regex-like secret-name literals and terminal control
   character escaping in human output.
 - Package smoke tests install packed workspace tarballs into a temporary consumer,

@@ -18,6 +18,9 @@ Loader issue retention uses `maxDiagnostics` from the loader boundary onward. Th
 default limit is 200, and both per-source and aggregate issue arrays include the
 overflow marker within that bound.
 
+Pipeline declaration validation has a fixed 200-diagnostic bootstrap budget and
+stops traversing once the in-budget overflow marker is emitted.
+
 Runtime limit values must be positive safe integers. Invalid direct-library values
 fall back to defaults; `NaN` and `Infinity` must never bypass a comparison-based
 bound.

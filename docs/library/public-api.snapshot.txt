@@ -20,7 +20,7 @@ export { DEFAULT_MERGE_POLICY, DEFAULT_RESOURCE_LIMITS, resolveConfig } from "./
 export { applyCoercionRules } from "./coercion.js";
 export { createMappedOverrideSource } from "./mapping.js";
 export { loadConfigSources } from "./loader.js";
-export { runConfigPipeline } from "./pipeline.js";
+export { combineConfigIssues, runConfigPipeline } from "./pipeline.js";
 export { DEFAULT_SECRET_NAME_PATTERNS, buildDiagnosticReport } from "./redaction.js";
 export { runValidators } from "./validation.js";
 export { cloneConfigValue, formatPath, getConfigValueAtPath, isPathPrefix, isUnsafePathSegment, pathToKey, pathsEqual, setConfigValueAtPath } from "./path.js";
@@ -79,7 +79,7 @@ export declare function cloneConfigValue(value: ConfigValue): ConfigValue;
 
 ### pipeline.d.ts
 import { type BuildDiagnosticReportOptions } from "./redaction.js";
-import type { CoercionRule, ConfigLoader, ConfigResult, DiagnosticReport, MergePolicy, ResourceLimitPolicy, ValidatorAdapter } from "./types.js";
+import type { CoercionRule, ConfigIssue, ConfigLoader, ConfigResult, DiagnosticReport, MergePolicy, ResourceLimitPolicy, ValidatorAdapter } from "./types.js";
 export interface RunConfigPipelineInput<TContext = undefined> {
     readonly loaders: readonly ConfigLoader<TContext>[];
     readonly context: TContext;
@@ -94,6 +94,7 @@ export interface RunConfigPipelineResult {
     readonly report: DiagnosticReport;
 }
 export declare function runConfigPipeline<TContext = undefined>(input: RunConfigPipelineInput<TContext>): Promise<RunConfigPipelineResult>;
+export declare function combineConfigIssues(existing: readonly ConfigIssue[], next: readonly ConfigIssue[], declaredMaxDiagnostics: number): readonly ConfigIssue[];
 
 ### redaction.d.ts
 import type { ConfigPath, ConfigResult, DiagnosticReport } from "./types.js";
