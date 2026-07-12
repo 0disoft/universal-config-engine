@@ -1564,7 +1564,7 @@ describe("buildDiagnosticReport", () => {
     expect(reportText).not.toContain("example-secret-value");
   });
 
-  it("keeps default secret-name regex patterns working", () => {
+  it("keeps default secret-name literal variants working", () => {
     const result = resolveConfig({
       sources: [
         {
@@ -1593,7 +1593,7 @@ describe("buildDiagnosticReport", () => {
     );
   });
 
-  it("falls back to literal matching for risky secret-name patterns", () => {
+  it("treats regex-like secret-name patterns as literals", () => {
     const result = resolveConfig({
       sources: [
         {
@@ -1624,5 +1624,33 @@ describe("buildDiagnosticReport", () => {
       })
     );
     expect(JSON.stringify(report)).not.toContain("example-secret-value");
+  });
+
+  it("does not execute regex-like secret-name patterns", () => {
+    const result = resolveConfig({
+      sources: [
+        {
+          descriptor: {
+            id: "defaults",
+            kind: "object",
+            priority: 0,
+            displayName: "defaults",
+            redaction: {
+              secretNamePatterns: ["(a+)+$"]
+            }
+          },
+          value: {
+            service: {
+              [`${"a".repeat(50_000)}!`]: "public-value"
+            }
+          }
+        }
+      ]
+    });
+    const report = buildDiagnosticReport(result);
+
+    expect(report.resolvedPaths).toContainEqual(
+      expect.objectContaining({ redacted: false })
+    );
   });
 });

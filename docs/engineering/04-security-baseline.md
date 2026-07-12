@@ -42,6 +42,10 @@ boundaries, hosted API security, database security, or remote secret delivery.
 - Duplicate source ids fail before merge so redaction policies cannot overwrite one
   another through ambiguous string identity.
 - Validator config and provenance inputs are isolated and frozen before execution.
+- Secret-name policies use literal substring matching only; untrusted regular
+  expressions are never executed by the redaction path.
+- Human CLI output escapes terminal control characters and line separators before
+  writing dynamic diagnostic metadata.
 - Exceptions from getters, proxies, or other hostile source values are omitted from
   diagnostics and reject the source before merge.
 - Validator issue codes are bounded machine identifiers, not a free-form text

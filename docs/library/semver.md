@@ -50,6 +50,10 @@ diagnostics, and stricter runtime validation of adapter results. Existing typed
 adapters remain source-compatible when they already return valid `ConfigIssue` and
 `ValueLocation` structures. See `docs/library/migration-0.4.md`.
 
+Changing `secretNamePatterns` from regular-expression interpretation to literal
+substring matching is a consumer-visible security hardening and requires a
+pre-1.0 minor release with migration notes.
+
 ## Patch Changes
 
 Patch versions may fix incorrect provenance, redaction, validation, or parsing

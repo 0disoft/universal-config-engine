@@ -28,6 +28,10 @@ values by default.
 Pipeline parser errors, validator compiler errors, and unknown option values must
 not echo raw exception or user-controlled text into JSON output.
 
+Human output escapes line breaks and C0/C1 terminal control characters in every
+dynamic source, path, redaction, and issue field. Untrusted metadata must remain on
+one rendered line and must not emit terminal control sequences.
+
 Secret redaction applies to resolved path metadata, validation/source issues, and
 provenance messages. If an issue or provenance event is associated with a secret
 path or secret source, human-readable message text and issue details are replaced

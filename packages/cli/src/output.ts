@@ -20,7 +20,10 @@ export function formatHumanReport(command: CliCommand, report: DiagnosticReport)
   lines.push("sources:");
 
   for (const source of report.sources) {
-    lines.push(`- ${source.id} (${source.kind}) priority=${source.priority} status=${source.status}`);
+    lines.push(
+      `- ${escapeTerminalText(source.id)} (${escapeTerminalText(source.kind)}) ` +
+      `priority=${source.priority} status=${escapeTerminalText(source.status)}`
+    );
   }
 
   lines.push("resolved:");
@@ -28,12 +31,17 @@ export function formatHumanReport(command: CliCommand, report: DiagnosticReport)
     lines.push("- <none>");
   } else {
     for (const resolved of report.resolvedPaths) {
-      const redaction = resolved.redacted ? ` redacted=${resolved.redactionReason ?? "true"}` : "";
+      const redaction = resolved.redacted
+        ? ` redacted=${escapeTerminalText(resolved.redactionReason ?? "true")}`
+        : "";
       const overridden =
         resolved.overriddenSourceIds.length === 0
           ? ""
-          : ` overridden=${resolved.overriddenSourceIds.join(",")}`;
-      lines.push(`- ${formatPath(resolved.path)} source=${resolved.winningSourceId}${overridden}${redaction}`);
+          : ` overridden=${resolved.overriddenSourceIds.map(escapeTerminalText).join(",")}`;
+      lines.push(
+        `- ${escapeTerminalText(formatPath(resolved.path))} ` +
+        `source=${escapeTerminalText(resolved.winningSourceId)}${overridden}${redaction}`
+      );
     }
   }
 
@@ -50,7 +58,29 @@ export function formatHumanReport(command: CliCommand, report: DiagnosticReport)
 }
 
 function formatIssue(issue: ConfigIssue): string {
-  const path = issue.path === undefined ? "" : ` path=${formatPath(issue.path)}`;
-  const source = issue.sourceId === undefined ? "" : ` source=${issue.sourceId}`;
-  return `${issue.severity} ${issue.category}/${issue.code}${source}${path}: ${issue.message}`;
+  const path = issue.path === undefined ? "" : ` path=${escapeTerminalText(formatPath(issue.path))}`;
+  const source = issue.sourceId === undefined ? "" : ` source=${escapeTerminalText(issue.sourceId)}`;
+  return (
+    `${escapeTerminalText(issue.severity)} ${escapeTerminalText(issue.category)}/` +
+    `${escapeTerminalText(issue.code)}${source}${path}: ${escapeTerminalText(issue.message)}`
+  );
+}
+
+function escapeTerminalText(value: string): string {
+  let escaped = "";
+  for (const character of value) {
+    const codePoint = character.codePointAt(0)!;
+    if (character === "\n") {
+      escaped += "\\n";
+    } else if (character === "\r") {
+      escaped += "\\r";
+    } else if (character === "\t") {
+      escaped += "\\t";
+    } else if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
+      escaped += `\\u${codePoint.toString(16).padStart(4, "0")}`;
+    } else {
+      escaped += character;
+    }
+  }
+  return escaped;
 }

@@ -159,9 +159,9 @@ migration review before running `pnpm run update:api-snapshot`.
   errors, CLI JSON, issue messages, issue details, and provenance messages.
 - Treat declared `secretPaths` as subtree roots. A path such as `["database"]`
   redacts diagnostics for `["database"]` and every descendant path below it.
-- Treat user-provided secret-name patterns as bounded diagnostic matchers. Reuse
-  compiled matchers within a report and fall back to literal matching for invalid,
-  oversized, or risky regular expressions.
+- Treat user-provided secret-name patterns as case-insensitive literal substrings.
+  Core never compiles caller-provided patterns as regular expressions. Default API
+  key detection uses explicit `api_key`, `api-key`, and `apikey` variants.
 
 ## Decision State
 

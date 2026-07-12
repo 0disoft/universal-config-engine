@@ -116,6 +116,42 @@ describe("loadPipelineDeclaration", () => {
 });
 
 describe("runCli", () => {
+  it("escapes line breaks and terminal control characters in human output", async () => {
+    await withTempDir(async (dir) => {
+      const maliciousId = "source\nstatus: forged\u001b]52;c;YW5hbHlzaXM=\u0007";
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            {
+              id: maliciousId,
+              kind: "object",
+              priority: 0,
+              value: { enabled: true }
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => {
+          stdout += text;
+        },
+        stderr: () => {}
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(stdout).not.toContain("\nstatus: forged");
+      expect(stdout).not.toContain("\u001b");
+      expect(stdout).not.toContain("\u0007");
+      expect(stdout).toContain("source\\nstatus: forged\\u001b]52;c;YW5hbHlzaXM=\\u0007");
+    });
+  });
+
   it("omits malformed pipeline parser exception text from JSON output", async () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, "uce.json"), '{"secret":"pipeline-parser-secret-value", invalid', "utf8");

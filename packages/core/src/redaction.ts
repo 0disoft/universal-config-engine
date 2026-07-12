@@ -15,12 +15,11 @@ export const DEFAULT_SECRET_NAME_PATTERNS: readonly string[] = [
   "password",
   "secret",
   "token",
-  "api[_-]?key",
+  "api_key",
+  "api-key",
+  "apikey",
   "credential"
 ];
-
-const MAX_SECRET_NAME_PATTERN_LENGTH = 128;
-const MAX_REDACTION_MATCH_INPUT_LENGTH = 512;
 
 export interface BuildDiagnosticReportOptions {
   readonly secretPaths?: readonly ConfigPath[];
@@ -36,7 +35,6 @@ interface RedactionContext {
 
 interface PatternMatcher {
   readonly rawLower: string;
-  readonly regex?: RegExp;
 }
 
 interface RedactionDecision {
@@ -234,12 +232,6 @@ function matchesNamePattern(
 
 function safePatternMatches(pattern: string, value: string, redactionContext: RedactionContext): boolean {
   const matcher = getPatternMatcher(pattern, redactionContext.patternCache);
-  const matchInput = boundPatternInput(value);
-
-  if (matcher.regex !== undefined) {
-    return matcher.regex.test(matchInput);
-  }
-
   return value.toLowerCase().includes(matcher.rawLower);
 }
 
@@ -255,30 +247,7 @@ function getPatternMatcher(pattern: string, patternCache: Map<string, PatternMat
 }
 
 function compilePatternMatcher(pattern: string): PatternMatcher {
-  const rawLower = pattern.toLowerCase();
-  if (pattern.length > MAX_SECRET_NAME_PATTERN_LENGTH || hasNestedQuantifier(pattern)) {
-    return { rawLower };
-  }
-
-  try {
-    return {
-      rawLower,
-      regex: new RegExp(pattern, "i")
-    };
-  } catch {
-    return { rawLower };
-  }
-}
-
-function hasNestedQuantifier(pattern: string): boolean {
-  return /\([^)]*[+*{][^)]*\)[+*{]/.test(pattern);
-}
-
-function boundPatternInput(value: string): string {
-  if (value.length <= MAX_REDACTION_MATCH_INPUT_LENGTH) {
-    return value;
-  }
-
-  const half = MAX_REDACTION_MATCH_INPUT_LENGTH / 2;
-  return `${value.slice(0, half)}${value.slice(-half)}`;
+  return {
+    rawLower: pattern.toLowerCase()
+  };
 }
