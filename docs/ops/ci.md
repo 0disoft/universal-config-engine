@@ -52,6 +52,10 @@ The existing `check` job remains the Ubuntu compatibility gate and:
 - runs `pnpm run smoke:packages`
 - runs `git diff --check`
 
+The release workflow additionally runs `pnpm run smoke:registry-packages` after a
+real publish. It installs the exact release version from npm rather than reusing
+workspace builds or locally packed tarballs.
+
 The `windows-check` job uses the same pinned Node.js and pnpm versions on
 `windows-latest`. It runs the repository check, packed workspace package smoke, and
 diff hygiene. The Ubuntu job name remains stable for existing branch protection;

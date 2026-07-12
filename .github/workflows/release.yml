@@ -242,3 +242,9 @@ jobs:
               sleep 5
             done
           done
+
+      - name: Smoke published registry packages
+        if: steps.release.outputs.dry_run != 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: pnpm run smoke:registry-packages

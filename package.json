@@ -29,6 +29,7 @@
     "benchmark:argv": "pnpm --filter @0disoft/universal-config-engine-node... build && node scripts/benchmark-argv.mjs",
     "smoke:core-package": "node scripts/smoke-core-package.mjs",
     "smoke:packages": "node scripts/smoke-packages.mjs",
+    "smoke:registry-packages": "node scripts/smoke-registry-packages.mjs",
     "check": "pnpm run typecheck && node scripts/check-public-api-snapshot.mjs && pnpm run test && pnpm run check:no-secret-snapshots && pnpm run check:adapter-fixtures && pnpm run clean:build"
   },
   "devDependencies": {

@@ -43,6 +43,9 @@ Before publishing, also verify:
 - `pnpm run smoke:packages` installs the packed tarballs into a temporary consumer
   project, compiles and runs the legacy validator compatibility fixture, and
   verifies package imports plus the `uce` binary;
+- the release workflow installs all five exact published versions from the public
+  npm registry into a blank temporary project and verifies ESM imports plus the
+  `uce` binary before declaring publication successful;
 - npm Trusted Publisher is registered for every publishable package;
 - no secret-like values appear in tracked files or generated reports.
 
@@ -55,6 +58,9 @@ Before publishing, also verify:
 5. Let `.github/workflows/release.yml` rebuild from the tag, attach GitHub release
    tarballs, and publish npm packages through Trusted Publisher.
 6. Verify installed package imports and the `uce` binary from published artifacts.
+
+The post-publication smoke can also be reproduced with
+`$env:RELEASE_VERSION = "0.4.0"; pnpm run smoke:registry-packages`.
 
 Manual local publication is a break-glass fallback only. If it is used, it must
 follow the same validation gates and use a temporary `.npmrc` that is removed

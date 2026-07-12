@@ -101,6 +101,23 @@ Owner: UNASSIGNED
 - Converted hostile source value inspection exceptions into stable parse issues.
 - Indexed duplicate CLI mapping target paths for linear declaration validation.
 
+## Phase 8: 0.5.x Observability And Execution Budgets
+
+- Define aggregate execution budgets for source count, retained provenance, resolved
+  paths, and serialized diagnostic report bytes before adding new report fields.
+- Preserve bounded loader source locations through resolution and diagnostics with a
+  versioned public report-schema change.
+- Add bounded provenance and coercion summaries to human `explain` output.
+- Decide an opt-in strict policy for unmapped process environment and argv entries;
+  the default must preserve compatibility and avoid treating unrelated host input as
+  configuration errors.
+- Converge CLI orchestration on the public pipeline facade without weakening the
+  declaration-specific diagnostic and exit-code contracts.
+- Define resumable partial-publication evidence for the five-package release because
+  npm publication cannot be atomic.
+- Record and test the supported Node.js runtime matrix independently from the package
+  manager and CI runner pins.
+
 ## Explicitly Deferred
 
 - Remote config service.
