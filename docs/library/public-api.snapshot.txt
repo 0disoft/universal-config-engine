@@ -554,7 +554,7 @@ export interface CreateAjvValidatorInput {
     readonly options?: Options;
 }
 export declare function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAdapter;
-export declare function instancePathToConfigPath(instancePath: string): ConfigPath;
+export declare function instancePathToConfigPath(instancePath: string, rootValue?: unknown): ConfigPath;
 
 ## @0disoft/universal-config-engine-validator-zod
 

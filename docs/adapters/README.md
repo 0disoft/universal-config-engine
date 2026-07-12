@@ -67,6 +67,10 @@ output. Core also ignores adapter-provided message, details, category, and sourc
 fields. It reconstructs the public `ConfigIssue` with the registered validator id
 and a stable generic message. ADR 0011 owns this trust boundary.
 
+JSON Pointer adapters must preserve numeric-looking object keys. The first-party Ajv
+adapter converts a segment to a numeric index only when traversal of the validated
+instance shows that its parent is an array; ambiguous helper calls retain strings.
+
 ## Fixture Rules
 
 Fixtures under `docs/adapters/fixtures/` are checked by

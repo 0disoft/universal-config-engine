@@ -136,7 +136,22 @@ describe("instancePathToConfigPath", () => {
     expect(instancePathToConfigPath("/")).toEqual([]);
   });
 
-  it("decodes JSON pointer escaping and numeric array indexes", () => {
-    expect(instancePathToConfigPath("/items/0/a~1b/~0key")).toEqual(["items", 0, "a/b", "~key"]);
+  it("decodes JSON pointer escaping and uses config shape for array indexes", () => {
+    expect(
+      instancePathToConfigPath(
+        "/items/0/a~1b/~0key",
+        { items: [{ "a/b": { "~key": true } }] }
+      )
+    ).toEqual(["items", 0, "a/b", "~key"]);
+  });
+
+  it("preserves numeric object keys and ambiguous segments as strings", () => {
+    expect(
+      instancePathToConfigPath(
+        "/featureFlags/0/enabled",
+        { featureFlags: { "0": { enabled: false } } }
+      )
+    ).toEqual(["featureFlags", "0", "enabled"]);
+    expect(instancePathToConfigPath("/items/0/name")).toEqual(["items", "0", "name"]);
   });
 });

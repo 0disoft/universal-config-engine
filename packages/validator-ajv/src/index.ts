@@ -40,33 +40,50 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
 
       return {
         ok: false,
-        issues: errors.map(toValidatorIssue)
+        issues: errors.map((error) => toValidatorIssue(error, validatorInput.config))
       };
     }
   };
 }
 
-function toValidatorIssue(error: ErrorObject): ValidatorIssue {
+function toValidatorIssue(error: ErrorObject, config: unknown): ValidatorIssue {
   return {
     code: error.keyword,
     severity: "error",
-    path: instancePathToConfigPath(error.instancePath)
+    path: instancePathToConfigPath(error.instancePath, config)
   };
 }
 
-export function instancePathToConfigPath(instancePath: string): ConfigPath {
+export function instancePathToConfigPath(instancePath: string, rootValue?: unknown): ConfigPath {
   if (instancePath.length === 0 || instancePath === "/") {
     return [];
   }
 
-  return instancePath
+  const decodedSegments = instancePath
     .split("/")
     .slice(1)
-    .map((segment) => decodePointerSegment(segment))
-    .map((segment) => {
-      const numericSegment = Number(segment);
-      return Number.isInteger(numericSegment) && String(numericSegment) === segment ? numericSegment : segment;
-    });
+    .map((segment) => decodePointerSegment(segment));
+  const path: (string | number)[] = [];
+  let current = rootValue;
+
+  for (const segment of decodedSegments) {
+    const numericSegment = Number(segment);
+    const pathSegment =
+      Array.isArray(current) && Number.isSafeInteger(numericSegment) && String(numericSegment) === segment
+        ? numericSegment
+        : segment;
+    path.push(pathSegment);
+    current = getChildValue(current, pathSegment);
+  }
+
+  return path;
+}
+
+function getChildValue(value: unknown, segment: string | number): unknown {
+  if (value === null || typeof value !== "object") {
+    return undefined;
+  }
+  return (value as Readonly<Record<string | number, unknown>>)[segment];
 }
 
 function decodePointerSegment(segment: string): string {

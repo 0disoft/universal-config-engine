@@ -145,6 +145,9 @@ migration review before running `pnpm run update:api-snapshot`.
   validation issues from `code`, `severity`, and optional `path`; see ADR 0011.
 - Accept validator issue codes only as bounded ASCII machine identifiers;
   reject prose-like or assignment-like codes as malformed adapter output.
+- Resolve Ajv JSON Pointer numeric segments against the validated config shape.
+  `instancePathToConfigPath` preserves ambiguous numeric-looking segments as strings
+  when no root value is provided.
 - Normalize inconsistent validator status. A validator that returns `ok: false`
   without error issues produces a validation error issue, and any returned error
   issue makes the validator provenance status `error`.

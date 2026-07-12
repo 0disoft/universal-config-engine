@@ -182,7 +182,7 @@ export function createJsonPointerValidator(
     id: "example-json-pointer-validator",
     validate(input) {
       const externalIssues = validateExternal(input.config);
-      const issues = externalIssues.map(toValidatorIssue);
+      const issues = externalIssues.map((issue) => toValidatorIssue(issue, input.config));
 
       return {
         ok: issues.length === 0,
@@ -192,26 +192,46 @@ export function createJsonPointerValidator(
   };
 }
 
-function toValidatorIssue(issue: ExternalValidatorIssue): ValidatorIssue {
+function toValidatorIssue(issue: ExternalValidatorIssue, config: unknown): ValidatorIssue {
   return {
     code: issue.code,
     severity: "error",
-    path: jsonPointerToConfigPath(issue.instancePath)
+    path: jsonPointerToConfigPath(issue.instancePath, config)
   };
 }
 
-function jsonPointerToConfigPath(pointer: string): ConfigPath {
+function jsonPointerToConfigPath(pointer: string, rootValue: unknown): ConfigPath {
   if (pointer === "") {
     return [];
   }
 
-  return pointer
+  const decoded = pointer
     .slice(1)
     .split("/")
-    .map((segment) => segment.replace(/~1/g, "/").replace(/~0/g, "~"))
-    .map((segment) => (/^(0|[1-9]\d*)$/.test(segment) ? Number(segment) : segment));
+    .map((segment) => segment.replace(/~1/g, "/").replace(/~0/g, "~"));
+  const path: (string | number)[] = [];
+  let current = rootValue;
+
+  for (const segment of decoded) {
+    const numeric = Number(segment);
+    const pathSegment =
+      Array.isArray(current) && Number.isSafeInteger(numeric) && String(numeric) === segment
+        ? numeric
+        : segment;
+    path.push(pathSegment);
+    current =
+      current !== null && typeof current === "object"
+        ? (current as Record<string | number, unknown>)[pathSegment]
+        : undefined;
+  }
+
+  return path;
 }
 ```
+
+JSON Pointer text alone cannot distinguish an object property named `"0"` from an
+array index. Adapters should use the validated instance shape when choosing numeric
+path segments; without that context, preserving the segment as a string is safer.
 
 Validator adapters may keep typed validator output in `value`, but core does not
 replace the resolved config with that value.
