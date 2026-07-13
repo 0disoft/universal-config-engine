@@ -16,6 +16,7 @@ Status: Draft
 - Library compatibility source: docs/library/compatibility.md
 - 0.3.x migration guide: docs/library/migration-0.3.md
 - 0.4.x migration guide: docs/library/migration-0.4.md
+- 0.5.x migration guide: docs/library/migration-0.5.md
 - Adapter ecosystem source: docs/adapters/README.md
 - CLI command contract source: docs/cli/command-contract.md
 - CLI output and exit-code source: docs/cli/output-and-exit-codes.md

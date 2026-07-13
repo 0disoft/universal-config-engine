@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 
 const version = process.env.RELEASE_VERSION;
 if (version === undefined || !/^\d+\.\d+\.\d+$/.test(version)) {
-  throw new Error("RELEASE_VERSION must be an exact semantic version such as 0.4.0.");
+  throw new Error("RELEASE_VERSION must be an exact semantic version such as 0.5.0.");
 }
 
 const packageNames = [
