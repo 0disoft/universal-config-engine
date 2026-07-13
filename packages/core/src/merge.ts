@@ -91,12 +91,17 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     pushBoundedIssues(issues, sourceIssues, limits);
 
     if (sourceIssues.some((issue) => issue.severity === "error")) {
-      appendProvenance(provenance, {
+      const event: ProvenanceEvent = {
         path: [],
         action: "rejected",
         sourceId: source.descriptor.id,
         message: `Source ${source.descriptor.id} was rejected before merge.`
-      }, issues, limits);
+      };
+      if (provenance.length < limits.maxProvenanceEvents) {
+        provenance.push(event);
+      } else {
+        pushResourceLimitIssueOnce(issues, "max_provenance_events_exceeded", limits.maxProvenanceEvents, limits);
+      }
       continue;
     }
 
@@ -123,7 +128,11 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     config = coercionResult.config as Record<string, ConfigValue>;
     pushBoundedIssues(issues, coercionResult.issues, limits);
     for (const event of coercionResult.provenance) {
-      appendProvenance(provenance, event, issues, limits);
+      if (provenance.length < limits.maxProvenanceEvents) {
+        provenance.push(event);
+      } else {
+        pushResourceLimitIssueOnce(issues, "max_provenance_events_exceeded", limits.maxProvenanceEvents, limits);
+      }
     }
   }
 
@@ -289,12 +298,22 @@ function applyEntry(input: {
   }
 
   if (relatedResolved.length === 0 && existingValue === undefined) {
-    appendProvenance(input.provenance, {
+    const event: ProvenanceEvent = {
       path: input.entryPath,
       action: "defined",
       sourceId: input.descriptor.id,
       message: `Path was defined by source ${input.descriptor.id}.`
-    }, input.issues, input.limits);
+    };
+    if (input.provenance.length < input.limits.maxProvenanceEvents) {
+      input.provenance.push(event);
+    } else {
+      pushResourceLimitIssueOnce(
+        input.issues,
+        "max_provenance_events_exceeded",
+        input.limits.maxProvenanceEvents,
+        input.limits
+      );
+    }
     setResolvedPath(input.resolvedIndex, {
       path: input.entryPath,
       status: "resolved",
@@ -310,7 +329,7 @@ function applyEntry(input: {
     deleteResolvedPath(input.resolvedIndex, key);
   }
   const previousSourceId = overriddenSourceIds[0];
-  appendProvenance(input.provenance, {
+  const event: ProvenanceEvent = {
     path: input.entryPath,
     action: "overridden",
     sourceId: input.descriptor.id,
@@ -319,7 +338,17 @@ function applyEntry(input: {
       previousSourceId === undefined
         ? `Source ${input.descriptor.id} replaced an overlapping config shape.`
         : `Source ${input.descriptor.id} overrode source ${previousSourceId}.`
-  }, input.issues, input.limits);
+  };
+  if (input.provenance.length < input.limits.maxProvenanceEvents) {
+    input.provenance.push(event);
+  } else {
+    pushResourceLimitIssueOnce(
+      input.issues,
+      "max_provenance_events_exceeded",
+      input.limits.maxProvenanceEvents,
+      input.limits
+    );
+  }
   setResolvedPath(input.resolvedIndex, {
     path: input.entryPath,
     status: "resolved",
@@ -383,19 +412,6 @@ function setResolvedPath(index: MutableResolvedPathIndex, resolved: MutableResol
     node = child;
   }
   node.entryKey = key;
-}
-
-function appendProvenance(
-  provenance: ProvenanceEvent[],
-  event: ProvenanceEvent,
-  issues: ConfigIssue[],
-  limits: ResourceLimitPolicy
-): void {
-  if (provenance.length >= limits.maxProvenanceEvents) {
-    pushResourceLimitIssueOnce(issues, "max_provenance_events_exceeded", limits.maxProvenanceEvents, limits);
-    return;
-  }
-  provenance.push(event);
 }
 
 function pushResourceLimitIssueOnce(
