@@ -111,7 +111,7 @@ Owner: UNASSIGNED
 - Added an opt-in strict policy for unmapped process environment and argv entries;
   environment checks require an explicit prefix and the default preserves ignore
   behavior.
-- Converge CLI orchestration on the public pipeline facade without weakening the
+- Converged CLI orchestration on the public pipeline facade without weakening the
   declaration-specific diagnostic and exit-code contracts.
 - Define resumable partial-publication evidence for the five-package release because
   npm publication cannot be atomic.

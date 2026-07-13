@@ -26,6 +26,11 @@ The first commands are:
 Both commands execute the same local resolution pipeline. The CLI does not own merge,
 mapping, coercion, validation, redaction, or source-loading semantics. It calls
 `@0disoft/universal-config-engine-core` and `@0disoft/universal-config-engine-node`.
+After declaration-owned sources and validators are constructed, command execution
+uses the public core `runConfigPipeline` facade for loading-result normalization,
+resolution, validation, execution-budget enforcement, and report construction.
+CLI-owned validator construction failures are combined with the facade result under
+the same diagnostic limit before output and exit-code selection.
 
 Pipeline declaration files are JSON. The declaration may include:
 
@@ -107,6 +112,7 @@ library API integrations until a separate ADR defines a safe declaration format.
 ## Review Blockers
 
 - CLI implements merge, mapping, coercion, validation, or redaction logic directly.
+- CLI duplicates core pipeline orchestration instead of using `runConfigPipeline`.
 - CLI reads argv override values before the `--` separator.
 - CLI dynamically imports validator code from a pipeline declaration.
 - CLI silently skips an unsupported source kind.

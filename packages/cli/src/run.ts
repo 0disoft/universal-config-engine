@@ -1,9 +1,11 @@
 import {
   buildDiagnosticReport,
   combineConfigIssues,
+  type ConfigLoader,
   type ConfigIssue,
-  runValidators,
-  resolveConfig
+  type ConfigResult,
+  type LoadedSource,
+  runConfigPipeline
 } from "@0disoft/universal-config-engine-core";
 import { getCliUsageContext, parseCliArgs } from "./args.js";
 import {
@@ -44,16 +46,24 @@ export async function runCli(args: readonly string[], runtime: CliRuntime): Prom
       env: runtime.env,
       argv: parsed.sourceArgv
     });
-    const result = resolveConfig({
-      sources,
+    const declaredValidators =
+      parsed.command === "validate"
+        ? createDeclaredValidators(declaration)
+        : { validators: [], issues: [] };
+    const validators = declaredValidators.issues.some((issue) => issue.severity === "error")
+      ? []
+      : declaredValidators.validators;
+    const pipeline = await runConfigPipeline({
+      loaders: sources.map(toLoadedSourceAdapter),
+      context: undefined,
+      validators,
       ...(declaration.coercionRules === undefined ? {} : { coercionRules: declaration.coercionRules }),
       ...(declaration.limits === undefined ? {} : { limits: declaration.limits })
     });
-    const finalResult =
-      parsed.command === "validate"
-        ? await applyDeclaredValidation(result, declaration)
-        : result;
-    const report = buildDiagnosticReport(finalResult);
+    const finalResult = appendValidatorSetupIssues(pipeline.result, declaredValidators.issues);
+    const report = declaredValidators.issues.length === 0
+      ? pipeline.report
+      : buildDiagnosticReport(finalResult);
     const output =
       parsed.output === "json"
         ? formatJsonReport(parsed.command, report)
@@ -118,57 +128,36 @@ function buildUsageErrorReport(message: string) {
   });
 }
 
-async function applyDeclaredValidation(
-  result: ReturnType<typeof resolveConfig>,
-  declaration: Awaited<ReturnType<typeof loadPipelineDeclarationContext>>["declaration"]
-): Promise<ReturnType<typeof resolveConfig>> {
-  const declaredValidators = createDeclaredValidators(declaration);
-  const setupIssues = declaredValidators.issues;
-  const setupCombinedIssues = combineConfigIssues(
+function appendValidatorSetupIssues(
+  result: ConfigResult,
+  setupIssues: readonly ConfigIssue[]
+): ConfigResult {
+  if (setupIssues.length === 0) {
+    return result;
+  }
+
+  const issues = combineConfigIssues(
     result.issues,
     setupIssues,
-    result.limits.maxDiagnostics
-  );
-
-  if (!result.ok || setupIssues.some((issue) => issue.severity === "error")) {
-    return {
-      ...result,
-      ok: !setupCombinedIssues.some((issue) => issue.severity === "error"),
-      issues: setupCombinedIssues
-    };
-  }
-
-  const remainingProvenanceEvents = result.limits.maxProvenanceEvents - result.provenance.length;
-  if (remainingProvenanceEvents <= 0 && declaredValidators.validators.length > 0) {
-    const issues = combineConfigIssues(
-      setupCombinedIssues,
-      [{
-        category: "resource-limit",
-        code: "max_provenance_events_exceeded",
-        severity: "error",
-        message: `Retained entries exceeded the maximum of ${result.limits.maxProvenanceEvents}.`
-      }],
-      result.limits.maxDiagnostics
-    );
-    return { ...result, ok: false, issues };
-  }
-
-  const validation = await runValidators({
-    config: result.config,
-    provenance: result.provenance,
-    validators: declaredValidators.validators,
-    limits: { ...result.limits, maxProvenanceEvents: Math.max(1, remainingProvenanceEvents) }
-  });
-  const issues = combineConfigIssues(
-    setupCombinedIssues,
-    validation.issues,
     result.limits.maxDiagnostics
   );
 
   return {
     ...result,
     ok: !issues.some((issue) => issue.severity === "error"),
-    issues,
-    provenance: [...result.provenance, ...validation.provenance].slice(0, result.limits.maxProvenanceEvents)
+    issues
+  };
+}
+
+function toLoadedSourceAdapter(source: LoadedSource): ConfigLoader {
+  return {
+    descriptor: source.descriptor,
+    load() {
+      return {
+        value: source.value,
+        ...(source.issues === undefined ? {} : { issues: source.issues }),
+        ...(source.locations === undefined ? {} : { locations: source.locations })
+      };
+    }
   };
 }
