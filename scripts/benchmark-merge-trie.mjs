@@ -1,5 +1,5 @@
 import { performance } from "node:perf_hooks";
-import { resolveConfig } from "../packages/core/dist/index.js";
+import { buildDiagnosticReport, resolveConfig } from "../packages/core/dist/index.js";
 
 const WARMUP_RUNS = 2;
 const SAMPLE_RUNS = 5;
@@ -13,6 +13,16 @@ const subtreeSources = [
   objectSource("base", 0, { root: createWideObject(SUBTREE_KEY_COUNT, 0) }),
   objectSource("override", 10, { root: "replaced" })
 ];
+const locatedSource = objectSource("located", 0, createWideObject(WIDE_KEY_COUNT, 0));
+locatedSource.locations = Array.from({ length: WIDE_KEY_COUNT }, (_, index) => ({
+  path: [`key-${index}`],
+  location: {
+    sourceId: "located",
+    sourcePath: "config.json",
+    line: index + 1,
+    column: 1
+  }
+}));
 
 const scenarios = [
   {
@@ -22,6 +32,10 @@ const scenarios = [
   {
     name: "large-subtree-replacement",
     run: runLargeSubtreeReplacement
+  },
+  {
+    name: "wide-locations-and-report",
+    run: runWideLocationsAndReport
   }
 ];
 
@@ -45,6 +59,19 @@ for (const scenario of scenarios) {
     medianMs: roundMilliseconds(median(samples)),
     maxMs: roundMilliseconds(Math.max(...samples))
   });
+}
+
+function runWideLocationsAndReport() {
+  const result = resolveConfig({ sources: [locatedSource] });
+  const report = buildDiagnosticReport(result);
+  assertEqual(result.resolvedPaths.length, WIDE_KEY_COUNT, "located resolved path count");
+  assertEqual(report.resolvedPaths.length, WIDE_KEY_COUNT, "located report path count");
+  assertEqual(report.resolvedPaths[0]?.winningLocation?.line, 1, "first source location line");
+  assertEqual(
+    report.resolvedPaths.at(-1)?.winningLocation?.line,
+    WIDE_KEY_COUNT,
+    "last source location line"
+  );
 }
 
 process.stdout.write(`${JSON.stringify({

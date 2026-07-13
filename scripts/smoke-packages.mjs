@@ -29,7 +29,7 @@ const packages = [
         ]
       });
       const report = module.buildDiagnosticReport(result);
-      if (!result.ok || report.schemaVersion !== "0.1") {
+      if (!result.ok || report.schemaVersion !== "0.2") {
         throw new Error("Core ESM smoke import failed.");
       }
       if (typeof module.loadConfigSources !== "function") {
@@ -172,7 +172,7 @@ function smokeConsumerInstall(tarballs) {
       "});",
       "const result = resolveConfig({ sources: [mapped] });",
       "const report = buildDiagnosticReport(result);",
-      'if (!result.ok || report.schemaVersion !== "0.1") throw new Error("installed core/node smoke failed");',
+      'if (!result.ok || report.schemaVersion !== "0.2") throw new Error("installed core/node smoke failed");',
       'const ajv = createAjvValidator({ id: "schema", schema: { type: "object" } });',
       "const ajvResult = ajv.validate({ config: result.config, provenance: result.provenance });",
       'if (!ajvResult.ok) throw new Error("installed Ajv validator smoke failed");',

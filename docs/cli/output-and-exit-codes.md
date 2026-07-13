@@ -43,7 +43,8 @@ and issue templates must tell users not to paste real reports publicly without r
 
 CLI JSON output must include a report schema version before it is treated as stable.
 Schema field changes are compatibility changes for CI and agent users.
-The first schema version is `0.1`.
+The current schema version is `0.2`. It adds optional winning and overridden source
+locations to resolved paths.
 
 ## Exit Codes
 
@@ -59,12 +60,16 @@ The first schema version is `0.1`.
 - `schemaVersion`: report schema version.
 - `command`: command that produced the report.
 - `sources`: loaded source descriptors and load status.
-- `resolvedPaths`: paths with winning source, overridden sources, and redaction
-  status.
+- `resolvedPaths`: paths with winning source, overridden sources, redaction status,
+  and optional source file, line, and column locations.
 - `provenance`: bounded event list for definition, override, default, coercion,
   validation, and redaction.
 - `issues`: source-aware failures and warnings.
 - `limits`: resource limits applied during the run.
+
+Human `explain` output includes `at=` and `overriddenAt=` location summaries when
+available, followed by the bounded provenance event list. CLI file locations are
+relative to the pipeline declaration directory and use `/` separators.
 
 If the redacted compact report exceeds `limits.maxReportBytes`, the report is
 replaced with a fixed error report containing

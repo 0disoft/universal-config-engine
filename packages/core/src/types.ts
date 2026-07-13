@@ -178,6 +178,8 @@ export interface ResolvedPath {
   readonly winningSourceId: string;
   readonly winningPriority: number;
   readonly overriddenSourceIds: readonly string[];
+  readonly winningLocation?: SourceLocation;
+  readonly overriddenLocations?: readonly SourceLocation[];
 }
 
 export interface ResolveConfigInput {
@@ -210,12 +212,14 @@ export interface DiagnosticReportResolvedPath {
   readonly status: "resolved";
   readonly winningSourceId: string;
   readonly overriddenSourceIds: readonly string[];
+  readonly winningLocation?: SourceLocation;
+  readonly overriddenLocations?: readonly SourceLocation[];
   readonly redacted: boolean;
   readonly redactionReason?: string;
 }
 
 export interface DiagnosticReport {
-  readonly schemaVersion: "0.1";
+  readonly schemaVersion: "0.2";
   readonly status: "ok" | "error";
   readonly sources: readonly DiagnosticReportSource[];
   readonly resolvedPaths: readonly DiagnosticReportResolvedPath[];

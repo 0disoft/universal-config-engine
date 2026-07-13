@@ -105,9 +105,9 @@ Owner: UNASSIGNED
 
 - Define aggregate execution budgets for source count, retained provenance, resolved
   paths, and serialized diagnostic report bytes before adding new report fields.
-- Preserve bounded loader source locations through resolution and diagnostics with a
-  versioned public report-schema change.
-- Add bounded provenance and coercion summaries to human `explain` output.
+- Preserved bounded loader source locations through resolution and diagnostics with
+  report schema `0.2`.
+- Added bounded provenance and coercion summaries to human `explain` output.
 - Decide an opt-in strict policy for unmapped process environment and argv entries;
   the default must preserve compatibility and avoid treating unrelated host input as
   configuration errors.

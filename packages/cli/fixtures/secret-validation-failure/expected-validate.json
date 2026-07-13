@@ -1,6 +1,6 @@
 {
   "command": "validate",
-  "schemaVersion": "0.1",
+  "schemaVersion": "0.2",
   "status": "error",
   "sources": [
     {

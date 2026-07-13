@@ -391,6 +391,26 @@ describe("runCli", () => {
     expect(stdout).not.toContain("fixture-placeholder");
   });
 
+  it("shows source locations and bounded provenance in human explain output", async () => {
+    const fixtureRoot = fileURLToPath(new URL("../fixtures/local-precedence/", import.meta.url));
+    let stdout = "";
+    const result = await runCli(
+      ["explain", "--config", "uce.json", "--", "--host", "localhost"],
+      {
+        cwd: fixtureRoot,
+        env: { APP_PORT: "8080", FEATURE_CACHE: "true" },
+        stdout: (text) => { stdout += text; },
+        stderr: () => {}
+      }
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(stdout).toContain("at=defaults.json:5:19");
+    expect(stdout).toContain("overriddenAt=defaults.json:4:13");
+    expect(stdout).toContain("provenance:\n");
+    expect(stdout).toContain("overridden service.port source=runtime-env previous=defaults");
+  });
+
   it("matches the coercion and validation golden report", async () => {
     const fixtureRoot = new URL("../fixtures/coercion-validation/", import.meta.url);
     const expected = JSON.parse(

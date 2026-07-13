@@ -28,7 +28,7 @@ export async function loadDotenvFileSource(input: LoadDotenvFileSourceInput): Pr
       };
     }
 
-    return parseSimpleDotenv(input.descriptor, readResult.raw);
+    return parseSimpleDotenv(input.descriptor, readResult.raw, readResult.canonicalPath);
   } catch {
     return {
       descriptor: input.descriptor,
@@ -46,9 +46,14 @@ export async function loadDotenvFileSource(input: LoadDotenvFileSourceInput): Pr
   }
 }
 
-export function parseSimpleDotenv(descriptor: ConfigSourceDescriptor, raw: string): LoadedSource {
+export function parseSimpleDotenv(
+  descriptor: ConfigSourceDescriptor,
+  raw: string,
+  sourcePath?: string
+): LoadedSource {
   const value: Record<string, string> = {};
   const issues: ConfigIssue[] = [];
+  const locationByName = new Map<string, NonNullable<LoadedSource["locations"]>[number]>();
   const lines = raw.split(/\r?\n/);
 
   for (const [index, line] of lines.entries()) {
@@ -71,11 +76,21 @@ export function parseSimpleDotenv(descriptor: ConfigSourceDescriptor, raw: strin
     }
 
     value[name] = stripSimpleQuotes(rawValue.trim());
+    locationByName.set(name, {
+      path: [name],
+      location: {
+        sourceId: descriptor.id,
+        ...(sourcePath === undefined ? {} : { sourcePath }),
+        line: index + 1,
+        column: line.indexOf(name) + 1
+      }
+    });
   }
 
   return {
     descriptor,
     value,
+    locations: [...locationByName.values()],
     issues
   };
 }

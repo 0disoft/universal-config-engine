@@ -130,7 +130,7 @@ export async function loadDeclaredSources(input: {
           });
           sources.push(
             filePath.ok
-              ? await loadJsonFileSource(
+              ? withCliSourcePaths(await loadJsonFileSource(
                   source.maxFileBytes === undefined
                     ? {
                         descriptor,
@@ -143,7 +143,7 @@ export async function loadDeclaredSources(input: {
                         allowedRootPath: filePath.allowedRootPath,
                         maxFileBytes: source.maxFileBytes
                       }
-                )
+                ), input.configPath)
               : failedDeclaredSource(descriptor, filePath.issue)
           );
         }
@@ -159,7 +159,7 @@ export async function loadDeclaredSources(input: {
           });
           sources.push(
             filePath.ok
-              ? await loadDotenvFileSource(
+              ? withCliSourcePaths(await loadDotenvFileSource(
                   source.maxFileBytes === undefined
                     ? {
                         descriptor,
@@ -172,7 +172,7 @@ export async function loadDeclaredSources(input: {
                         allowedRootPath: filePath.allowedRootPath,
                         maxFileBytes: source.maxFileBytes
                       }
-                )
+                ), input.configPath)
               : failedDeclaredSource(descriptor, filePath.issue)
           );
         }
@@ -216,6 +216,27 @@ export async function loadDeclaredSources(input: {
   }
 
   return sources;
+}
+
+function withCliSourcePaths(source: LoadedSource, configPath: string): LoadedSource {
+  if (source.locations === undefined) return source;
+  const configDirectory = dirname(configPath);
+  return {
+    ...source,
+    locations: source.locations.map((valueLocation) => ({
+      path: valueLocation.path,
+      location: {
+        ...valueLocation.location,
+        ...(valueLocation.location.sourcePath === undefined
+          ? {}
+          : {
+              sourcePath: relative(configDirectory, valueLocation.location.sourcePath)
+                .split(sep)
+                .join("/")
+            })
+      }
+    }))
+  };
 }
 
 function failedDeclaredSource(descriptor: ConfigSourceDescriptor, issue: ConfigIssue): LoadedSource {

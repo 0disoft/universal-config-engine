@@ -254,6 +254,39 @@ describe("resolveConfig", () => {
     });
   });
 
+  it("preserves winning and overridden source locations", () => {
+    const result = resolveConfig({
+      sources: [
+        {
+          ...source("defaults", 0, { server: { port: 3000 } }),
+          locations: [{
+            path: ["server", "port"],
+            location: { sourceId: "defaults", sourcePath: "defaults.json", line: 2, column: 11 }
+          }]
+        },
+        {
+          ...source("local", 10, { server: { port: 8080 } }),
+          locations: [{
+            path: ["server", "port"],
+            location: { sourceId: "local", sourcePath: "local.json", line: 4, column: 9 }
+          }]
+        }
+      ]
+    });
+
+    expect(result.resolvedPaths).toContainEqual(expect.objectContaining({
+      path: ["server", "port"],
+      winningLocation: { sourceId: "local", sourcePath: "local.json", line: 4, column: 9 },
+      overriddenLocations: [
+        { sourceId: "defaults", sourcePath: "defaults.json", line: 2, column: 11 }
+      ]
+    }));
+    expect(buildDiagnosticReport(result).resolvedPaths).toContainEqual(expect.objectContaining({
+      path: ["server", "port"],
+      winningLocation: { sourceId: "local", sourcePath: "local.json", line: 4, column: 9 }
+    }));
+  });
+
   it("reports same-priority conflicts without hiding the winning source", () => {
     const result = resolveConfig({
       sources: [

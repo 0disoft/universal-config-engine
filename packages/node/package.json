@@ -43,6 +43,7 @@
     "test": "pnpm --filter @0disoft/universal-config-engine-node... build && vitest run"
   },
   "dependencies": {
-    "@0disoft/universal-config-engine-core": "workspace:*"
+    "@0disoft/universal-config-engine-core": "workspace:*",
+    "jsonc-parser": "3.3.1"
   }
 }

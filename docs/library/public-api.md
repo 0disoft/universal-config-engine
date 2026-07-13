@@ -176,6 +176,9 @@ migration review before running `pnpm run update:api-snapshot`.
   returns at most `maxDiagnostics` issues, including the marker.
 - Generate provenance during resolution rather than reconstructing it from the final
   object.
+- Preserve adapter-provided source locations on winning and overridden resolved
+  paths. Node file loaders report canonical opened paths; the CLI emits
+  declaration-relative paths. See ADR 0014.
 - Reject unsafe keys in public path setters and deep merge before they can mutate
   object state or object prototypes.
 - Return bounded issues for resource-limit failures.
@@ -193,5 +196,5 @@ migration review before running `pnpm run update:api-snapshot`.
   `ConfigIssue`; strict parsers and low-level invariant helpers may throw. See ADR
   0010.
 - TypeScript ESM, Node.js `>=24`, package ownership, validator packages, report
-  schema `0.1`, adapter ownership, and validator typed output are decided in ADRs
+  schema `0.2`, adapter ownership, and validator typed output are decided in ADRs
   0003, 0004, 0006, and 0009.

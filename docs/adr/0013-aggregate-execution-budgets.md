@@ -39,5 +39,4 @@ itself fits.
   change belongs in the next pre-1.0 minor release.
 - Direct JavaScript callers with missing or invalid limits receive defaults. CLI
   declarations reject malformed values and reject `maxReportBytes` below `1024`.
-- This ADR does not add source locations to reports. Location retention must consume
-  these budgets in a separate versioned report-schema change.
+- Source location reporting was subsequently added under these budgets by ADR 0014.

@@ -59,7 +59,7 @@ export function buildDiagnosticReport(
   );
 
   const report: DiagnosticReport = {
-    schemaVersion: "0.1",
+    schemaVersion: "0.2",
     status: result.ok ? "ok" : "error",
     sources: result.sources.map((source) => ({
       id: source.id,
@@ -79,7 +79,7 @@ export function buildDiagnosticReport(
     return report;
   }
   return {
-    schemaVersion: "0.1",
+    schemaVersion: "0.2",
     status: "error",
     sources: [],
     resolvedPaths: [],
@@ -108,6 +108,8 @@ function buildResolvedPathReport(
       status: "resolved",
       winningSourceId: resolvedPath.winningSourceId,
       overriddenSourceIds: resolvedPath.overriddenSourceIds,
+      ...(resolvedPath.winningLocation === undefined ? {} : { winningLocation: resolvedPath.winningLocation }),
+      ...(resolvedPath.overriddenLocations === undefined ? {} : { overriddenLocations: resolvedPath.overriddenLocations }),
       redacted: true,
       redactionReason: redaction.reason ?? "secret"
     };
@@ -118,6 +120,8 @@ function buildResolvedPathReport(
     status: "resolved",
     winningSourceId: resolvedPath.winningSourceId,
     overriddenSourceIds: resolvedPath.overriddenSourceIds,
+    ...(resolvedPath.winningLocation === undefined ? {} : { winningLocation: resolvedPath.winningLocation }),
+    ...(resolvedPath.overriddenLocations === undefined ? {} : { overriddenLocations: resolvedPath.overriddenLocations }),
     redacted: false
   };
 }

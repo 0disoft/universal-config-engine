@@ -178,7 +178,7 @@ for CLI usage errors, and `5` for redaction policy failure.
 The product direction is documented. ADR 0003 selects TypeScript, ESM output, Node
 `>=24`, a pnpm workspace, and a zero-runtime-dependency core package. ADR 0004
 selects `@0disoft/universal-config-engine-cli`, binary name `uce`, commands `explain` and
-`validate`, JSON pipeline declarations, and JSON report schema version `0.1`.
+`validate`, JSON pipeline declarations, and JSON report schema version `0.2`.
 Initial validator adapters are `@0disoft/universal-config-engine-validator-zod` and
 `@0disoft/universal-config-engine-validator-ajv`. ADR 0005 selects the MIT license,
 the `@0disoft` npm scope, and a manual validation-gated release baseline. ADR 0007

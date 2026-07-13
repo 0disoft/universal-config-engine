@@ -58,6 +58,17 @@ describe("node source loaders", () => {
 
       expect(result.ok).toBe(true);
       expect(result.config).toEqual({ server: { port: 3000 } });
+      expect(loaded.locations).toEqual(expect.arrayContaining([
+        {
+          path: ["server", "port"],
+          location: {
+            sourceId: "json",
+            sourcePath: await realpath(filePath),
+            line: 1,
+            column: 19
+          }
+        }
+      ]));
     } finally {
       await rm(dir, { force: true, recursive: true });
     }
@@ -82,6 +93,24 @@ describe("node source loaders", () => {
           sourceId: "json"
         })
       );
+    } finally {
+      await rm(dir, { force: true, recursive: true });
+    }
+  });
+
+  it("retains container locations without expanding array elements", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "uce-json-locations-"));
+    try {
+      const filePath = join(dir, "config.json");
+      await writeFile(filePath, '{"items":[{"id":1},{"id":2}]}', "utf8");
+      const loaded = await loadJsonFileSource({
+        descriptor: descriptor("json", "json-file", 1),
+        filePath
+      });
+
+      expect(loaded.locations).toContainEqual(expect.objectContaining({ path: ["items"] }));
+      expect(loaded.locations?.some((entry) => entry.path.some((segment) => typeof segment === "number")))
+        .toBe(false);
     } finally {
       await rm(dir, { force: true, recursive: true });
     }
@@ -132,6 +161,24 @@ describe("node source loaders", () => {
         }
       ]);
       expect(JSON.stringify(loaded)).not.toContain("json-parser-secret-value");
+    } finally {
+      await rm(dir, { force: true, recursive: true });
+    }
+  });
+
+  it.each([
+    '{"enabled":true,}',
+    '{"enabled":true /* comment */}'
+  ])("keeps JSON file parsing strict for %s", async (raw) => {
+    const dir = await mkdtemp(join(tmpdir(), "uce-json-strict-"));
+    try {
+      const filePath = join(dir, "config.json");
+      await writeFile(filePath, raw, "utf8");
+      const loaded = await loadJsonFileSource({
+        descriptor: descriptor("json", "json-file", 1),
+        filePath
+      });
+      expect(loaded.issues).toContainEqual(expect.objectContaining({ code: "json_parse_failed" }));
     } finally {
       await rm(dir, { force: true, recursive: true });
     }
@@ -287,6 +334,20 @@ describe("node source loaders", () => {
     expect(JSON.stringify(loaded)).not.toContain("dotenv-secret-value");
   });
 
+  it("retains the last dotenv location for repeated names", () => {
+    const loaded = parseSimpleDotenv(
+      descriptor("dotenv", "dotenv-file", 1),
+      "APP_PORT=3000\n  APP_PORT=4000",
+      "config.env"
+    );
+
+    expect(loaded.value).toEqual({ APP_PORT: "4000" });
+    expect(loaded.locations).toEqual([{
+      path: ["APP_PORT"],
+      location: { sourceId: "dotenv", sourcePath: "config.env", line: 2, column: 3 }
+    }]);
+  });
+
   it("loads dotenv files and lets declared mappings control paths", async () => {
     const dir = await mkdtemp(join(tmpdir(), "uce-dotenv-"));
     try {
@@ -313,6 +374,17 @@ describe("node source loaders", () => {
 
       expect(result.ok).toBe(true);
       expect(result.config).toEqual({ server: { port: 3000 } });
+      expect(loaded.locations).toEqual(expect.arrayContaining([
+        {
+          path: ["APP_PORT"],
+          location: {
+            sourceId: "dotenv",
+            sourcePath: await realpath(filePath),
+            line: 1,
+            column: 1
+          }
+        }
+      ]));
     } finally {
       await rm(dir, { force: true, recursive: true });
     }

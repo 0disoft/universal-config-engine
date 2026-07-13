@@ -1,4 +1,5 @@
 import type { ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
+import { visit, type JSONPath } from "jsonc-parser";
 import { DEFAULT_MAX_FILE_BYTES, readTextFileWithinLimit, type FileReadPolicy } from "./file.js";
 
 export interface LoadJsonFileSourceInput extends FileReadPolicy {
@@ -46,7 +47,8 @@ export async function loadJsonFileSource(input: LoadJsonFileSourceInput): Promis
   try {
     return {
       descriptor: input.descriptor,
-      value: JSON.parse(readResult.raw) as unknown
+      value: JSON.parse(readResult.raw) as unknown,
+      locations: collectJsonLocations(input.descriptor.id, readResult.canonicalPath, readResult.raw)
     };
   } catch {
     return {
@@ -63,4 +65,21 @@ export async function loadJsonFileSource(input: LoadJsonFileSourceInput): Promis
       ]
     };
   }
+}
+
+function collectJsonLocations(sourceId: string, sourcePath: string, raw: string) {
+  const locations = new Map<string, NonNullable<LoadedSource["locations"]>[number]>();
+  const add = (path: JSONPath, line: number, column: number) => {
+    if (path.length === 0 || path.some((segment) => typeof segment === "number")) return;
+    locations.set(JSON.stringify(path), {
+      path: [...path],
+      location: { sourceId, sourcePath, line: line + 1, column: column + 1 }
+    });
+  };
+  visit(raw, {
+    onObjectBegin: (_offset, _length, line, column, path) => add(path(), line, column),
+    onArrayBegin: (_offset, _length, line, column, path) => add(path(), line, column),
+    onLiteralValue: (_value, _offset, _length, line, column, path) => add(path(), line, column)
+  }, { disallowComments: true, allowTrailingComma: false });
+  return [...locations.values()];
 }

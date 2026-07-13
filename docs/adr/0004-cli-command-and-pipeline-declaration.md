@@ -74,7 +74,8 @@ symlink or junction used to name the declaration is retargeted after reading.
 CLI argv source values must appear after `--`, so CLI options do not get mixed with
 configuration override arguments.
 
-JSON output carries diagnostic report schema version `0.1` plus the command name.
+JSON output initially carried diagnostic report schema version `0.1` plus the command
+name. ADR 0014 advances the current schema to `0.2` for source locations.
 
 When a known command requests JSON output but fails CLI usage validation, the CLI
 emits a versioned JSON diagnostic report on stdout and exits `4`. Unknown commands

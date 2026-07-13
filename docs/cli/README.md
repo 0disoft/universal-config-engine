@@ -20,7 +20,7 @@ a daemon, remote config server, secret manager, or feature flag console.
 - Command list and flag ownership: draft commands are `explain` and `validate`.
 - Exit-code taxonomy: see `docs/cli/command-contract.md`.
 - Machine-readable output contract: JSON output is redacted by default and carries
-  diagnostic report schema version `0.1`.
+  diagnostic report schema version `0.2`.
 - Config precedence and default behavior: read from declared pipeline inputs only.
 - Runtime compatibility floor: Node.js `>=24`.
 - JSON usage errors for known commands are emitted as versioned JSON reports on

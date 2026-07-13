@@ -1,4 +1,9 @@
-import { formatPath, type ConfigIssue, type DiagnosticReport } from "@0disoft/universal-config-engine-core";
+import {
+  formatPath,
+  type ConfigIssue,
+  type DiagnosticReport,
+  type SourceLocation
+} from "@0disoft/universal-config-engine-core";
 import type { CliCommand } from "./types.js";
 
 export interface CliJsonReport extends DiagnosticReport {
@@ -38,9 +43,31 @@ export function formatHumanReport(command: CliCommand, report: DiagnosticReport)
         resolved.overriddenSourceIds.length === 0
           ? ""
           : ` overridden=${resolved.overriddenSourceIds.map(escapeTerminalText).join(",")}`;
+      const location = resolved.winningLocation === undefined
+        ? ""
+        : ` at=${formatLocation(resolved.winningLocation)}`;
+      const overriddenLocations = resolved.overriddenLocations === undefined
+        ? ""
+        : ` overriddenAt=${resolved.overriddenLocations.map(formatLocation).join(",")}`;
       lines.push(
         `- ${escapeTerminalText(formatPath(resolved.path))} ` +
-        `source=${escapeTerminalText(resolved.winningSourceId)}${overridden}${redaction}`
+        `source=${escapeTerminalText(resolved.winningSourceId)}${location}${overridden}` +
+        `${overriddenLocations}${redaction}`
+      );
+    }
+  }
+
+  lines.push("provenance:");
+  if (report.provenance.length === 0) {
+    lines.push("- <none>");
+  } else {
+    for (const event of report.provenance) {
+      const previous = event.previousSourceId === undefined
+        ? ""
+        : ` previous=${escapeTerminalText(event.previousSourceId)}`;
+      lines.push(
+        `- ${escapeTerminalText(event.action)} ${escapeTerminalText(formatPath(event.path))} ` +
+        `source=${escapeTerminalText(event.sourceId)}${previous}`
       );
     }
   }
@@ -55,6 +82,13 @@ export function formatHumanReport(command: CliCommand, report: DiagnosticReport)
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+function formatLocation(location: SourceLocation): string {
+  const source = escapeTerminalText(location.sourcePath ?? location.sourceId);
+  const line = location.line === undefined ? "" : `:${location.line}`;
+  const column = location.column === undefined ? "" : `:${location.column}`;
+  return `${source}${line}${column}`;
 }
 
 function formatIssue(issue: ConfigIssue): string {

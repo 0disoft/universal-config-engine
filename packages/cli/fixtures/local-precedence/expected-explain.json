@@ -1,6 +1,6 @@
 {
   "command": "explain",
-  "schemaVersion": "0.1",
+  "schemaVersion": "0.2",
   "status": "ok",
   "sources": [
     {
@@ -31,6 +31,12 @@
       "status": "resolved",
       "winningSourceId": "defaults",
       "overriddenSourceIds": [],
+      "winningLocation": {
+        "sourceId": "defaults",
+        "sourcePath": "defaults.json",
+        "line": 5,
+        "column": 19
+      },
       "redacted": true,
       "redactionReason": "secret-path"
     },
@@ -39,6 +45,14 @@
       "status": "resolved",
       "winningSourceId": "runtime-env",
       "overriddenSourceIds": ["defaults"],
+      "overriddenLocations": [
+        {
+          "sourceId": "defaults",
+          "sourcePath": "defaults.json",
+          "line": 4,
+          "column": 13
+        }
+      ],
       "redacted": false
     },
     {
@@ -46,6 +60,14 @@
       "status": "resolved",
       "winningSourceId": "runtime-env",
       "overriddenSourceIds": ["defaults"],
+      "overriddenLocations": [
+        {
+          "sourceId": "defaults",
+          "sourcePath": "defaults.json",
+          "line": 8,
+          "column": 14
+        }
+      ],
       "redacted": false
     },
     {
@@ -53,6 +75,14 @@
       "status": "resolved",
       "winningSourceId": "cli",
       "overriddenSourceIds": ["defaults"],
+      "overriddenLocations": [
+        {
+          "sourceId": "defaults",
+          "sourcePath": "defaults.json",
+          "line": 3,
+          "column": 13
+        }
+      ],
       "redacted": false
     }
   ],

@@ -43,6 +43,9 @@ importers:
       '@0disoft/universal-config-engine-core':
         specifier: workspace:*
         version: link:../core
+      jsonc-parser:
+        specifier: 3.3.1
+        version: 3.3.1
 
   packages/validator-ajv:
     dependencies:
@@ -344,6 +347,9 @@ packages:
 
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
+
+  jsonc-parser@3.3.1:
+    resolution: {integrity: sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==}
 
   lightningcss-android-arm64@1.32.0:
     resolution: {integrity: sha512-YK7/ClTt4kAK0vo6w3X+Pnm0D2cf2vPHbhOXdoNti1Ga0al1P4TBZhwjATvjNwLEBCnKvjJc2jQgHXH0NEwlAg==}
@@ -838,6 +844,8 @@ snapshots:
   js-tokens@10.0.0: {}
 
   json-schema-traverse@1.0.0: {}
+
+  jsonc-parser@3.3.1: {}
 
   lightningcss-android-arm64@1.32.0:
     optional: true

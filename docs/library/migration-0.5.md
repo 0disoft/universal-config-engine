@@ -23,3 +23,11 @@ under `limits`.
 Pipelines exceeding a new limit now fail with `resource-limit` diagnostics. An
 oversized diagnostic report is replaced by a valid bounded error report; consumers
 must not assume a successful resolution always implies `report.status === "ok"`.
+
+## Diagnostic Report 0.2
+
+The report schema changes from `0.1` to `0.2`. Resolved paths may contain
+`winningLocation` and `overriddenLocations`, each with source id and optional source
+path, line, and column. CLI paths are relative to the pipeline declaration. Consumers
+that exhaustively match resolved-path fields or schema versions must accept the new
+shape before upgrading.

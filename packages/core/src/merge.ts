@@ -14,7 +14,9 @@ import type {
   ProvenanceEvent,
   ResolveConfigInput,
   ResolvedPath,
-  ResourceLimitPolicy
+  ResourceLimitPolicy,
+  SourceLocation,
+  ValueLocation
 } from "./types.js";
 
 export const DEFAULT_MERGE_POLICY: MergePolicy = {
@@ -34,6 +36,8 @@ interface MutableResolvedPath {
   winningSourceId: string;
   winningPriority: number;
   overriddenSourceIds: string[];
+  winningLocation?: SourceLocation;
+  overriddenLocations: SourceLocation[];
 }
 
 interface MutableResolvedPathIndex {
@@ -105,12 +109,15 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
       continue;
     }
 
+    const locationIndex = createLocationIndex(source.locations);
     for (const entry of flattened.entries) {
+      const entryLocation = locationIndex.get(pathToKey(entry.path));
       applyEntry({
         config,
         descriptor: source.descriptor,
         entryPath: entry.path,
         entryValue: entry.value,
+        ...(entryLocation === undefined ? {} : { entryLocation }),
         issues,
         limits,
         policy,
@@ -154,7 +161,11 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
       status: resolved.status,
       winningSourceId: resolved.winningSourceId,
       winningPriority: resolved.winningPriority,
-      overriddenSourceIds: resolved.overriddenSourceIds
+      overriddenSourceIds: resolved.overriddenSourceIds,
+      ...(resolved.winningLocation === undefined ? {} : { winningLocation: resolved.winningLocation }),
+      ...(resolved.overriddenLocations.length === 0
+        ? {}
+        : { overriddenLocations: resolved.overriddenLocations })
     })),
     limits
   };
@@ -228,6 +239,7 @@ function applyEntry(input: {
   readonly descriptor: ConfigSourceDescriptor;
   readonly entryPath: readonly (string | number)[];
   readonly entryValue: ConfigValue;
+  readonly entryLocation?: SourceLocation;
   readonly issues: ConfigIssue[];
   readonly limits: ResourceLimitPolicy;
   readonly policy: MergePolicy;
@@ -319,12 +331,15 @@ function applyEntry(input: {
       status: "resolved",
       winningSourceId: input.descriptor.id,
       winningPriority: input.descriptor.priority,
-      overriddenSourceIds: []
+      overriddenSourceIds: [],
+      ...(input.entryLocation === undefined ? {} : { winningLocation: input.entryLocation }),
+      overriddenLocations: []
     });
     return;
   }
 
   const overriddenSourceIds = collectOverriddenSourceIds(relatedResolved, input.descriptor.id);
+  const overriddenLocations = collectOverriddenLocations(relatedResolved);
   for (const { key } of relatedResolved) {
     deleteResolvedPath(input.resolvedIndex, key);
   }
@@ -354,8 +369,20 @@ function applyEntry(input: {
     status: "resolved",
     winningSourceId: input.descriptor.id,
     winningPriority: input.descriptor.priority,
-    overriddenSourceIds
+    overriddenSourceIds,
+    ...(input.entryLocation === undefined ? {} : { winningLocation: input.entryLocation }),
+    overriddenLocations
   });
+}
+
+function createLocationIndex(
+  locations: readonly ValueLocation[] | undefined
+): ReadonlyMap<string, SourceLocation> {
+  const index = new Map<string, SourceLocation>();
+  for (const valueLocation of locations ?? []) {
+    index.set(pathToKey(valueLocation.path), valueLocation.location);
+  }
+  return index;
 }
 
 function findRelatedResolvedPaths(
@@ -533,6 +560,17 @@ function collectOverriddenSourceIds(
   }
 
   return [...sourceIds];
+}
+
+function collectOverriddenLocations(
+  relatedResolved: readonly { readonly resolved: MutableResolvedPath }[]
+): SourceLocation[] {
+  const locations: SourceLocation[] = [];
+  for (const { resolved } of relatedResolved) {
+    locations.push(...resolved.overriddenLocations);
+    if (resolved.winningLocation !== undefined) locations.push(resolved.winningLocation);
+  }
+  return locations;
 }
 
 function pushBoundedIssues(

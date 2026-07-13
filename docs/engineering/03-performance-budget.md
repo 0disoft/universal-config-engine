@@ -49,6 +49,8 @@ mapped values and reports local comparison timings; it is not a cross-machine SL
 
 - same-priority writes across a wide object, including bounded conflict diagnostics;
 - replacement of a large resolved subtree by one higher-priority scalar path.
+- resolution and diagnostic-report construction with 10,000 retained source
+  locations.
 
 The benchmark verifies result shape and reports warmup plus five timing samples as
 JSON. Timings are local comparison evidence, not a cross-machine SLA, so this command
