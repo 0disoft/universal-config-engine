@@ -65,6 +65,10 @@ Adding aggregate execution-budget fields to `ResourceLimitPolicy` and CLI JSON
 `limits`, together with new resource-limit failures, requires the next pre-1.0 minor
 release. See ADR 0013.
 
+Adding optional strict unmapped-input policies and their diagnostics is additive
+pre-1.0 minor work. Existing callers retain ignore behavior when the policy is
+absent. See ADR 0015.
+
 ## Patch Changes
 
 Patch versions may fix incorrect provenance, redaction, validation, or parsing

@@ -30,9 +30,10 @@ declaration validation scales linearly with mapping count while preserving the
 first-declaration error reference.
 
 The argv adapter compiles exact-name lookup and an assignment-prefix trie, then
-scans argv once. `pnpm run benchmark:argv` measures 256, 1,024, and 4,096 declared
-assignment forms with warmup and five samples. The command verifies first/last
-mapped values and reports local comparison timings; it is not a cross-machine SLA.
+scans argv without mapping-count multiplication. `pnpm run benchmark:argv` measures
+256, 1,024, and 4,096 declared assignment forms in default and strict-warning modes
+with warmup and five samples. The command verifies first/last mapped values and
+reports local comparison timings; it is not a cross-machine SLA.
 
 ## Required Evidence
 

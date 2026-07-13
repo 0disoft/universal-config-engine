@@ -317,12 +317,14 @@ export declare function flattenConfigObject(sourceId: string, value: unknown, li
 
 ### argv-source.d.ts
 import { type ConfigSourceDescriptor, type LoadedSource, type OverrideMapping } from "@0disoft/universal-config-engine-core";
+import { type UnmappedInputBehavior } from "./input-policy.js";
 export declare const DEFAULT_MAX_ARGV_ENTRIES = 4096;
 export interface CreateArgvSourceInput {
     readonly descriptor: ConfigSourceDescriptor;
     readonly argv: readonly string[];
     readonly mappings: readonly OverrideMapping[];
     readonly maxArgvEntries?: number;
+    readonly unmappedBehavior?: UnmappedInputBehavior;
 }
 export declare function createArgvSource(input: CreateArgvSourceInput): LoadedSource;
 
@@ -376,6 +378,12 @@ export type { LoadJsonFileSourceInput } from "./json-file-loader.js";
 export type { LoadDotenvFileSourceInput } from "./dotenv-file-loader.js";
 export type { CreateProcessEnvSourceInput } from "./process-env-source.js";
 export type { CreateArgvSourceInput } from "./argv-source.js";
+export type { UnmappedInputBehavior } from "./input-policy.js";
+
+### input-policy.d.ts
+import type { ConfigIssueSeverity } from "@0disoft/universal-config-engine-core";
+export type UnmappedInputBehavior = "warning" | "error";
+export declare function behaviorSeverity(behavior: UnmappedInputBehavior): ConfigIssueSeverity;
 
 ### json-file-loader.d.ts
 import type { ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
@@ -391,12 +399,15 @@ export declare function positiveSafeIntegerLimit(value: number | undefined, fall
 
 ### process-env-source.d.ts
 import { type ConfigSourceDescriptor, type LoadedSource, type OverrideMapping } from "@0disoft/universal-config-engine-core";
+import { type UnmappedInputBehavior } from "./input-policy.js";
 export declare const DEFAULT_MAX_ENV_ENTRIES = 4096;
 export interface CreateProcessEnvSourceInput {
     readonly descriptor: ConfigSourceDescriptor;
     readonly env: NodeJS.ProcessEnv;
     readonly mappings: readonly OverrideMapping[];
     readonly maxEnvEntries?: number;
+    readonly unmappedBehavior?: UnmappedInputBehavior;
+    readonly unmappedPrefix?: string;
 }
 export declare function createProcessEnvSource(input: CreateProcessEnvSourceInput): LoadedSource;
 
@@ -482,6 +493,7 @@ export declare function runCli(args: readonly string[], runtime: CliRuntime): Pr
 ### types.d.ts
 import type { CoercionRule, ConfigSourceDescriptor, OverrideMapping, ResourceLimitPolicy } from "@0disoft/universal-config-engine-core";
 import type { Schema } from "ajv/dist/ajv.js";
+import type { UnmappedInputBehavior } from "@0disoft/universal-config-engine-node";
 export type CliCommand = "explain" | "validate";
 export type CliOutputMode = "human" | "json";
 export interface PipelineDeclaration {
@@ -515,11 +527,14 @@ export interface ProcessEnvSourceDeclaration extends BaseSourceDeclaration {
     readonly kind: "process-env";
     readonly mappings: readonly OverrideMapping[];
     readonly maxEnvEntries?: number;
+    readonly unmappedBehavior?: UnmappedInputBehavior;
+    readonly unmappedPrefix?: string;
 }
 export interface ArgvSourceDeclaration extends BaseSourceDeclaration {
     readonly kind: "argv";
     readonly mappings: readonly OverrideMapping[];
     readonly maxArgvEntries?: number;
+    readonly unmappedBehavior?: UnmappedInputBehavior;
 }
 export interface AjvJsonSchemaValidatorDeclaration {
     readonly id: string;

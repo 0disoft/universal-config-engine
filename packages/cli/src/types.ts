@@ -5,6 +5,7 @@ import type {
   ResourceLimitPolicy
 } from "@0disoft/universal-config-engine-core";
 import type { Schema } from "ajv/dist/ajv.js";
+import type { UnmappedInputBehavior } from "@0disoft/universal-config-engine-node";
 
 export type CliCommand = "explain" | "validate";
 
@@ -52,12 +53,15 @@ export interface ProcessEnvSourceDeclaration extends BaseSourceDeclaration {
   readonly kind: "process-env";
   readonly mappings: readonly OverrideMapping[];
   readonly maxEnvEntries?: number;
+  readonly unmappedBehavior?: UnmappedInputBehavior;
+  readonly unmappedPrefix?: string;
 }
 
 export interface ArgvSourceDeclaration extends BaseSourceDeclaration {
   readonly kind: "argv";
   readonly mappings: readonly OverrideMapping[];
   readonly maxArgvEntries?: number;
+  readonly unmappedBehavior?: UnmappedInputBehavior;
 }
 
 export interface AjvJsonSchemaValidatorDeclaration {

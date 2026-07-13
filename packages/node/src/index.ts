@@ -34,3 +34,4 @@ export type {
 export type {
   CreateArgvSourceInput
 } from "./argv-source.js";
+export type { UnmappedInputBehavior } from "./input-policy.js";

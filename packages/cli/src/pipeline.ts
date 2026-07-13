@@ -46,8 +46,8 @@ const SOURCE_KIND_FIELDS: Readonly<Record<string, ReadonlySet<string>>> = {
   object: new Set(["value"]),
   "json-file": new Set(["path", "maxFileBytes"]),
   "dotenv-file": new Set(["path", "maxFileBytes"]),
-  "process-env": new Set(["mappings", "maxEnvEntries"]),
-  argv: new Set(["mappings", "maxArgvEntries"])
+  "process-env": new Set(["mappings", "maxEnvEntries", "unmappedBehavior", "unmappedPrefix"]),
+  argv: new Set(["mappings", "maxArgvEntries", "unmappedBehavior"])
 };
 const OVERRIDE_MAPPING_FIELDS = new Set(["externalName", "targetPath", "sourceKind", "parseAs", "secret"]);
 const COERCION_RULE_FIELDS = new Set(["path", "from", "to", "onFailure"]);
@@ -183,7 +183,9 @@ export async function loadDeclaredSources(input: {
             descriptor,
             env: input.env,
             mappings: source.mappings,
-            ...(source.maxEnvEntries === undefined ? {} : { maxEnvEntries: source.maxEnvEntries })
+            ...(source.maxEnvEntries === undefined ? {} : { maxEnvEntries: source.maxEnvEntries }),
+            ...(source.unmappedBehavior === undefined ? {} : { unmappedBehavior: source.unmappedBehavior }),
+            ...(source.unmappedPrefix === undefined ? {} : { unmappedPrefix: source.unmappedPrefix })
           })
         );
         break;
@@ -193,7 +195,8 @@ export async function loadDeclaredSources(input: {
             descriptor,
             argv: input.argv,
             mappings: source.mappings,
-            ...(source.maxArgvEntries === undefined ? {} : { maxArgvEntries: source.maxArgvEntries })
+            ...(source.maxArgvEntries === undefined ? {} : { maxArgvEntries: source.maxArgvEntries }),
+            ...(source.unmappedBehavior === undefined ? {} : { unmappedBehavior: source.unmappedBehavior })
           })
         );
         break;
@@ -302,14 +305,17 @@ function normalizeSourceDeclaration(source: unknown): PipelineSourceDeclaration 
         ...base,
         kind: "process-env",
         mappings: arrayField(source, "mappings").map((mapping) => normalizeOverrideMapping(mapping, "process-env")),
-        ...optionalPositiveIntegerField(source, "maxEnvEntries")
+        ...optionalPositiveIntegerField(source, "maxEnvEntries"),
+        ...optionalUnmappedBehaviorField(source),
+        ...optionalStringField(source, "unmappedPrefix")
       };
     case "argv":
       return {
         ...base,
         kind: "argv",
         mappings: arrayField(source, "mappings").map((mapping) => normalizeOverrideMapping(mapping, "argv")),
-        ...optionalPositiveIntegerField(source, "maxArgvEntries")
+        ...optionalPositiveIntegerField(source, "maxArgvEntries"),
+        ...optionalUnmappedBehaviorField(source)
       };
     default:
       throw new Error(`Unsupported source kind ${source.kind} reached normalization.`);
@@ -475,6 +481,14 @@ function optionalParseAsField(record: Readonly<Record<string, unknown>>): Pick<O
   }
 
   return { parseAs: value };
+}
+
+function optionalUnmappedBehaviorField(
+  record: Readonly<Record<string, unknown>>
+): { readonly unmappedBehavior?: "warning" | "error" } {
+  return record.unmappedBehavior === undefined
+    ? {}
+    : { unmappedBehavior: record.unmappedBehavior as "warning" | "error" };
 }
 
 function coercionTargetField(
@@ -870,6 +884,61 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
               path: sourcePath(limitField),
               sourceId,
               message: `${limitField} must be a positive integer when provided.`
+            })
+          );
+        }
+      }
+      if (
+        source.unmappedBehavior !== undefined &&
+        source.unmappedBehavior !== "warning" &&
+        source.unmappedBehavior !== "error"
+      ) {
+        issues.push(
+          pipelineDeclarationIssue({
+            code: "pipeline_unmapped_behavior_invalid",
+            path: sourcePath("unmappedBehavior"),
+            sourceId,
+            message: "unmappedBehavior must be warning or error when provided."
+          })
+        );
+      }
+      if (source.kind === "process-env") {
+        if (source.unmappedPrefix !== undefined && (
+          typeof source.unmappedPrefix !== "string" || source.unmappedPrefix.length === 0
+        )) {
+          issues.push(
+            pipelineDeclarationIssue({
+              code: "pipeline_unmapped_prefix_invalid",
+              path: sourcePath("unmappedPrefix"),
+              sourceId,
+              message: "Process env unmappedPrefix must be a non-empty string when provided."
+            })
+          );
+        }
+        if (
+          (source.unmappedBehavior === "warning" || source.unmappedBehavior === "error") &&
+          (typeof source.unmappedPrefix !== "string" || source.unmappedPrefix.length === 0)
+        ) {
+          issues.push(
+            pipelineDeclarationIssue({
+              code: "pipeline_unmapped_prefix_required",
+              path: sourcePath("unmappedPrefix"),
+              sourceId,
+              message: "Strict process env mapping requires unmappedPrefix."
+            })
+          );
+        }
+        if (
+          typeof source.unmappedPrefix === "string" &&
+          source.unmappedPrefix.length > 0 &&
+          source.unmappedBehavior === undefined
+        ) {
+          issues.push(
+            pipelineDeclarationIssue({
+              code: "pipeline_unmapped_behavior_required",
+              path: sourcePath("unmappedBehavior"),
+              sourceId,
+              message: "Process env unmappedPrefix requires unmappedBehavior."
             })
           );
         }

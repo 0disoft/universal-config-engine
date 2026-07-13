@@ -6,6 +6,7 @@ import {
   type OverrideMapping
 } from "@0disoft/universal-config-engine-core";
 import { positiveSafeIntegerLimit } from "./limits.js";
+import { behaviorSeverity, type UnmappedInputBehavior } from "./input-policy.js";
 
 export const DEFAULT_MAX_ARGV_ENTRIES = 4096;
 
@@ -14,6 +15,7 @@ export interface CreateArgvSourceInput {
   readonly argv: readonly string[];
   readonly mappings: readonly OverrideMapping[];
   readonly maxArgvEntries?: number;
+  readonly unmappedBehavior?: UnmappedInputBehavior;
 }
 
 interface ArgObservation {
@@ -51,7 +53,36 @@ export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
 
   const values: Record<string, string> = {};
   const issues: ConfigIssue[] = [];
+  if (
+    input.unmappedBehavior !== undefined &&
+    input.unmappedBehavior !== "warning" &&
+    input.unmappedBehavior !== "error"
+  ) {
+    return {
+      descriptor: input.descriptor,
+      value: {},
+      issues: [{
+        category: "mapping",
+        code: "unmapped_argv_behavior_invalid",
+        severity: "error",
+        sourceId: input.descriptor.id,
+        message: "Invalid unmappedBehavior."
+      }]
+    };
+  }
   const observations = scanArgv(input.argv, input.mappings);
+  if (input.unmappedBehavior !== undefined) {
+    for (const argumentIndex of unmappedArgvIndexes(input.argv, input.mappings)) {
+      issues.push({
+        category: "mapping",
+        code: "unmapped_argv_entry",
+        severity: behaviorSeverity(input.unmappedBehavior),
+        sourceId: input.descriptor.id,
+        message: "Argument input has no declared mapping.",
+        details: { argumentIndex }
+      });
+    }
+  }
 
   for (const mapping of input.mappings) {
     if (mapping.sourceKind !== "argv") {
@@ -100,6 +131,33 @@ export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
     ...mapped,
     issues: [...issues, ...(mapped.issues ?? [])]
   };
+}
+
+function unmappedArgvIndexes(
+  argv: readonly string[],
+  mappings: readonly OverrideMapping[]
+): readonly number[] {
+  const exactNames = new Set(
+    mappings.filter((mapping) => mapping.sourceKind === "argv").map((mapping) => mapping.externalName)
+  );
+  const assignmentPrefixes = createAssignmentPrefixNode();
+  for (const name of exactNames) addAssignmentPrefix(assignmentPrefixes, name);
+  const unmapped: number[] = [];
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index]!;
+    if (exactNames.has(argument)) {
+      const next = argv[index + 1];
+      if (next !== undefined && isArgValueToken(next)) index += 1;
+      continue;
+    }
+    if (matchAssignmentPrefixes(assignmentPrefixes, argument).length > 0) continue;
+
+    unmapped.push(index);
+    const next = argv[index + 1];
+    if (argument.startsWith("-") && next !== undefined && isArgValueToken(next)) index += 1;
+  }
+  return unmapped;
 }
 
 function observationToArgValue(observation: ArgObservation | undefined):

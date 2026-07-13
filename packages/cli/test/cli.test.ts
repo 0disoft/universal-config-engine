@@ -1378,6 +1378,63 @@ describe("runCli", () => {
     });
   });
 
+  it("applies opt-in unmapped env warnings inside the declared prefix", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, "uce.json"), JSON.stringify({
+        sources: [{
+          id: "env",
+          kind: "process-env",
+          priority: 10,
+          unmappedBehavior: "warning",
+          unmappedPrefix: "APP_",
+          mappings: [{
+            externalName: "APP_PORT",
+            sourceKind: "process-env",
+            targetPath: ["server", "port"],
+            parseAs: "number"
+          }]
+        }]
+      }), "utf8");
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: { APP_PORT: "8080", APP_TYPO: "secret-value", PATH: "ignored" },
+        stdout: (text) => { stdout += text; },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as { readonly issues: readonly { readonly code: string; readonly severity: string }[] };
+
+      expect(result.exitCode).toBe(0);
+      expect(report.issues).toContainEqual(expect.objectContaining({ code: "unmapped_env_entry", severity: "warning" }));
+      expect(stdout).not.toContain("secret-value");
+    });
+  });
+
+  it("rejects invalid unmapped input declarations before loading sources", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, "uce.json"), JSON.stringify({
+        sources: [
+          { id: "env", kind: "process-env", priority: 1, unmappedBehavior: "error", mappings: [] },
+          { id: "argv", kind: "argv", priority: 2, unmappedBehavior: "ignore", mappings: [] }
+        ]
+      }), "utf8");
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => { stdout += text; },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as { readonly issues: readonly { readonly code: string }[] };
+
+      expect(result.exitCode).toBe(2);
+      expect(report.issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: "pipeline_unmapped_prefix_required" }),
+        expect.objectContaining({ code: "pipeline_unmapped_behavior_invalid" })
+      ]));
+    });
+  });
+
   it("rejects unknown declaration fields and malformed redaction policy before source loading", async () => {
     await withTempDir(async (dir) => {
       await writeFile(

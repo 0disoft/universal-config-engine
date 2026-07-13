@@ -81,6 +81,13 @@ returns `resource-limit/max_env_entries_exceeded` or
 `resource-limit/max_argv_entries_exceeded`; the CLI exits with code `3`. The limit
 counts the complete input, not only names referenced by mappings.
 
+Override sources may opt into unmapped-input diagnostics with
+`unmappedBehavior: "warning"` or `"error"`. Process-env sources must also declare a
+non-empty `unmappedPrefix`; only environment names inside that namespace are
+checked. Argv strict mode checks arguments after `--`, reports indexes rather than
+raw unknown argument text, and treats positionals as unmapped. Omitting the behavior
+preserves the default silent-ignore contract. See ADR 0015.
+
 Within a single process-env or argv source, two mappings must not target the same
 config path. Duplicate mapping targets are declaration errors rather than
 last-writer-wins overrides.

@@ -121,6 +121,11 @@ The Node file, process-env, and argv helpers apply the same positive-safe-intege
 normalization to direct JavaScript calls, so malformed numeric options cannot turn
 their default bounds into unbounded comparisons.
 
+The Node override helpers accept optional `unmappedBehavior` values `warning` and
+`error`. Process-env checks require `unmappedPrefix` and inspect only that namespace;
+argv diagnostics expose indexes rather than raw unknown argument text. Missing
+policy preserves silent ignore behavior. See ADR 0015.
+
 The committed `docs/library/public-api.snapshot.txt` records normalized declaration
 files for every publishable package. `pnpm run check:api-snapshot` fails when the
 built declaration surface drifts. Intentional API changes require semver and

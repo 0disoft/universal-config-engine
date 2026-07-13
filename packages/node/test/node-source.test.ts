@@ -436,6 +436,58 @@ describe("node source loaders", () => {
     expect(result.config).toEqual({ server: { port: 8080 } });
   });
 
+  it("warns for unmapped env names only inside the declared prefix", () => {
+    const loaded = createProcessEnvSource({
+      descriptor: descriptor("env", "process-env", 10),
+      env: { APP_PORT: "8080", APP_TYPO: "secret-value", PATH: "ignored" },
+      mappings: [{
+        externalName: "APP_PORT",
+        sourceKind: "process-env",
+        targetPath: ["server", "port"],
+        parseAs: "number"
+      }],
+      unmappedBehavior: "warning",
+      unmappedPrefix: "APP_"
+    });
+    const result = resolveConfig({ sources: [loaded] });
+
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({ server: { port: 8080 } });
+    expect(result.issues).toEqual([expect.objectContaining({
+      code: "unmapped_env_entry",
+      severity: "warning",
+      details: { externalName: "APP_TYPO" }
+    })]);
+    expect(JSON.stringify(result)).not.toContain("secret-value");
+  });
+
+  it("requires an env prefix before strict unmapped checks", () => {
+    const loaded = createProcessEnvSource({
+      descriptor: descriptor("env", "process-env", 10),
+      env: { APP_PORT: "8080" },
+      mappings: [],
+      unmappedBehavior: "error"
+    });
+    expect(loaded.issues).toContainEqual(expect.objectContaining({ code: "unmapped_env_prefix_required" }));
+  });
+
+  it("rejects invalid direct-library unmapped policies", () => {
+    const env = createProcessEnvSource({
+      descriptor: descriptor("env", "process-env", 10),
+      env: {},
+      mappings: [],
+      unmappedPrefix: "APP_"
+    });
+    const argv = createArgvSource({
+      descriptor: descriptor("argv", "argv", 20),
+      argv: [],
+      mappings: [],
+      unmappedBehavior: "ignore" as "warning"
+    });
+    expect(env.issues).toContainEqual(expect.objectContaining({ code: "unmapped_env_behavior_required" }));
+    expect(argv.issues).toContainEqual(expect.objectContaining({ code: "unmapped_argv_behavior_invalid" }));
+  });
+
   it("rejects process env sources that exceed the entry limit before mapping", () => {
     const loaded = createProcessEnvSource({
       descriptor: descriptor("env", "process-env", 10),
@@ -513,6 +565,46 @@ describe("node source loaders", () => {
       server: { port: 9000 },
       app: { mode: "prod" }
     });
+  });
+
+  it("warns for unmapped argv entries without exposing their text", () => {
+    const loaded = createArgvSource({
+      descriptor: descriptor("argv", "argv", 20),
+      argv: ["--port", "9000", "--unknown", "argv-secret-value", "positional-secret"],
+      mappings: [{
+        externalName: "--port",
+        sourceKind: "argv",
+        targetPath: ["server", "port"],
+        parseAs: "number"
+      }],
+      unmappedBehavior: "warning"
+    });
+    const result = resolveConfig({ sources: [loaded] });
+
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({ server: { port: 9000 } });
+    expect(result.issues).toEqual([
+      expect.objectContaining({ code: "unmapped_argv_entry", severity: "warning", details: { argumentIndex: 2 } }),
+      expect.objectContaining({ code: "unmapped_argv_entry", severity: "warning", details: { argumentIndex: 4 } })
+    ]);
+    expect(JSON.stringify(result)).not.toContain("argv-secret-value");
+    expect(JSON.stringify(result)).not.toContain("positional-secret");
+  });
+
+  it("rejects argv sources when unmapped behavior is error", () => {
+    const loaded = createArgvSource({
+      descriptor: descriptor("argv", "argv", 20),
+      argv: ["--unknown=value"],
+      mappings: [],
+      unmappedBehavior: "error"
+    });
+    const result = resolveConfig({ sources: [loaded] });
+    expect(result.ok).toBe(false);
+    expect(result.config).toEqual({});
+    expect(result.issues).toContainEqual(expect.objectContaining({
+      code: "unmapped_argv_entry",
+      severity: "error"
+    }));
   });
 
   it("scans large declared argv mappings without repeated full-array searches", () => {

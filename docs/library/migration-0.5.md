@@ -31,3 +31,10 @@ The report schema changes from `0.1` to `0.2`. Resolved paths may contain
 path, line, and column. CLI paths are relative to the pipeline declaration. Consumers
 that exhaustively match resolved-path fields or schema versions must accept the new
 shape before upgrading.
+
+## Optional Strict Inputs
+
+No migration is required for existing process-env or argv sources. To detect typos,
+set `unmappedBehavior` to `warning` or `error`. Process-env sources must also set a
+namespace such as `unmappedPrefix: "MYAPP_"`. Do not use an empty prefix to inspect
+the complete host environment.

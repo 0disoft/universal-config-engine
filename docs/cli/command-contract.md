@@ -71,6 +71,8 @@ Candidate responsibilities:
 - Runtime compatibility floor: Node.js `>=24`.
 - JSON report schema version: `0.2`.
 - CLI argv source values must appear after `--`.
+- Unmapped env and argv diagnostics are opt-in; strict environment checks require
+  an explicit prefix namespace.
 - Validator declarations support first-party Ajv JSON Schema via
   `kind: "json-schema-ajv"`.
 
