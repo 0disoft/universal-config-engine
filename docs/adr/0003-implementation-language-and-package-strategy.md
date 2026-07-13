@@ -19,6 +19,14 @@ This document records the first implementation choices for Universal Config Engi
 The initial implementation uses TypeScript, ESM package output, Node.js `>=24`, and
 a pnpm workspace.
 
+Node.js `24.0.0` is the exact minimum runtime represented by that package contract.
+Hosted runtime compatibility checks execute the workspace tests and packed-package
+smoke on both `24.0.0` and the latest stable Node.js distribution. The rolling
+latest check verifies the open upper range implied by `>=24`; the pinned `24.11.1`
+main CI and release jobs remain the reproducible validation baseline. A future
+upper bound or runtime-floor change requires package metadata, compatibility docs,
+and this ADR to move together.
+
 The first package is `@0disoft/universal-config-engine-core`. Package publication
 uses the verified `@0disoft` npm scope. The core package must have zero
 runtime dependencies and must not import file-system, process, argv, parser,
@@ -58,3 +66,5 @@ Package boundaries are:
 - Core imports Node.js file-system, process, argv, parser, validator, or CLI modules.
 - Package metadata claims a publishable OSS license that differs from ADR 0005.
 - Future CLI behavior bypasses the core resolution pipeline.
+- Package runtime metadata claims a Node.js range not exercised at its exact floor
+  and rolling upper edge.

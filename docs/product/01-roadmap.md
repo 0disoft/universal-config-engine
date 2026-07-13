@@ -115,8 +115,8 @@ Owner: UNASSIGNED
   declaration-specific diagnostic and exit-code contracts.
 - Added resumable package-level publication evidence for the five-package release
   because npm publication cannot be atomic.
-- Record and test the supported Node.js runtime matrix independently from the package
-  manager and CI runner pins.
+- Recorded and tested the supported Node.js runtime matrix independently from the
+  reproducible main CI and release runner pins.
 
 ## Explicitly Deferred
 

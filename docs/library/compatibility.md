@@ -23,7 +23,9 @@ one parser, one validator, one framework, or one remote service.
 - Validator compatibility is owned by validator adapters.
 - Packed-package smoke validation compiles and runs a pre-0.3
   `ConfigIssue[]`-returning validator fixture against the current core types.
-- Runtime compatibility floor is Node.js `>=24`.
+- Runtime compatibility is Node.js `>=24`. Hosted checks exercise exact Node.js
+  `24.0.0` and the latest stable Node.js release; the latter guards the open upper
+  range claimed by package metadata.
 - Package module format is ESM.
 - CLI JSON output compatibility is governed by `docs/cli/output-and-exit-codes.md`.
 - CLI JSON diagnostic reports carry schema version `0.2`; schema field changes are
@@ -48,3 +50,5 @@ one parser, one validator, one framework, or one remote service.
 - A required parser or validator dependency is introduced without an ADR.
 - Package artifacts drift from documented public API.
 - Core imports file-system, process, parser, validator, or CLI dependencies.
+- The exact runtime floor or latest stable Node.js fails tests or packed-package
+  smoke while package metadata still claims compatibility.

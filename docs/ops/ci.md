@@ -62,10 +62,17 @@ diff hygiene. The Ubuntu job name remains stable for existing branch protection;
 Windows coverage is a separate status that can be made required without renaming
 the existing gate.
 
+`.github/workflows/runtime-compatibility.yml` independently checks the package
+runtime claim on Ubuntu. Its `minimum` job uses exact Node.js `24.0.0`; its
+`current` job uses the latest stable Node.js distribution. Both run workspace type
+checks and tests, packed-package smoke, and diff hygiene with the locked pnpm
+version. This rolling matrix is a compatibility signal, while the pinned main CI
+and release jobs remain the reproducible release baseline.
+
 ## Validation
 
 - Required validation names: typecheck, test, smoke, check.
 - Release blocker status: public API, CLI, or package-surface changes are blocked when local `check`,
-  smoke, or hosted CI fails.
+  smoke, hosted CI, or runtime compatibility fails.
 - Remaining operational risk: publication still runs on Ubuntu. Windows CI covers
   package behavior and smoke installation, but not the Trusted Publisher release job.
