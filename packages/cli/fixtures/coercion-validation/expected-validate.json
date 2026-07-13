@@ -45,6 +45,10 @@
     "maxDepth": 32,
     "maxKeyCount": 10000,
     "maxPathLength": 32,
-    "maxDiagnostics": 200
+    "maxDiagnostics": 200,
+    "maxSources": 64,
+    "maxProvenanceEvents": 20000,
+    "maxResolvedPaths": 10000,
+    "maxReportBytes": 4194304
   }
 }

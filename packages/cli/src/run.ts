@@ -73,7 +73,11 @@ export async function runCli(args: readonly string[], runtime: CliRuntime): Prom
         maxDepth: 0,
         maxKeyCount: 0,
         maxPathLength: 0,
-        maxDiagnostics: Math.max(1, issues.length)
+        maxDiagnostics: Math.max(1, issues.length),
+        maxSources: 1,
+        maxProvenanceEvents: 1,
+        maxResolvedPaths: 1,
+        maxReportBytes: 4 * 1024 * 1024
       }
     } as const;
     const report = buildDiagnosticReport(failureResult);
@@ -105,7 +109,11 @@ function buildUsageErrorReport(message: string) {
       maxDepth: 0,
       maxKeyCount: 0,
       maxPathLength: 0,
-      maxDiagnostics: 1
+      maxDiagnostics: 1,
+      maxSources: 1,
+      maxProvenanceEvents: 1,
+      maxResolvedPaths: 1,
+      maxReportBytes: 4 * 1024 * 1024
     }
   });
 }
@@ -130,11 +138,26 @@ async function applyDeclaredValidation(
     };
   }
 
+  const remainingProvenanceEvents = result.limits.maxProvenanceEvents - result.provenance.length;
+  if (remainingProvenanceEvents <= 0 && declaredValidators.validators.length > 0) {
+    const issues = combineConfigIssues(
+      setupCombinedIssues,
+      [{
+        category: "resource-limit",
+        code: "max_provenance_events_exceeded",
+        severity: "error",
+        message: `Retained entries exceeded the maximum of ${result.limits.maxProvenanceEvents}.`
+      }],
+      result.limits.maxDiagnostics
+    );
+    return { ...result, ok: false, issues };
+  }
+
   const validation = await runValidators({
     config: result.config,
     provenance: result.provenance,
     validators: declaredValidators.validators,
-    ...(declaration.limits === undefined ? {} : { limits: declaration.limits })
+    limits: { ...result.limits, maxProvenanceEvents: Math.max(1, remainingProvenanceEvents) }
   });
   const issues = combineConfigIssues(
     setupCombinedIssues,
@@ -146,6 +169,6 @@ async function applyDeclaredValidation(
     ...result,
     ok: !issues.some((issue) => issue.severity === "error"),
     issues,
-    provenance: [...result.provenance, ...validation.provenance]
+    provenance: [...result.provenance, ...validation.provenance].slice(0, result.limits.maxProvenanceEvents)
   };
 }

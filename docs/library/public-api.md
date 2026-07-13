@@ -32,8 +32,8 @@ Repository Type: library
 - `ConfigProvenance`: value-level source, override, default, coercion, validation,
   and redaction report.
 - `RedactedDiagnostic`: secret-safe errors and explain output.
-- `ResourceLimitPolicy`: bounds for file size, object depth, key count, path length,
-  diagnostics count, and source size.
+- `ResourceLimitPolicy`: bounds for source count, source size, object depth, key
+  count, path length, diagnostics, provenance, resolved paths, and report bytes.
 - `ConfigIssue`: bounded issue taxonomy for CLI usage, load, parse, mapping,
   merge, coercion, validation, redaction, and resource-limit failures.
 
@@ -76,6 +76,13 @@ Only positive safe integers are accepted. Missing or invalid values such as zero
 negative numbers, `NaN`, `Infinity`, or unsafe integers fall back to the documented
 default instead of disabling the bound. The CLI declaration layer remains stricter:
 an explicitly malformed limit is a declaration error rather than a fallback.
+
+Aggregate defaults are 64 sources, 20,000 retained provenance events, 10,000
+retained resolved paths, and 4 MiB of compact UTF-8 diagnostic-report JSON. Source
+count is rejected before resolution, provenance is bounded while events are
+created, and resolved paths are capped only after merge decisions complete. Reports
+that exceed `maxReportBytes` are replaced by a fixed error report rather than
+returning partial JSON. See ADR 0013.
 
 `resolveConfig` checks source values early and rechecks the final config after merge
 and coercion. A final aggregate or coercion-expanded structure that exceeds depth,

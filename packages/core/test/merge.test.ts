@@ -100,7 +100,11 @@ describe("resolveConfig", () => {
         maxDepth: Number.NaN,
         maxKeyCount: Number.POSITIVE_INFINITY,
         maxPathLength: 0,
-        maxDiagnostics: Number.MAX_SAFE_INTEGER + 1
+        maxDiagnostics: Number.MAX_SAFE_INTEGER + 1,
+        maxSources: 0,
+        maxProvenanceEvents: Number.NaN,
+        maxResolvedPaths: Number.POSITIVE_INFINITY,
+        maxReportBytes: 1
       }
     });
 
@@ -109,8 +113,36 @@ describe("resolveConfig", () => {
       maxDepth: 32,
       maxKeyCount: 10_000,
       maxPathLength: 32,
-      maxDiagnostics: 200
+      maxDiagnostics: 200,
+      maxSources: 64,
+      maxProvenanceEvents: 20_000,
+      maxResolvedPaths: 10_000,
+      maxReportBytes: 4 * 1024 * 1024
     });
+  });
+
+  it("bounds source count before resolution", () => {
+    const result = resolveConfig({
+      sources: [source("one", 0, { one: 1 }), source("two", 1, { two: 2 })],
+      limits: { maxSources: 1 }
+    });
+    expect(result.ok).toBe(false);
+    expect(result.sources).toHaveLength(1);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "max_sources_exceeded" }));
+  });
+
+  it("bounds retained provenance and resolved paths", () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { one: 1, two: 2, three: 3 })],
+      limits: { maxProvenanceEvents: 1, maxResolvedPaths: 1 }
+    });
+    expect(result.ok).toBe(false);
+    expect(result.provenance).toHaveLength(1);
+    expect(result.resolvedPaths).toHaveLength(1);
+    expect(result.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "max_provenance_events_exceeded" }),
+      expect.objectContaining({ code: "max_resolved_paths_exceeded" })
+    ]));
   });
 
   it("converts source value inspection exceptions into parse issues", () => {
@@ -1085,9 +1117,51 @@ describe("resolveConfig", () => {
       }
     ]);
   });
+
+  it("rejects oversized validator provenance before invoking validators", async () => {
+    let invoked = false;
+    const validation = await runValidators({
+      config: {},
+      provenance: [
+        { path: ["one"], action: "defined", sourceId: "one", message: "one" },
+        { path: ["two"], action: "defined", sourceId: "two", message: "two" }
+      ],
+      limits: { maxProvenanceEvents: 1 },
+      validators: [{
+        id: "must-not-run",
+        validate() {
+          invoked = true;
+          return { ok: true, issues: [] };
+        }
+      }]
+    });
+
+    expect(invoked).toBe(false);
+    expect(validation.issues).toContainEqual(expect.objectContaining({ code: "max_provenance_events_exceeded" }));
+  });
 });
 
 describe("loadConfigSources", () => {
+  it("rejects excess loaders before invoking them", async () => {
+    let invoked = false;
+    const loader = (id: string): ConfigLoader => ({
+      descriptor: { id, kind: "adapter", priority: 0, displayName: id },
+      load() {
+        invoked = true;
+        return { value: {} };
+      }
+    });
+    const loaded = await loadConfigSources({
+      loaders: [loader("one"), loader("two")],
+      context: undefined,
+      limits: { maxSources: 1 }
+    });
+
+    expect(invoked).toBe(false);
+    expect(loaded.sources).toEqual([]);
+    expect(loaded.issues).toContainEqual(expect.objectContaining({ code: "max_sources_exceeded" }));
+  });
+
   it("loads source adapters into merge-ready sources", async () => {
     const loaders: readonly ConfigLoader<{ readonly port: number }>[] = [
       {
@@ -1341,6 +1415,20 @@ describe("loadConfigSources", () => {
 });
 
 describe("buildDiagnosticReport", () => {
+  it("replaces oversized reports with a bounded error report", () => {
+    const result = resolveConfig({
+      sources: [{
+        descriptor: { id: "large", kind: "object", priority: 0, displayName: "x".repeat(4_000) },
+        value: { enabled: true }
+      }],
+      limits: { maxReportBytes: 1024 }
+    });
+    const report = buildDiagnosticReport(result);
+    expect(report.status).toBe("error");
+    expect(report.issues).toEqual([expect.objectContaining({ code: "max_report_bytes_exceeded" })]);
+    expect(new TextEncoder().encode(JSON.stringify(report)).byteLength).toBeLessThanOrEqual(1024);
+  });
+
   it.each([
     {
       name: "descriptor secret source with a pathless issue",

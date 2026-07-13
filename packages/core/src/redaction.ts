@@ -58,7 +58,7 @@ export function buildDiagnosticReport(
       .map((issue) => issue.sourceId as string)
   );
 
-  return {
+  const report: DiagnosticReport = {
     schemaVersion: "0.1",
     status: result.ok ? "ok" : "error",
     sources: result.sources.map((source) => ({
@@ -73,6 +73,23 @@ export function buildDiagnosticReport(
     ),
     issues: result.issues.map((issue) => sanitizeIssue(issue, sourceById, redactionContext)),
     provenance: result.provenance.map((event) => sanitizeProvenance(event, sourceById, redactionContext)),
+    limits: result.limits
+  };
+  if (new TextEncoder().encode(JSON.stringify(report)).byteLength <= result.limits.maxReportBytes) {
+    return report;
+  }
+  return {
+    schemaVersion: "0.1",
+    status: "error",
+    sources: [],
+    resolvedPaths: [],
+    issues: [{
+      category: "resource-limit",
+      code: "max_report_bytes_exceeded",
+      severity: "error",
+      message: `Diagnostic report exceeded the maximum of ${result.limits.maxReportBytes} bytes.`
+    }],
+    provenance: [],
     limits: result.limits
   };
 }

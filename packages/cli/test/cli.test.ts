@@ -2,6 +2,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  realpath,
   rm,
   symlink,
   writeFile
@@ -91,7 +92,7 @@ describe("loadPipelineDeclaration", () => {
       });
 
       expect(sources[0]?.value).toEqual({ origin: "A" });
-      expect(context.canonicalConfigPath).toBe(join(directoryA, "uce.json"));
+      expect(context.canonicalConfigPath).toBe(await realpath(join(directoryA, "uce.json")));
     });
   });
 
@@ -1199,7 +1200,8 @@ describe("runCli", () => {
             maxDepth: "deep",
             maxKeyCount: 0,
             maxPathLength: -1,
-            maxDiagnostics: 1.5
+            maxDiagnostics: 1.5,
+            maxReportBytes: 1
           }
         }),
         "utf8"
@@ -1276,6 +1278,35 @@ describe("runCli", () => {
         })
       );
       expect(report.issues.every((issue) => issue.category === "source-load")).toBe(true);
+    });
+  });
+
+  it("rejects excess declared sources before loading them", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "uce.json"),
+        JSON.stringify({
+          sources: [
+            { id: "first", kind: "object", priority: 0, value: { first: true } },
+            { id: "outside", kind: "json-file", priority: 1, path: "missing.json" }
+          ],
+          limits: { maxSources: 1 }
+        }),
+        "utf8"
+      );
+
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json", "--json"], {
+        cwd: dir,
+        env: {},
+        stdout: (text) => { stdout += text; },
+        stderr: () => {}
+      });
+      const report = JSON.parse(stdout) as { readonly issues: readonly { readonly code: string }[] };
+
+      expect(result.exitCode).toBe(3);
+      expect(report.issues).toContainEqual(expect.objectContaining({ code: "max_sources_exceeded" }));
+      expect(report.issues).not.toContainEqual(expect.objectContaining({ code: "file_read_failed" }));
     });
   });
 

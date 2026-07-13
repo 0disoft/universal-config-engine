@@ -28,11 +28,22 @@ export interface RunValidatorsResult {
 export async function runValidators(input: RunValidatorsInput): Promise<RunValidatorsResult> {
   const issues: ConfigIssue[] = [];
   const provenance: ProvenanceEvent[] = [];
-  const maxDiagnostics = normalizeResourceLimits(input.limits).maxDiagnostics;
+  const limits = normalizeResourceLimits(input.limits);
+  const maxDiagnostics = limits.maxDiagnostics;
+  if (input.provenance.length > limits.maxProvenanceEvents) {
+    return {
+      issues: [provenanceLimitIssue(limits.maxProvenanceEvents)],
+      provenance
+    };
+  }
   const validatorConfig = freezeConfigValue(cloneConfigValue(input.config));
   const validatorProvenance = freezeProvenance(input.provenance);
 
   for (const validator of input.validators) {
+    if (provenance.length >= limits.maxProvenanceEvents) {
+      pushBoundedIssues(issues, [provenanceLimitIssue(limits.maxProvenanceEvents)], maxDiagnostics);
+      break;
+    }
     if (isDiagnosticsLimitReached(issues, maxDiagnostics)) {
       break;
     }
@@ -92,6 +103,15 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
   }
 
   return { issues, provenance };
+}
+
+function provenanceLimitIssue(maximum: number): ConfigIssue {
+  return {
+    category: "resource-limit",
+    code: "max_provenance_events_exceeded",
+    severity: "error",
+    message: `Retained entries exceeded the maximum of ${maximum}.`
+  };
 }
 
 function freezeProvenance(input: readonly ProvenanceEvent[]): readonly ProvenanceEvent[] {

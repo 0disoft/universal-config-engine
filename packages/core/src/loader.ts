@@ -38,7 +38,20 @@ export async function loadConfigSources<TContext = undefined>(
 ): Promise<LoadConfigSourcesResult> {
   const sources: LoadedSource[] = [];
   const issues: ConfigIssue[] = [];
-  const maxDiagnostics = normalizeResourceLimits(input.limits).maxDiagnostics;
+  const limits = normalizeResourceLimits(input.limits);
+  const maxDiagnostics = limits.maxDiagnostics;
+
+  if (input.loaders.length > limits.maxSources) {
+    return {
+      sources,
+      issues: [{
+        category: "resource-limit",
+        code: "max_sources_exceeded",
+        severity: "error",
+        message: `Source count exceeded the maximum of ${limits.maxSources}.`
+      }]
+    };
+  }
 
   for (const loader of input.loaders) {
     try {

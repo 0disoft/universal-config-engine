@@ -116,6 +116,10 @@ export interface ResourceLimitPolicy {
   readonly maxKeyCount: number;
   readonly maxPathLength: number;
   readonly maxDiagnostics: number;
+  readonly maxSources: number;
+  readonly maxProvenanceEvents: number;
+  readonly maxResolvedPaths: number;
+  readonly maxReportBytes: number;
 }
 
 export interface OverrideMapping {

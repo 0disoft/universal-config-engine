@@ -25,7 +25,7 @@ import type {
   ResourceLimitPolicy,
   SourceKind
 } from "@0disoft/universal-config-engine-core";
-import { pathsEqual } from "@0disoft/universal-config-engine-core";
+import { DEFAULT_RESOURCE_LIMITS, pathsEqual } from "@0disoft/universal-config-engine-core";
 import type {
   PipelineDeclaration,
   PipelineValidatorDeclaration,
@@ -36,7 +36,10 @@ const SUPPORTED_SOURCE_KINDS = new Set(["object", "json-file", "dotenv-file", "p
 const SUPPORTED_MAPPING_PARSE_AS = new Set(["string", "number", "boolean", "json"]);
 const SUPPORTED_COERCION_TARGETS = new Set(["number", "boolean", "json"]);
 const SUPPORTED_VALIDATOR_KINDS = new Set(["json-schema-ajv"]);
-const RESOURCE_LIMIT_FIELDS = ["maxDepth", "maxKeyCount", "maxPathLength", "maxDiagnostics"] as const;
+const RESOURCE_LIMIT_FIELDS = [
+  "maxDepth", "maxKeyCount", "maxPathLength", "maxDiagnostics", "maxSources",
+  "maxProvenanceEvents", "maxResolvedPaths", "maxReportBytes"
+] as const;
 const PIPELINE_DECLARATION_FIELDS = new Set(["sources", "validators", "coercionRules", "limits"]);
 const BASE_SOURCE_FIELDS = new Set(["id", "kind", "priority", "displayName", "redaction"]);
 const SOURCE_KIND_FIELDS: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -350,7 +353,11 @@ function normalizeResourceLimitsDeclaration(limits: Readonly<Record<string, unkn
     ...optionalPositiveIntegerField(limits, "maxDepth"),
     ...optionalPositiveIntegerField(limits, "maxKeyCount"),
     ...optionalPositiveIntegerField(limits, "maxPathLength"),
-    ...optionalPositiveIntegerField(limits, "maxDiagnostics")
+    ...optionalPositiveIntegerField(limits, "maxDiagnostics"),
+    ...optionalPositiveIntegerField(limits, "maxSources"),
+    ...optionalPositiveIntegerField(limits, "maxProvenanceEvents"),
+    ...optionalPositiveIntegerField(limits, "maxResolvedPaths"),
+    ...optionalPositiveIntegerField(limits, "maxReportBytes")
   };
 }
 
@@ -646,6 +653,19 @@ function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[] {
     }
   }
 
+  const declaredMaxSources = isRecord(value.limits) && isPositiveInteger(value.limits.maxSources)
+    ? value.limits.maxSources
+    : DEFAULT_RESOURCE_LIMITS.maxSources;
+  if (value.sources.length > declaredMaxSources) {
+    appendDeclarationIssues(issues, [{
+      category: "resource-limit",
+      code: "max_sources_exceeded",
+      severity: "error",
+      path: ["sources"],
+      message: `Source count exceeded the maximum of ${declaredMaxSources}.`
+    }]);
+  }
+
   if (value.validators !== undefined && !Array.isArray(value.validators)) {
     issues.push(
       pipelineDeclarationIssue({
@@ -892,6 +912,20 @@ function validateResourceLimitsDeclaration(limits: unknown): readonly ConfigIssu
         })
       );
     }
+  }
+
+  if (
+    typeof limits.maxReportBytes === "number" &&
+    isPositiveInteger(limits.maxReportBytes) &&
+    limits.maxReportBytes < 1024
+  ) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_limit_value_invalid",
+        path: [...path, "maxReportBytes"],
+        message: "Pipeline limits.maxReportBytes must be at least 1024 when provided."
+      })
+    );
   }
 
   return issues;

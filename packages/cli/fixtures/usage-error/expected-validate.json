@@ -17,6 +17,10 @@
     "maxDepth": 0,
     "maxKeyCount": 0,
     "maxPathLength": 0,
-    "maxDiagnostics": 1
+    "maxDiagnostics": 1,
+    "maxSources": 1,
+    "maxProvenanceEvents": 1,
+    "maxResolvedPaths": 1,
+    "maxReportBytes": 4194304
   }
 }

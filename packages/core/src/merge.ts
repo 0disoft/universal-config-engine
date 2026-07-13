@@ -50,11 +50,27 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
   const policy: MergePolicy = { ...DEFAULT_MERGE_POLICY, ...input.mergePolicy };
   const limits = normalizeResourceLimits(input.limits);
   const sources = sortSources(input.sources);
-  const descriptors = sources.map((source) => source.descriptor);
+  const descriptors = sources.slice(0, limits.maxSources).map((source) => source.descriptor);
   let config: Record<string, ConfigValue> = {};
   const issues: ConfigIssue[] = [];
   const provenance: ProvenanceEvent[] = [];
   const resolvedIndex = createResolvedPathIndex();
+  if (sources.length > limits.maxSources) {
+    return {
+      ok: false,
+      config,
+      sources: descriptors,
+      issues: [{
+        category: "resource-limit",
+        code: "max_sources_exceeded",
+        severity: "error",
+        message: `Source count exceeded the maximum of ${limits.maxSources}.`
+      }],
+      provenance,
+      resolvedPaths: [],
+      limits
+    };
+  }
   const sourceIdentityIssues = duplicateSourceIdIssues(sources, limits.maxDiagnostics);
   if (sourceIdentityIssues.length > 0) {
     return {
@@ -75,12 +91,12 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     pushBoundedIssues(issues, sourceIssues, limits);
 
     if (sourceIssues.some((issue) => issue.severity === "error")) {
-      provenance.push({
+      appendProvenance(provenance, {
         path: [],
         action: "rejected",
         sourceId: source.descriptor.id,
         message: `Source ${source.descriptor.id} was rejected before merge.`
-      });
+      }, issues, limits);
       continue;
     }
 
@@ -106,11 +122,17 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     });
     config = coercionResult.config as Record<string, ConfigValue>;
     pushBoundedIssues(issues, coercionResult.issues, limits);
-    provenance.push(...coercionResult.provenance);
+    for (const event of coercionResult.provenance) {
+      appendProvenance(provenance, event, issues, limits);
+    }
   }
 
   const finalStructure = flattenConfigObject("core:resolved-config", config, limits);
   pushBoundedIssues(issues, finalStructure.issues, limits);
+  const resolvedPaths = Array.from(resolvedIndex.byPath.values());
+  if (resolvedPaths.length > limits.maxResolvedPaths) {
+    pushResourceLimitIssueOnce(issues, "max_resolved_paths_exceeded", limits.maxResolvedPaths, limits);
+  }
 
   return {
     ok: !issues.some((issue) => issue.severity === "error"),
@@ -118,7 +140,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     sources: descriptors,
     issues,
     provenance,
-    resolvedPaths: Array.from(resolvedIndex.byPath.values()).map((resolved) => ({
+    resolvedPaths: resolvedPaths.slice(0, limits.maxResolvedPaths).map((resolved) => ({
       path: resolved.path,
       status: resolved.status,
       winningSourceId: resolved.winningSourceId,
@@ -267,12 +289,12 @@ function applyEntry(input: {
   }
 
   if (relatedResolved.length === 0 && existingValue === undefined) {
-    input.provenance.push({
+    appendProvenance(input.provenance, {
       path: input.entryPath,
       action: "defined",
       sourceId: input.descriptor.id,
       message: `Path was defined by source ${input.descriptor.id}.`
-    });
+    }, input.issues, input.limits);
     setResolvedPath(input.resolvedIndex, {
       path: input.entryPath,
       status: "resolved",
@@ -288,7 +310,7 @@ function applyEntry(input: {
     deleteResolvedPath(input.resolvedIndex, key);
   }
   const previousSourceId = overriddenSourceIds[0];
-  input.provenance.push({
+  appendProvenance(input.provenance, {
     path: input.entryPath,
     action: "overridden",
     sourceId: input.descriptor.id,
@@ -297,7 +319,7 @@ function applyEntry(input: {
       previousSourceId === undefined
         ? `Source ${input.descriptor.id} replaced an overlapping config shape.`
         : `Source ${input.descriptor.id} overrode source ${previousSourceId}.`
-  });
+  }, input.issues, input.limits);
   setResolvedPath(input.resolvedIndex, {
     path: input.entryPath,
     status: "resolved",
@@ -361,6 +383,34 @@ function setResolvedPath(index: MutableResolvedPathIndex, resolved: MutableResol
     node = child;
   }
   node.entryKey = key;
+}
+
+function appendProvenance(
+  provenance: ProvenanceEvent[],
+  event: ProvenanceEvent,
+  issues: ConfigIssue[],
+  limits: ResourceLimitPolicy
+): void {
+  if (provenance.length >= limits.maxProvenanceEvents) {
+    pushResourceLimitIssueOnce(issues, "max_provenance_events_exceeded", limits.maxProvenanceEvents, limits);
+    return;
+  }
+  provenance.push(event);
+}
+
+function pushResourceLimitIssueOnce(
+  issues: ConfigIssue[],
+  code: string,
+  maximum: number,
+  limits: ResourceLimitPolicy
+): void {
+  if (issues.some((issue) => issue.category === "resource-limit" && issue.code === code)) return;
+  pushBoundedIssue(issues, {
+    category: "resource-limit",
+    code,
+    severity: "error",
+    message: `Retained entries exceeded the maximum of ${maximum}.`
+  }, limits);
 }
 
 function deleteResolvedPath(index: MutableResolvedPathIndex, key: string): void {

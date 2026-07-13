@@ -61,6 +61,10 @@ Returning coerced config from `applyCoercionRules` while removing its undocument
 input mutation is a pre-1.0 minor compatibility change. Consumers must read the
 returned `config` instead of observing side effects.
 
+Adding aggregate execution-budget fields to `ResourceLimitPolicy` and CLI JSON
+`limits`, together with new resource-limit failures, requires the next pre-1.0 minor
+release. See ADR 0013.
+
 ## Patch Changes
 
 Patch versions may fix incorrect provenance, redaction, validation, or parsing
