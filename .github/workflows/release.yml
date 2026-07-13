@@ -159,6 +159,26 @@ jobs:
             fi
           done
 
+      - name: Record publication state before publish
+        id: publication_before
+        if: steps.release.outputs.dry_run != 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state_file=".tmp/release/publication-state-run-${GITHUB_RUN_ID}-attempt-${GITHUB_RUN_ATTEMPT}-before.json"
+          node scripts/record-publication-state.mjs \
+            --version "$RELEASE_VERSION" \
+            --tag "$RELEASE_TAG" \
+            --commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --phase before \
+            --output "$state_file"
+          echo "state_file=$state_file" >> "$GITHUB_OUTPUT"
+
       - name: Upload GitHub release assets
         if: steps.release.outputs.dry_run != 'true'
         env:
@@ -181,6 +201,7 @@ jobs:
         env:
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
           DRY_RUN: ${{ steps.release.outputs.dry_run }}
+          PUBLICATION_STATE_FILE: ${{ steps.publication_before.outputs.state_file }}
         shell: bash
         run: |
           set -euo pipefail
@@ -198,9 +219,18 @@ jobs:
             package_name="${entry%%|*}"
             tarball="${entry##*|}"
 
-            if [[ "$DRY_RUN" != "true" ]] && npm view "${package_name}@${RELEASE_VERSION}" version --registry=https://registry.npmjs.org/ >/dev/null 2>&1; then
-              echo "Skipping already published package ${package_name}@${RELEASE_VERSION}"
-              continue
+            if [[ "$DRY_RUN" != "true" ]]; then
+              package_status="$(node --input-type=module -e '
+                import { readFileSync } from "node:fs";
+                const manifest = JSON.parse(readFileSync(process.argv[1], "utf8"));
+                const entry = manifest.packages.find((candidate) => candidate.name === process.argv[2]);
+                if (entry === undefined) process.exit(2);
+                process.stdout.write(entry.status);
+              ' "$PUBLICATION_STATE_FILE" "$package_name")"
+              if [[ "$package_status" == "published" ]]; then
+                echo "Skipping already published package ${package_name}@${RELEASE_VERSION}"
+                continue
+              fi
             fi
 
             publish_args=(publish "$tarball" --access public --provenance --registry=https://registry.npmjs.org/)
@@ -248,3 +278,39 @@ jobs:
         env:
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: pnpm run smoke:registry-packages
+
+      - name: Record publication state after publish
+        if: always() && steps.release.outputs.dry_run != 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state_file=".tmp/release/publication-state-run-${GITHUB_RUN_ID}-attempt-${GITHUB_RUN_ATTEMPT}-after.json"
+          node scripts/record-publication-state.mjs \
+            --version "$RELEASE_VERSION" \
+            --tag "$RELEASE_TAG" \
+            --commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --phase after \
+            --output "$state_file"
+
+      - name: Preserve publication evidence
+        if: always() && steps.release.outputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          manifests=(.tmp/release/publication-state-*.json)
+          if [[ "${#manifests[@]}" -eq 0 ]]; then
+            echo "No publication state manifests were produced." >&2
+            exit 1
+          fi
+          gh release upload "$RELEASE_TAG" "${manifests[@]}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber

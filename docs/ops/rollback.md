@@ -30,6 +30,16 @@ If a bad package is published:
 5. Publish the patch only after validation passes and Trusted Publisher
    registration is confirmed.
 
+If only some workspace packages are published:
+
+1. Preserve the workflow run URL and its package-level before and after manifests.
+2. Confirm that every published package has the expected version and tagged commit
+   provenance; do not attempt to overwrite it.
+3. Rerun the same tagged workflow. Its preflight manifest skips confirmed published
+   packages and resumes missing packages in dependency order.
+4. Stop and investigate instead when npm state cannot be read reliably or a
+   published package does not match the release version.
+
 If a GitHub release exists but npm publication has not happened:
 
 1. Preserve the failing tag, release URL, asset names, and validation log.

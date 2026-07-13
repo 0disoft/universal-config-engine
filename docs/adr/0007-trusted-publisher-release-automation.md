@@ -37,7 +37,15 @@ The release workflow is tag-driven for `v<major>.<minor>.<patch>` tags. It:
 - runs the release validation gates;
 - builds and packs each publishable workspace package;
 - uploads GitHub release tarballs from the validated tag;
+- records package-level npm publication state before and after publication;
 - publishes the packed tarballs with npm CLI provenance enabled.
+
+Publication state uses schema `0.1` and records the release version, tag, commit,
+workflow run and attempt, observation phase, and `published` or `missing` status for
+each of the five packages. A registry lookup failure is not treated as a missing
+package. Each workflow attempt preserves its before and after manifests as GitHub
+Release assets. A rerun skips only packages confirmed as already published by its
+before manifest and resumes the remaining packages in dependency order.
 
 `pnpm pack` remains responsible for producing publishable tarballs from workspace
 packages. `npm publish <tarball>` is the final publication command so npm Trusted
@@ -61,6 +69,8 @@ dispatch is dry-run by default and is intended for validation, not routine relea
 - Package version bumps must happen before tagging.
 - Future changes to publisher, environment, package scope, or release trigger must
   update this ADR and `docs/ops/release.md`.
+- npm publication is not atomic, but each attempt now leaves durable package-level
+  evidence and can resume without trying to overwrite published versions.
 
 ## Review Blockers
 
@@ -68,3 +78,4 @@ dispatch is dry-run by default and is intended for validation, not routine relea
 - The workflow publishes unpacked package directories instead of packed tarballs.
 - A long-lived npm token is reintroduced for routine release.
 - The npm Trusted Publisher repository or workflow filename differs from this ADR.
+- A non-dry-run publication does not preserve package-level before and after state.

@@ -113,8 +113,8 @@ Owner: UNASSIGNED
   behavior.
 - Converged CLI orchestration on the public pipeline facade without weakening the
   declaration-specific diagnostic and exit-code contracts.
-- Define resumable partial-publication evidence for the five-package release because
-  npm publication cannot be atomic.
+- Added resumable package-level publication evidence for the five-package release
+  because npm publication cannot be atomic.
 - Record and test the supported Node.js runtime matrix independently from the package
   manager and CI runner pins.
 

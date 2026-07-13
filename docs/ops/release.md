@@ -59,6 +59,11 @@ Before publishing, also verify:
    tarballs, and publish npm packages through Trusted Publisher.
 6. Verify installed package imports and the `uce` binary from published artifacts.
 
+Every non-dry-run attempt attaches `publication-state-...-before.json` and
+`publication-state-...-after.json` to the GitHub Release. The workflow distinguishes
+an npm `404` from registry lookup failure and resumes only packages recorded as
+missing. Preserve these manifests when investigating a partial release.
+
 The post-publication smoke can also be reproduced with
 `$env:RELEASE_VERSION = "0.4.0"; pnpm run smoke:registry-packages`.
 
@@ -109,6 +114,8 @@ releases, including the `0.2.x`, `0.3.x`, and `0.4.x` lines, are published by
 - Package metadata does not match ADR 0005.
 - A report, fixture, or package artifact exposes raw secret values.
 - GitHub release assets cannot be reproduced from the validated tag.
+- Publication state cannot be read reliably from npm or preserved on the GitHub
+  Release.
 
 ## Validation
 
