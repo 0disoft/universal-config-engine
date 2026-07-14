@@ -14,6 +14,7 @@ Status: Draft
 - Library public API source: docs/library/public-api.md
 - Library semver source: docs/library/semver.md
 - Library compatibility source: docs/library/compatibility.md
+- 1.0 stability plan: docs/library/stability-1.0.md
 - 0.3.x migration guide: docs/library/migration-0.3.md
 - 0.4.x migration guide: docs/library/migration-0.4.md
 - 0.5.x migration guide: docs/library/migration-0.5.md

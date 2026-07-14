@@ -35,6 +35,11 @@ merge behavior, validator handoff, provenance, and redaction behavior explicit.
 - `docs/library/migration-0.5.md`: migrate consumers to the current `0.5.0`
   observability and execution-budget release.
 
+## Stable Release Planning
+
+- `docs/library/stability-1.0.md`: public-surface audit, adversarial evidence,
+  consumer matrix, and release gates required before `1.0.0-rc.1`.
+
 ## Review Blockers
 
 - Public exports change without semver and migration notes.

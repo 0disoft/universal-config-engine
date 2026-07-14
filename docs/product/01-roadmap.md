@@ -103,7 +103,7 @@ Owner: UNASSIGNED
 
 ## Phase 8: 0.5.x Observability And Execution Budgets
 
-- Define aggregate execution budgets for source count, retained provenance, resolved
+- Defined aggregate execution budgets for source count, retained provenance, resolved
   paths, and serialized diagnostic report bytes before adding new report fields.
 - Preserved bounded loader source locations through resolution and diagnostics with
   report schema `0.2`.
@@ -117,6 +117,24 @@ Owner: UNASSIGNED
   because npm publication cannot be atomic.
 - Recorded and tested the supported Node.js runtime matrix independently from the
   reproducible main CI and release runner pins.
+
+## Phase 9: 1.0 Contract Stabilization
+
+- Classify every published declaration as stable, candidate, or compatibility
+  surface and resolve the remaining validator compatibility decision.
+- Freeze or deliberately replace diagnostic report schema `0.2` before stable use.
+- Freeze CLI commands, flags, JSON envelopes, and exit codes for the `1.x` line.
+- Decide the stable Node.js upper-range policy while retaining exact-floor and
+  rolling-current evidence.
+- Define the `1.x` deprecation notice, support-window, migration, and removal policy.
+- Add bounded deterministic generated tests for merge, path, resource-limit,
+  redaction, loader, and validator invariants.
+- Add deterministic complexity guards for critical paths without cross-machine
+  wall-clock thresholds.
+- Validate packed release candidates across JavaScript, strict TypeScript, adapter,
+  CLI, operating-system, and supported-Node consumers.
+- Publish `1.0.0-rc.1` only after all stability gates in
+  `docs/library/stability-1.0.md` are satisfied.
 
 ## Explicitly Deferred
 
