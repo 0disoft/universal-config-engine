@@ -116,8 +116,12 @@ The `v0.1.0` release includes pre-publication tarballs for core, node, CLI, Ajv
 validator, and Zod validator packages under the superseded package scope. The
 `v0.1.1` release is the first npm publication baseline under `@0disoft`. Later
 releases, including the `0.2.x` through `0.6.x` lines, are published by
-`.github/workflows/release.yml`. The `1.0.0-rc.1` line is prepared as the first
-prerelease to publish under npm `next`.
+`.github/workflows/release.yml`. The `1.0.0-rc.1` line is the first prerelease
+published under npm `next`.
+
+Stable `1.0.0` must follow the review-period and candidate-revalidation contract in
+`docs/library/stability-1.0.md`; a successful candidate publication alone does not
+authorize immediate stable publication.
 
 ## Stop Conditions
 

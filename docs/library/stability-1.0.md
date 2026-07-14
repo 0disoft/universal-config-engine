@@ -75,6 +75,24 @@ matrix.
 
 ## Release Gates
 
+### Review Period Contract
+
+The stable release requires a minimum seven-day (`168` hour) public review period.
+The clock starts at the GitHub prerelease `publishedAt` timestamp, not at the local
+commit or tag time. Throughout the period, all five packages must remain installable
+at the candidate's exact version under npm `next` while npm `latest` continues to
+name the previous stable release.
+
+A newly confirmed issue that requires a breaking public-contract change blocks the
+stable release. The fix must ship as another release candidate, and the review
+period restarts from that candidate's publication timestamp. Non-breaking fixes may
+also use another candidate when they affect runtime or packaging behavior; the
+stable release must not silently differ from the candidate that completed review.
+
+Immediately before stable release preparation, rerun the main CI, runtime
+compatibility, consumer compatibility, release dry-run, exact registry package
+smoke, and npm dist-tag/provenance checks against the intended stable commit.
+
 `1.0.0-rc.1` may be prepared only when:
 
 - every public declaration has an explicit stability classification;
@@ -89,6 +107,8 @@ matrix.
 documented review period. Any newly discovered breaking requirement returns the
 work to another release candidate instead of changing the stable tag in place.
 
-The preparation gates above are satisfied for `1.0.0-rc.1`. Stable `1.0.0` remains
-blocked until the published release candidate passes registry smoke and completes
-the documented review period.
+The preparation gates above are satisfied for `1.0.0-rc.1`. The candidate was
+published at `2026-07-14T10:11:01Z`; its hosted release and exact registry package
+smoke passed. Stable `1.0.0` remains blocked until at least
+`2026-07-21T10:11:01Z` and until the final checks above pass without a confirmed
+breaking blocker.

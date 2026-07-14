@@ -136,9 +136,10 @@ Owner: UNASSIGNED
   wall-clock thresholds.
 - Validated packed release candidates across JavaScript, strict TypeScript, adapter,
   CLI, operating-system, and supported-Node consumers.
-- Prepared `1.0.0-rc.1` after satisfying all preparation gates in
-  `docs/library/stability-1.0.md`; stable `1.0.0` remains gated by candidate
-  registry smoke and the review period.
+- Published `1.0.0-rc.1` under npm `next` after satisfying all preparation gates
+  and passing candidate registry smoke. Stable `1.0.0` remains gated by the
+  seven-day review period and final revalidation in
+  `docs/library/stability-1.0.md`.
 
 ## Explicitly Deferred
 
