@@ -22,8 +22,8 @@ Node file reader:
 1. opens the requested file without reading contents;
 2. canonicalizes the allowed root and current file path;
 3. rejects a canonical file path outside the allowed root;
-4. compares bigint `dev` and `ino` identity from the current path with the opened
-   file handle, avoiding numeric precision loss across supported platforms;
+4. requires matching bigint `ino` identity from the current path and opened handle,
+   and also requires matching `dev` when both calls provide a nonzero device id;
 5. reads only from that verified handle.
 
 Boundary lookup failure, an outside canonical path, or changed file identity
@@ -52,9 +52,11 @@ handle prevents a later path replacement from redirecting the read.
 - Node consumers can apply the same boundary without depending on CLI code.
 - Boundary verification adds filesystem metadata calls only when
   `allowedRootPath` is configured.
-- Platforms must provide stable bigint `dev` and `ino` values through Node.js
-  `stat` for identity verification. Bigint comparison is required for Windows
-  compatibility at the exact Node.js `24.0.0` floor.
+- Platforms must provide stable bigint `ino` values through Node.js `stat` for
+  identity verification. Device identity is additionally compared when both stat
+  variants provide it. Windows Node.js `24.0.0` reports path `dev` as zero while
+  handle `dev` is nonzero, so zero is treated as unavailable rather than as a
+  mismatched device. Bigint comparison avoids numeric precision loss.
 
 ## Validation
 

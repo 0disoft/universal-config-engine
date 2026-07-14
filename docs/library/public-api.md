@@ -107,7 +107,7 @@ The Node package exports `readTextFileWithinLimit` for bounded consumers such as
 the CLI pipeline declaration loader. It reads through an open handle and returns a
 resource-limit issue instead of allocating beyond the configured byte limit. A
 successful result includes `canonicalPath`, verified against the opened file
-identity with bigint filesystem identifiers before reading.
+identity with bigint inode and, when available, device identifiers before reading.
 
 The CLI package exports `loadPipelineDeclarationContext` for callers that need the
 normalized declaration together with its opened canonical path. The existing

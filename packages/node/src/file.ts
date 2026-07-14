@@ -82,7 +82,12 @@ async function openedFileBoundaryResult(input: {
   try {
     const canonicalFilePath = await realpath(input.filePath);
     const currentStats = await stat(canonicalFilePath, { bigint: true });
-    if (currentStats.dev !== input.openedDevice || currentStats.ino !== input.openedInode) {
+    if (!sameFileIdentity({
+      openedDevice: input.openedDevice,
+      openedInode: input.openedInode,
+      currentDevice: currentStats.dev,
+      currentInode: currentStats.ino
+    })) {
       return {
         ok: false,
         issues: [fileBoundaryIssue(input.sourceId, "file_identity_changed")]
@@ -106,6 +111,21 @@ async function openedFileBoundaryResult(input: {
       issues: [fileBoundaryIssue(input.sourceId, "file_boundary_verification_failed")]
     };
   }
+}
+
+function sameFileIdentity(input: {
+  readonly openedDevice: bigint;
+  readonly openedInode: bigint;
+  readonly currentDevice: bigint;
+  readonly currentInode: bigint;
+}): boolean {
+  if (input.openedInode !== input.currentInode) {
+    return false;
+  }
+  if (input.openedDevice === 0n || input.currentDevice === 0n) {
+    return true;
+  }
+  return input.openedDevice === input.currentDevice;
 }
 
 function isInsideOrEqualPath(rootPath: string, targetPath: string): boolean {
