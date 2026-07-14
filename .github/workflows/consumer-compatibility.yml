@@ -1,0 +1,65 @@
+name: Consumer Compatibility
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: consumer-compatibility-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  packed-consumer:
+    name: packed-consumer-${{ matrix.os-name }}-${{ matrix.runtime }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            os-name: ubuntu
+            node-version: 24.0.0
+            runtime: minimum
+          - os: ubuntu-latest
+            os-name: ubuntu
+            node-version: node
+            runtime: current
+          - os: windows-latest
+            os-name: windows
+            node-version: 24.0.0
+            runtime: minimum
+          - os: windows-latest
+            os-name: windows
+            node-version: node
+            runtime: current
+
+    steps:
+      - name: Checkout
+        # actions/checkout v7.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - name: Setup Node.js
+        # actions/setup-node v6.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.7.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Smoke isolated packed consumers
+        run: pnpm run smoke:consumer-matrix
+
+      - name: Check repository diff hygiene
+        run: git diff --check

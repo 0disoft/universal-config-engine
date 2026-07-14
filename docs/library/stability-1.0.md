@@ -69,6 +69,10 @@ The release candidate must pass packed or registry-backed consumers covering:
 - exact Node.js `24.0.0` and the latest stable Node.js release;
 - migration examples from the latest `0.x` release.
 
+`pnpm run smoke:consumer-matrix` owns the isolated packed scenarios, and
+`.github/workflows/consumer-compatibility.yml` owns the operating-system and Node.js
+matrix.
+
 ## Release Gates
 
 `1.0.0-rc.1` may be prepared only when:

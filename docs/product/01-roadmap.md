@@ -132,7 +132,7 @@ Owner: UNASSIGNED
   redaction, loader, and validator invariants.
 - Added deterministic complexity guards for critical paths without cross-machine
   wall-clock thresholds.
-- Validate packed release candidates across JavaScript, strict TypeScript, adapter,
+- Validated packed release candidates across JavaScript, strict TypeScript, adapter,
   CLI, operating-system, and supported-Node consumers.
 - Publish `1.0.0-rc.1` only after all stability gates in
   `docs/library/stability-1.0.md` are satisfied.

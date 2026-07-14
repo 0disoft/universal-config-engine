@@ -69,6 +69,12 @@ checks and tests, packed-package smoke, and diff hygiene with the locked pnpm
 version. This rolling matrix is a compatibility signal, while the pinned main CI
 and release jobs remain the reproducible release baseline.
 
+`.github/workflows/consumer-compatibility.yml` installs packed candidate artifacts
+into isolated core, Node, Ajv, Zod, and CLI projects. It runs JavaScript ESM, strict
+TypeScript, adapter, and installed binary checks across Ubuntu and Windows on exact
+Node.js `24.0.0` and the latest stable Node.js release. Workspace links are not used
+inside those consumers.
+
 ## Validation
 
 - Required validation names: typecheck, test, smoke, check.
