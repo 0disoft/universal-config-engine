@@ -128,7 +128,7 @@ Owner: UNASSIGNED
   evidence.
 - Defined the `1.x` deprecation notice, support-window, migration, and removal
   policy.
-- Add bounded deterministic generated tests for merge, path, resource-limit,
+- Added bounded deterministic generated tests for merge, path, resource-limit,
   redaction, loader, and validator invariants.
 - Add deterministic complexity guards for critical paths without cross-machine
   wall-clock thresholds.

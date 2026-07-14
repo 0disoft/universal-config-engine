@@ -48,6 +48,9 @@ Testing standard defines merge-blocking expectations for unit, integration, cont
   issue retention, and descriptor-owned issue/location source identity.
 - Validator boundary tests cover config and provenance mutation attempts, and source
   identity tests cover duplicate-id fail-closed behavior before reporting.
+- Generated invariant tests use a fixed seed and bounded run count so failures report
+  replayable seed and shrink paths. They supplement rather than replace named
+  regressions and golden fixtures.
 
 ## Review Blockers
 
