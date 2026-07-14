@@ -3,10 +3,13 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import { parseReleaseVersion } from "./release-version.mjs";
+
 const version = process.env.RELEASE_VERSION;
-if (version === undefined || !/^\d+\.\d+\.\d+$/.test(version)) {
-  throw new Error("RELEASE_VERSION must be an exact semantic version such as 0.6.0.");
+if (version === undefined) {
+  throw new Error("RELEASE_VERSION must be set to an exact release version.");
 }
+parseReleaseVersion(version);
 
 const packageNames = [
   "@0disoft/universal-config-engine-core",

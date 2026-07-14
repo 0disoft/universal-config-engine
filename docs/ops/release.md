@@ -22,6 +22,8 @@ no credentials or generated diagnostic reports with raw secret values.
 - Patch: fixes that preserve documented behavior.
 - Minor: additive public API, CLI report, package, or adapter behavior.
 - Major: reserved for post-`1.0` breaking changes.
+- Release candidate: a version such as `1.0.0-rc.1`, published to npm under
+  `next` and marked as a GitHub prerelease without replacing npm `latest`.
 
 ## Pre-Release Checklist
 
@@ -71,6 +73,11 @@ missing. Preserve these manifests when investigating a partial release.
 
 The post-publication smoke can also be reproduced with
 `$env:RELEASE_VERSION = "0.6.0"; pnpm run smoke:registry-packages`.
+
+Stable tags publish with the npm `latest` dist-tag. Semantic-version prerelease
+tags publish with `next`; the workflow verifies both that `next` points to the
+released version and that a prerelease did not replace `latest`. Consumers must use
+an exact prerelease version or the explicit `next` tag to opt in.
 
 Manual local publication is a break-glass fallback only. If it is used, it must
 follow the same validation gates and use a temporary `.npmrc` that is removed

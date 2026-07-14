@@ -5,6 +5,7 @@ import {
   collectPublicationState,
   RELEASE_PACKAGE_NAMES
 } from "./record-publication-state.mjs";
+import { parseReleaseVersion } from "./release-version.mjs";
 
 test("collects a bounded package publication summary", () => {
   const manifest = collectPublicationState({
@@ -50,4 +51,24 @@ test("rejects an unexpected registry version", () => {
     stdout: '"0.4.0"',
     stderr: ""
   }, "0.5.0"), /unexpected package version/);
+});
+
+test("classifies stable and prerelease npm tags", () => {
+  assert.deepEqual(parseReleaseVersion("1.0.0"), {
+    version: "1.0.0",
+    prerelease: false,
+    npmTag: "latest"
+  });
+  assert.deepEqual(parseReleaseVersion("1.0.0-rc.1"), {
+    version: "1.0.0-rc.1",
+    prerelease: true,
+    npmTag: "next"
+  });
+});
+
+test("rejects partial versions and invalid prerelease identifiers", () => {
+  assert.throws(() => parseReleaseVersion("1.0"), /exact stable or prerelease/);
+  assert.throws(() => parseReleaseVersion("01.0.0"), /exact stable or prerelease/);
+  assert.throws(() => parseReleaseVersion("1.0.0-rc.01"), /leading zeroes/);
+  assert.throws(() => parseReleaseVersion("1.0.0-rc+build"), /exact stable or prerelease/);
 });

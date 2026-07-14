@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to validate, such as v0.6.0"
+        description: "Release tag to validate, such as v0.6.0 or v1.0.0-rc.1"
         required: true
         type: string
       dry_run:
@@ -50,14 +50,24 @@ jobs:
             fi
           fi
 
-          if [[ ! "$tag_name" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Release tag must match v<major>.<minor>.<patch>: $tag_name" >&2
+          if [[ ! "$tag_name" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "Release tag must be an exact stable or prerelease semantic version: $tag_name" >&2
             exit 1
+          fi
+
+          version="${tag_name#v}"
+          prerelease="false"
+          npm_tag="latest"
+          if [[ "$version" == *-* ]]; then
+            prerelease="true"
+            npm_tag="next"
           fi
 
           {
             echo "tag_name=$tag_name"
-            echo "version=${tag_name#v}"
+            echo "version=$version"
+            echo "prerelease=$prerelease"
+            echo "npm_tag=$npm_tag"
             echo "dry_run=$dry_run"
             echo "checkout_ref=$checkout_ref"
           } >> "$GITHUB_OUTPUT"
@@ -92,8 +102,10 @@ jobs:
           set -euo pipefail
           node --input-type=module <<'NODE'
           import { readFileSync } from "node:fs";
+          import { parseReleaseVersion } from "./scripts/release-version.mjs";
 
           const releaseVersion = process.env.RELEASE_VERSION;
+          parseReleaseVersion(releaseVersion);
           const packagePaths = [
             "packages/core/package.json",
             "packages/node/package.json",
@@ -188,23 +200,32 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+          RELEASE_PRERELEASE: ${{ steps.release.outputs.prerelease }}
         shell: bash
         run: |
           set -euo pipefail
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" .tmp/release/*.tgz --repo "$GITHUB_REPOSITORY" --clobber
+            if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+              gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --prerelease
+            fi
           else
-            gh release create "$RELEASE_TAG" .tmp/release/*.tgz \
+            release_args=(create "$RELEASE_TAG" .tmp/release/*.tgz \
               --repo "$GITHUB_REPOSITORY" \
               --verify-tag \
               --title "$RELEASE_TAG" \
-              --notes "Release $RELEASE_TAG publishes Universal Config Engine packages from the validated tag."
+              --notes "Release $RELEASE_TAG publishes Universal Config Engine packages from the validated tag.")
+            if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+              release_args+=(--prerelease)
+            fi
+            gh release "${release_args[@]}"
           fi
 
       - name: Publish npm packages
         env:
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
           DRY_RUN: ${{ steps.release.outputs.dry_run }}
+          NPM_TAG: ${{ steps.release.outputs.npm_tag }}
           PUBLICATION_STATE_FILE: ${{ steps.publication_before.outputs.state_file }}
         shell: bash
         run: |
@@ -237,7 +258,7 @@ jobs:
               fi
             fi
 
-            publish_args=(publish "$tarball" --access public --provenance --registry=https://registry.npmjs.org/)
+            publish_args=(publish "$tarball" --access public --provenance --tag "$NPM_TAG" --registry=https://registry.npmjs.org/)
             if [[ "$DRY_RUN" == "true" ]]; then
               publish_args+=(--dry-run)
             fi
@@ -249,6 +270,8 @@ jobs:
         if: steps.release.outputs.dry_run != 'true'
         env:
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          NPM_TAG: ${{ steps.release.outputs.npm_tag }}
+          RELEASE_PRERELEASE: ${{ steps.release.outputs.prerelease }}
         shell: bash
         run: |
           set -euo pipefail
@@ -264,11 +287,23 @@ jobs:
             package_ref="${package_name}@${RELEASE_VERSION}"
             for attempt in {1..12}; do
               if npm view "$package_ref" name version dist.tarball --json --registry=https://registry.npmjs.org/; then
-                break
+                published_tag="$(npm view "$package_name" "dist-tags.${NPM_TAG}" --json --registry=https://registry.npmjs.org/ || true)"
+                published_tag="${published_tag//\"/}"
+                if [[ "$published_tag" == "$RELEASE_VERSION" ]]; then
+                  if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+                    latest_tag="$(npm view "$package_name" dist-tags.latest --json --registry=https://registry.npmjs.org/ || true)"
+                    latest_tag="${latest_tag//\"/}"
+                    if [[ "$latest_tag" == "$RELEASE_VERSION" ]]; then
+                      echo "Prerelease unexpectedly replaced npm latest for $package_name" >&2
+                      exit 1
+                    fi
+                  fi
+                  break
+                fi
               fi
 
               if [[ "$attempt" == "12" ]]; then
-                echo "Published package did not become visible after ${attempt} attempts: $package_ref" >&2
+                echo "Published package or npm ${NPM_TAG} tag did not become visible after ${attempt} attempts: $package_ref" >&2
                 exit 1
               fi
 

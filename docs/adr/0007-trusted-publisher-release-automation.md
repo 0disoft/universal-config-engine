@@ -30,7 +30,8 @@ The Trusted Publisher registration for every package must use:
   environment;
 - allowed action: npm publish.
 
-The release workflow is tag-driven for `v<major>.<minor>.<patch>` tags. It:
+The release workflow is tag-driven for exact stable or semantic-version
+prerelease tags such as `v<major>.<minor>.<patch>` and `v1.0.0-rc.1`. It:
 
 - installs dependencies with the locked pnpm version;
 - checks that publishable package versions match the tag version;
@@ -39,6 +40,11 @@ The release workflow is tag-driven for `v<major>.<minor>.<patch>` tags. It:
 - uploads GitHub release tarballs from the validated tag;
 - records package-level npm publication state before and after publication;
 - publishes the packed tarballs with npm CLI provenance enabled.
+
+Stable versions publish under the npm `latest` dist-tag. Prerelease versions
+publish under `next` and create or update a GitHub prerelease. Post-publication
+verification fails if the expected dist-tag does not point to the released version
+or if a prerelease replaces npm `latest`.
 
 Publication state uses schema `0.1` and records the release version, tag, commit,
 workflow run and attempt, observation phase, and `published` or `missing` status for

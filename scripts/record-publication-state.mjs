@@ -3,6 +3,8 @@ import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
+import { parseReleaseVersion } from "./release-version.mjs";
+
 export const RELEASE_PACKAGE_NAMES = [
   "@0disoft/universal-config-engine-core",
   "@0disoft/universal-config-engine-node",
@@ -107,9 +109,7 @@ function parseArguments(args) {
 
   const version = values.get("version");
   const phase = values.get("phase");
-  if (!/^\d+\.\d+\.\d+$/.test(version)) {
-    throw new Error("Publication state version must be semantic version text.");
-  }
+  parseReleaseVersion(version);
   if (phase !== "before" && phase !== "after") {
     throw new Error("Publication state phase must be before or after.");
   }
