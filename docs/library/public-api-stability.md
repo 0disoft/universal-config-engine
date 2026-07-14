@@ -1,6 +1,6 @@
 # Public API Stability Inventory
 
-Status: Draft
+Status: Accepted
 Baseline: `v0.5.0`
 Repository Type: library
 

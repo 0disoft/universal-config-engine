@@ -1,6 +1,6 @@
 # Migration To 0.6
 
-Status: Current
+Status: Previous Stable
 
 The `0.6` line deprecates ignored legacy validator issue fields before their
 scheduled removal in `1.0.0`. It does not change validator execution or diagnostic

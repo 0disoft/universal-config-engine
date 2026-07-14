@@ -1,6 +1,6 @@
 # 1.0 Stability Plan
 
-Status: Draft
+Status: Release Candidate
 Repository Type: library
 
 ## Baseline
@@ -88,3 +88,7 @@ matrix.
 `1.0.0` additionally requires a successful release-candidate registry smoke and a
 documented review period. Any newly discovered breaking requirement returns the
 work to another release candidate instead of changing the stable tag in place.
+
+The preparation gates above are satisfied for `1.0.0-rc.1`. Stable `1.0.0` remains
+blocked until the published release candidate passes registry smoke and completes
+the documented review period.

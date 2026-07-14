@@ -1,6 +1,6 @@
 # Migration To 0.5
 
-Status: Current
+Status: Previous
 
 `0.5.0` adds aggregate execution budgets, source locations, strict unmapped-input
 policies, and hardened immutable pipeline boundaries.

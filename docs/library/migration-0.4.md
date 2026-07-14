@@ -1,6 +1,6 @@
 # Migration to 0.4
 
-Status: Current
+Status: Previous
 
 `0.4.0` is an additive API release with stricter runtime enforcement at loader,
 resource-limit, and CLI declaration boundaries.

@@ -72,7 +72,7 @@ an npm `404` from registry lookup failure and resumes only packages recorded as
 missing. Preserve these manifests when investigating a partial release.
 
 The post-publication smoke can also be reproduced with
-`$env:RELEASE_VERSION = "0.6.0"; pnpm run smoke:registry-packages`.
+`$env:RELEASE_VERSION = "1.0.0-rc.1"; pnpm run smoke:registry-packages`.
 
 Stable tags publish with the npm `latest` dist-tag. Semantic-version prerelease
 tags publish with `next`; the workflow verifies both that `next` points to the
@@ -116,7 +116,8 @@ The `v0.1.0` release includes pre-publication tarballs for core, node, CLI, Ajv
 validator, and Zod validator packages under the superseded package scope. The
 `v0.1.1` release is the first npm publication baseline under `@0disoft`. Later
 releases, including the `0.2.x` through `0.6.x` lines, are published by
-`.github/workflows/release.yml`.
+`.github/workflows/release.yml`. The `1.0.0-rc.1` line is prepared as the first
+prerelease to publish under npm `next`.
 
 ## Stop Conditions
 
