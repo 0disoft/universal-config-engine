@@ -28,7 +28,7 @@ export async function readTextFileWithinLimit(input: {
   const fileHandle = await open(input.filePath, "r");
 
   try {
-    const stats = await fileHandle.stat();
+    const stats = await fileHandle.stat({ bigint: true });
     const boundaryResult = await openedFileBoundaryResult({
       filePath: input.filePath,
       sourceId: input.sourceId,
@@ -42,7 +42,7 @@ export async function readTextFileWithinLimit(input: {
 
     const sizeIssues = fileSizeIssues({
       sourceId: input.sourceId,
-      fileBytes: stats.size,
+      fileBytes: Number(stats.size),
       maxFileBytes
     });
 
@@ -73,15 +73,15 @@ async function openedFileBoundaryResult(input: {
   readonly filePath: string;
   readonly sourceId: string;
   readonly allowedRootPath: string | undefined;
-  readonly openedDevice: number;
-  readonly openedInode: number;
+  readonly openedDevice: bigint;
+  readonly openedInode: bigint;
 }): Promise<
   | { readonly ok: true; readonly canonicalPath: string }
   | { readonly ok: false; readonly issues: readonly ConfigIssue[] }
 > {
   try {
     const canonicalFilePath = await realpath(input.filePath);
-    const currentStats = await stat(canonicalFilePath);
+    const currentStats = await stat(canonicalFilePath, { bigint: true });
     if (currentStats.dev !== input.openedDevice || currentStats.ino !== input.openedInode) {
       return {
         ok: false,
