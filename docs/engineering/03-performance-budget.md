@@ -59,6 +59,19 @@ is intentionally excluded from the default `check` pipeline. Performance-sensiti
 merge changes should record before-and-after results from the same machine and Node
 version.
 
+## Deterministic Complexity Guard
+
+`pnpm run check:complexity` runs inside the default `check` pipeline. It measures
+explicit `Map` operations in an isolated process for wide same-priority conflicts
+and large subtree replacement at 512 and 1,024 keys. Doubling input may not exceed
+twice the smaller operation count plus a fixed 64-operation allowance.
+
+The same guard observes argv array element access through a Proxy. With 128
+assignment-form arguments, default mode must read each element once and strict mode
+twice, independent of whether 128 or 4,096 mappings are declared. This checks the
+single-scan contract without using wall-clock thresholds or exposing production
+instrumentation.
+
 ## Review Blockers
 
 - A change bypasses the source of truth.

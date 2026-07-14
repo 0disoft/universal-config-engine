@@ -130,7 +130,7 @@ Owner: UNASSIGNED
   policy.
 - Added bounded deterministic generated tests for merge, path, resource-limit,
   redaction, loader, and validator invariants.
-- Add deterministic complexity guards for critical paths without cross-machine
+- Added deterministic complexity guards for critical paths without cross-machine
   wall-clock thresholds.
 - Validate packed release candidates across JavaScript, strict TypeScript, adapter,
   CLI, operating-system, and supported-Node consumers.
