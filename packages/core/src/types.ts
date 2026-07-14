@@ -150,10 +150,14 @@ export interface ValidatorIssue {
   /**
    * Legacy compatibility fields accepted from pre-0.3 adapters. Core ignores
    * these untrusted fields and constructs the public ConfigIssue itself.
+   * @deprecated Omit this field. Core ignores it; removal is scheduled for 1.0.0.
    */
   readonly category?: ConfigIssueCategory;
+  /** @deprecated Omit this field. Core ignores it; removal is scheduled for 1.0.0. */
   readonly message?: string;
+  /** @deprecated Omit this field. Core ignores it; removal is scheduled for 1.0.0. */
   readonly sourceId?: string;
+  /** @deprecated Omit this field. Core ignores it; removal is scheduled for 1.0.0. */
   readonly details?: Readonly<Record<string, string | number | boolean | null>>;
 }
 

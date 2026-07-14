@@ -34,6 +34,8 @@ merge behavior, validator handoff, provenance, and redaction behavior explicit.
   hardening release.
 - `docs/library/migration-0.5.md`: migrate consumers to the current `0.5.0`
   observability and execution-budget release.
+- `docs/library/migration-0.6.md`: remove deprecated validator issue fields before
+  the planned `1.0.0` type cleanup.
 
 ## Stable Release Planning
 

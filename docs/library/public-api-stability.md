@@ -45,8 +45,9 @@ candidate may be removed solely because a higher-level facade is preferred.
 - `ResourceLimitPolicy`
 
 `ValidatorIssue.message`, `details`, `category`, and `sourceId` are compatibility
-fields inside an otherwise stable type. Core ignores them and reconstructs public
-diagnostics from structured fields.
+fields inside an otherwise stable type. The `0.6` declarations mark them deprecated;
+core continues to ignore them and reconstruct public diagnostics from structured
+fields until their scheduled `1.0.0` removal.
 
 ### Stable Low-Level Helpers
 
