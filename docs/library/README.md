@@ -36,6 +36,8 @@ merge behavior, validator handoff, provenance, and redaction behavior explicit.
   observability and execution-budget release.
 - `docs/library/migration-0.6.md`: migrate to the current `0.6.0` deprecation
   release and remove legacy validator issue fields before `1.0.0`.
+- `docs/library/migration-1.0.md`: adopt the `1.0.0-rc.1` package set and migrate
+  the only intentionally removed public compatibility fields.
 
 ## Stable Release Planning
 

@@ -24,8 +24,8 @@ remain public until a later accepted decision changes their classification.
 
 ADR 0016 resolves the baseline candidate decisions as follows:
 
-- legacy validator compatibility fields are deprecated in `0.6.0` and removed in
-  `1.0.0`;
+- legacy validator compatibility fields are deprecated in `0.6.0` and removed from
+  the public type beginning with `1.0.0-rc.1`;
 - diagnostic report schema `0.2` is frozen for `1.x`;
 - CLI commands, flags, JSON envelopes, and exit codes are frozen for `1.x`;
 - Node.js `>=24` remains open-ended with exact-floor and rolling-current gates;

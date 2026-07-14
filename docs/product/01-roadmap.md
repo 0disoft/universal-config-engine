@@ -128,6 +128,8 @@ Owner: UNASSIGNED
   evidence.
 - Defined the `1.x` deprecation notice, support-window, migration, and removal
   policy.
+- Removed the four ignored legacy validator issue fields from the `1.0` public type
+  after the `0.6.0` deprecation release and documented the migration.
 - Added bounded deterministic generated tests for merge, path, resource-limit,
   redaction, loader, and validator invariants.
 - Added deterministic complexity guards for critical paths without cross-machine

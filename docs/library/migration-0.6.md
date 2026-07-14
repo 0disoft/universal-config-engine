@@ -47,7 +47,8 @@ reports.
 
 The fields remain accepted by the `0.6` TypeScript types with `@deprecated`
 documentation so existing adapters continue to compile. They are removed from the
-public type in `1.0.0`; migrate before adopting the first `1.0` release candidate.
+public type beginning with `1.0.0-rc.1`; migrate before adopting the first `1.0`
+release candidate.
 
 No runtime deprecation warning is emitted. Library validation does not write
 unsolicited output to consumer logs.

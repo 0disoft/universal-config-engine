@@ -44,10 +44,11 @@ candidate may be removed solely because a higher-level facade is preferred.
   `DiagnosticReportResolvedPath`, `BuildDiagnosticReportOptions`
 - `ResourceLimitPolicy`
 
-`ValidatorIssue.message`, `details`, `category`, and `sourceId` are compatibility
-fields inside an otherwise stable type. The `0.6` declarations mark them deprecated;
-core continues to ignore them and reconstruct public diagnostics from structured
-fields until their scheduled `1.0.0` removal.
+`ValidatorIssue.message`, `details`, `category`, and `sourceId` were compatibility
+fields inside an otherwise stable type. The `0.6` declarations marked them
+deprecated, and the `1.0.0-rc.1` declaration removes them. Core continues to ignore
+structurally wider runtime values and reconstruct public diagnostics from the
+remaining structured fields.
 
 ### Stable Low-Level Helpers
 
@@ -123,7 +124,7 @@ validator-library peer and runtime dependency policies remain package-specific.
 ## Audit Exit Conditions
 
 - Every `v0.5.0` export is stable under ADR 0016.
-- Compatibility fields have a release and removal schedule.
+- Compatibility fields completed their documented deprecation and removal schedule.
 - Stable low-level helpers document throw, mutation, and malformed-input behavior.
 - The declaration snapshot and this inventory are checked together before a release
   candidate is tagged.

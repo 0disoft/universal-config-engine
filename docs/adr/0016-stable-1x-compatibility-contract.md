@@ -20,9 +20,10 @@ recommended entry points.
 
 `ValidatorIssue.message`, `details`, `category`, and `sourceId` are the only
 compatibility fields scheduled for removal. They remain ignored by core, receive
-TypeScript `@deprecated` annotations in `0.6.0`, and are removed in `1.0.0` after a
-migration guide. No runtime warning is emitted because library validation must not
-write unsolicited output to consumer processes.
+TypeScript `@deprecated` annotations in `0.6.0`, and are removed from the public
+type beginning with `1.0.0-rc.1` after a migration guide. No runtime warning is
+emitted because library validation must not write unsolicited output to consumer
+processes.
 
 Diagnostic report schema `0.2` is the stable `1.x` JSON shape. Its version is an
 independent data-contract identifier and does not need to match the npm package
@@ -73,7 +74,7 @@ For deprecations introduced after `1.0.0`:
 ## Review Blockers
 
 - A `v0.5.0` export is removed before `1.0.0` without an accepted replacement ADR.
-- Legacy validator compatibility fields are removed before the documented `1.0.0`
-  boundary and migration guide.
+- Legacy validator compatibility fields are removed before the documented
+  `1.0.0-rc.1` boundary and migration guide.
 - CLI or report behavior changes without a new compatibility decision.
 - Hosted checks stop exercising either exact Node.js `24.0.0` or latest stable Node.
