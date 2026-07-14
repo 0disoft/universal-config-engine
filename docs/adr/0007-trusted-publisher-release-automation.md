@@ -59,6 +59,10 @@ while still letting npm CLI perform the OIDC-backed publish operation.
 
 Tag-driven release limits accidental publication from arbitrary branches. Manual
 dispatch is dry-run by default and is intended for validation, not routine release.
+Manual dry-runs check out the workflow-dispatch commit while deriving the expected
+package version from the required tag-shaped input, so a release candidate can be
+validated before its tag exists. A manual non-dry-run still checks out the named
+tag and cannot publish arbitrary branch contents.
 
 ## Consequences
 
@@ -75,6 +79,8 @@ dispatch is dry-run by default and is intended for validation, not routine relea
 ## Review Blockers
 
 - The workflow publishes from a branch instead of a validated semver tag.
+- A non-dry-run publication checks out the workflow-dispatch branch instead of the
+  named release tag.
 - The workflow publishes unpacked package directories instead of packed tarballs.
 - A long-lived npm token is reintroduced for routine release.
 - The npm Trusted Publisher repository or workflow filename differs from this ADR.

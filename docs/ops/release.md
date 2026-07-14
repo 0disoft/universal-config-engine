@@ -49,6 +49,11 @@ Before publishing, also verify:
 - npm Trusted Publisher is registered for every publishable package;
 - no secret-like values appear in tracked files or generated reports.
 
+Before creating a release tag, dispatch `release.yml` from `main` with the intended
+tag text and `dry_run: true`. The workflow checks out that `main` commit, verifies
+its package versions against the tag text, builds the release tarballs, and runs npm
+publish in dry-run mode. Non-dry-run execution continues to require the named tag.
+
 ## Publish Flow
 
 1. Confirm the version in each publishable package.

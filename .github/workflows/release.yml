@@ -39,11 +39,14 @@ jobs:
 
           tag_name="${GITHUB_REF_NAME}"
           dry_run="false"
+          checkout_ref="$tag_name"
 
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             tag_name="${{ inputs.tag }}"
+            checkout_ref="$tag_name"
             if [[ "${{ inputs.dry_run }}" == "true" ]]; then
               dry_run="true"
+              checkout_ref="$GITHUB_SHA"
             fi
           fi
 
@@ -56,13 +59,14 @@ jobs:
             echo "tag_name=$tag_name"
             echo "version=${tag_name#v}"
             echo "dry_run=$dry_run"
+            echo "checkout_ref=$checkout_ref"
           } >> "$GITHUB_OUTPUT"
 
       - name: Checkout
         # actions/checkout v7.0.0
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ steps.release.outputs.tag_name }}
+          ref: ${{ steps.release.outputs.checkout_ref }}
 
       - name: Setup Node.js
         # actions/setup-node v6.4.0
