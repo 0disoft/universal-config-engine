@@ -37,6 +37,8 @@ merge behavior, validator handoff, provenance, and redaction behavior explicit.
 
 ## Stable Release Planning
 
+- `docs/library/public-api-stability.md`: `v0.5.0` export classification and
+  candidate review inventory.
 - `docs/library/stability-1.0.md`: public-surface audit, adversarial evidence,
   consumer matrix, and release gates required before `1.0.0-rc.1`.
 

@@ -130,6 +130,8 @@ The committed `docs/library/public-api.snapshot.txt` records normalized declarat
 files for every publishable package. `pnpm run check:api-snapshot` fails when the
 built declaration surface drifts. Intentional API changes require semver and
 migration review before running `pnpm run update:api-snapshot`.
+`docs/library/public-api-stability.md` classifies the `v0.5.0` declarations for the
+`1.0` audit without changing their current public status.
 
 ## Public API Principles
 

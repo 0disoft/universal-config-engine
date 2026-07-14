@@ -19,6 +19,9 @@ Before the first release candidate, every declaration in
 - candidate: retained only after an explicit keep, change, or remove decision;
 - compatibility: an older shape with a documented deprecation period.
 
+The baseline inventory is `docs/library/public-api-stability.md`. Candidate entries
+remain public until a later accepted decision changes their classification.
+
 The audit must resolve these known candidate decisions:
 
 - retain or remove legacy `ConfigIssue`-shaped validator compatibility fields;
