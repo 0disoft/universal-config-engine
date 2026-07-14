@@ -22,14 +22,14 @@ Before the first release candidate, every declaration in
 The baseline inventory is `docs/library/public-api-stability.md`. Candidate entries
 remain public until a later accepted decision changes their classification.
 
-The audit must resolve these known candidate decisions:
+ADR 0016 resolves the baseline candidate decisions as follows:
 
-- retain or remove legacy `ConfigIssue`-shaped validator compatibility fields;
-- freeze diagnostic report schema `0.2` or replace it before `1.0.0`;
-- freeze CLI commands, flags, JSON envelopes, and exit codes;
-- decide whether the open Node.js `>=24` upper range remains the stable contract;
-- classify low-level helpers separately from the recommended `runConfigPipeline`
-  facade without hiding existing exports.
+- legacy validator compatibility fields are deprecated in `0.6.0` and removed in
+  `1.0.0`;
+- diagnostic report schema `0.2` is frozen for `1.x`;
+- CLI commands, flags, JSON envelopes, and exit codes are frozen for `1.x`;
+- Node.js `>=24` remains open-ended with exact-floor and rolling-current gates;
+- all existing low-level helpers remain stable alongside the recommended facade.
 
 ## Deprecation Contract
 

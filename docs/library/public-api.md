@@ -204,4 +204,5 @@ migration review before running `pnpm run update:api-snapshot`.
   0010.
 - TypeScript ESM, Node.js `>=24`, package ownership, validator packages, report
   schema `0.2`, adapter ownership, and validator typed output are decided in ADRs
-  0003, 0004, 0006, and 0009.
+  0003, 0004, 0006, and 0009. ADR 0016 fixes the `1.x` stability, deprecation,
+  report, CLI, low-level helper, and runtime compatibility contracts.

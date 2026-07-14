@@ -74,6 +74,18 @@ absent. See ADR 0015.
 Patch versions may fix incorrect provenance, redaction, validation, or parsing
 behavior when the documented contract already required the corrected behavior.
 
+## Stable Deprecation Policy
+
+ADR 0016 keeps every `v0.5.0` export stable for `1.x`, except the four ignored
+legacy fields on `ValidatorIssue` scheduled for removal at `1.0.0`. Deprecations
+introduced after stable release require TypeScript `@deprecated` documentation,
+migration guidance, and retention for the rest of the current major. Removal waits
+for the next major version. Runtime warnings require a separate opt-in channel and
+are not emitted by default.
+
+Diagnostic report schema `0.2`, the documented CLI contract, and Node.js `>=24` are
+stable `1.x` contracts under ADR 0016.
+
 ## Decided Baseline
 
 - Initial npm package version: `0.1.1`; see ADR 0005.

@@ -120,13 +120,14 @@ Owner: UNASSIGNED
 
 ## Phase 9: 1.0 Contract Stabilization
 
-- Classify every published declaration as stable, candidate, or compatibility
-  surface and resolve the remaining validator compatibility decision.
-- Freeze or deliberately replace diagnostic report schema `0.2` before stable use.
-- Freeze CLI commands, flags, JSON envelopes, and exit codes for the `1.x` line.
-- Decide the stable Node.js upper-range policy while retaining exact-floor and
-  rolling-current evidence.
-- Define the `1.x` deprecation notice, support-window, migration, and removal policy.
+- Classified every published declaration and accepted the remaining validator
+  compatibility decision in ADR 0016.
+- Froze diagnostic report schema `0.2` for stable `1.x` use.
+- Froze CLI commands, flags, JSON envelopes, and exit codes for the `1.x` line.
+- Kept the stable Node.js range open at `>=24` with exact-floor and rolling-current
+  evidence.
+- Defined the `1.x` deprecation notice, support-window, migration, and removal
+  policy.
 - Add bounded deterministic generated tests for merge, path, resource-limit,
   redaction, loader, and validator invariants.
 - Add deterministic complexity guards for critical paths without cross-machine

@@ -45,6 +45,8 @@ CLI JSON output must include a report schema version before it is treated as sta
 Schema field changes are compatibility changes for CI and agent users.
 The current schema version is `0.2`. It adds optional winning and overridden source
 locations to resolved paths.
+ADR 0016 freezes schema `0.2`, the command envelope, and exit codes `0` through `5`
+for the `1.x` line.
 
 ## Exit Codes
 

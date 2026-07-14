@@ -48,16 +48,15 @@ candidate may be removed solely because a higher-level facade is preferred.
 fields inside an otherwise stable type. Core ignores them and reconstructs public
 diagnostics from structured fields.
 
-### Candidate Low-Level Helpers
+### Stable Low-Level Helpers
 
 - `cloneConfigValue`, `getConfigValueAtPath`, `setConfigValueAtPath`
 - `formatPath`, `pathToKey`, `pathsEqual`, `isPathPrefix`,
   `isUnsafePathSegment`
 - `flattenConfigObject`, `isConfigValue`, `isPlainConfigObject`
 
-These helpers are independently callable and tested, but their throw behavior,
-mutation contract, and role relative to `runConfigPipeline` require explicit stable
-documentation before the `1.x` guarantee.
+These independently callable helpers retain the throw, mutation, and malformed-input
+contracts accepted in ADR 0016.
 
 ## Node Package
 
@@ -72,13 +71,13 @@ documentation before the `1.x` guarantee.
 - `CreateProcessEnvSourceInput`, `CreateArgvSourceInput`
 - `UnmappedInputBehavior`
 
-### Candidate Low-Level Helpers
+### Stable Low-Level Helpers
 
 - `checkFileSize`
 - `parseSimpleDotenv`
 
-Their current behavior is tested, but direct-parser and pre-read size-check usage
-needs a stable caller contract distinct from the opened-file loader boundary.
+ADR 0016 distinguishes the direct parser and metadata preflight from the opened-file
+loader boundary while retaining both public helpers.
 
 ## CLI Package
 
@@ -95,7 +94,7 @@ needs a stable caller contract distinct from the opened-file loader boundary.
   `ArgvSourceDeclaration`
 - `LoadedPipelineDeclaration`
 
-### Candidate Programmatic CLI Stages
+### Stable Programmatic CLI Stages
 
 - `parseCliArgs`
 - `formatHumanReport`, `formatJsonReport`
@@ -103,9 +102,8 @@ needs a stable caller contract distinct from the opened-file loader boundary.
   `loadDeclaredSources`
 - `createDeclaredValidators`
 
-The installed `uce` command owns the stable workflow. These exported stages remain
-supported through the audit, but their independent composition contract must be
-accepted or deprecated before `1.0.0-rc.1`.
+The installed `uce` command is the recommended workflow, while ADR 0016 keeps these
+programmatic stages compatible throughout `1.x`.
 
 ## Validator Packages
 
@@ -123,7 +121,7 @@ validator-library peer and runtime dependency policies remain package-specific.
 
 ## Audit Exit Conditions
 
-- Every candidate has an accepted keep, deprecate, or remove decision.
+- Every `v0.5.0` export is stable under ADR 0016.
 - Compatibility fields have a release and removal schedule.
 - Stable low-level helpers document throw, mutation, and malformed-input behavior.
 - The declaration snapshot and this inventory are checked together before a release
