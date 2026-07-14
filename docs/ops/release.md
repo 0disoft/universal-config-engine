@@ -70,7 +70,7 @@ an npm `404` from registry lookup failure and resumes only packages recorded as
 missing. Preserve these manifests when investigating a partial release.
 
 The post-publication smoke can also be reproduced with
-`$env:RELEASE_VERSION = "0.5.0"; pnpm run smoke:registry-packages`.
+`$env:RELEASE_VERSION = "0.6.0"; pnpm run smoke:registry-packages`.
 
 Manual local publication is a break-glass fallback only. If it is used, it must
 follow the same validation gates and use a temporary `.npmrc` that is removed
@@ -108,7 +108,7 @@ pnpm run clean:build
 The `v0.1.0` release includes pre-publication tarballs for core, node, CLI, Ajv
 validator, and Zod validator packages under the superseded package scope. The
 `v0.1.1` release is the first npm publication baseline under `@0disoft`. Later
-releases, including the `0.2.x`, `0.3.x`, `0.4.x`, and `0.5.x` lines, are published by
+releases, including the `0.2.x` through `0.6.x` lines, are published by
 `.github/workflows/release.yml`.
 
 ## Stop Conditions

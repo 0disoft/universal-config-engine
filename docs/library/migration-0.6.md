@@ -1,10 +1,22 @@
 # Migration To 0.6
 
-Status: Planned
+Status: Current
 
 The `0.6` line deprecates ignored legacy validator issue fields before their
 scheduled removal in `1.0.0`. It does not change validator execution or diagnostic
 output.
+
+## Package Update
+
+Update the packages used by the consumer together:
+
+```powershell
+pnpm update @0disoft/universal-config-engine-core@0.6.0 `
+  @0disoft/universal-config-engine-node@0.6.0 `
+  @0disoft/universal-config-engine-cli@0.6.0 `
+  @0disoft/universal-config-engine-validator-ajv@0.6.0 `
+  @0disoft/universal-config-engine-validator-zod@0.6.0
+```
 
 ## Validator Issues
 
