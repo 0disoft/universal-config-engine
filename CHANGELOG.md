@@ -5,6 +5,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+## 1.0.0-rc.2 - 2026-07-15
+
 ### Added
 
 - Package-specific npm READMEs for core, Node adapters, CLI, Ajv, and Zod.
@@ -45,6 +47,7 @@ semantic versioning and keeps package versions aligned across the workspace.
 - Kept opened-file identity verification compatible with Windows Node.js `24.0.0`
   when path metadata does not expose a usable device identifier.
 
-[Unreleased]: https://github.com/0disoft/universal-config-engine/compare/v1.0.0-rc.1...HEAD
+[Unreleased]: https://github.com/0disoft/universal-config-engine/compare/v1.0.0-rc.2...HEAD
+[1.0.0-rc.2]: https://github.com/0disoft/universal-config-engine/compare/v1.0.0-rc.1...v1.0.0-rc.2
 [1.0.0-rc.1]: https://github.com/0disoft/universal-config-engine/compare/v0.6.0...v1.0.0-rc.1
 [0.6.0]: https://github.com/0disoft/universal-config-engine/releases/tag/v0.6.0

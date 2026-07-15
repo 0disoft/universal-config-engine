@@ -22,7 +22,7 @@ no credentials or generated diagnostic reports with raw secret values.
 - Patch: fixes that preserve documented behavior.
 - Minor: additive public API, CLI report, package, or adapter behavior.
 - Major: reserved for post-`1.0` breaking changes.
-- Release candidate: a version such as `1.0.0-rc.1`, published to npm under
+- Release candidate: a version such as `1.0.0-rc.2`, published to npm under
   `next` and marked as a GitHub prerelease without replacing npm `latest`.
 
 ## Pre-Release Checklist
@@ -74,7 +74,7 @@ an npm `404` from registry lookup failure and resumes only packages recorded as
 missing. Preserve these manifests when investigating a partial release.
 
 The post-publication smoke can also be reproduced with
-`$env:RELEASE_VERSION = "1.0.0-rc.1"; pnpm run smoke:registry-packages`.
+`$env:RELEASE_VERSION = "1.0.0-rc.2"; pnpm run smoke:registry-packages`.
 
 Stable tags publish with the npm `latest` dist-tag. Semantic-version prerelease
 tags publish with `next`; the workflow verifies both that `next` points to the

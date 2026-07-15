@@ -12,11 +12,11 @@ Update every Universal Config Engine package used by the consumer to the same
 release-candidate version:
 
 ```powershell
-pnpm update @0disoft/universal-config-engine-core@1.0.0-rc.1 `
-  @0disoft/universal-config-engine-node@1.0.0-rc.1 `
-  @0disoft/universal-config-engine-cli@1.0.0-rc.1 `
-  @0disoft/universal-config-engine-validator-ajv@1.0.0-rc.1 `
-  @0disoft/universal-config-engine-validator-zod@1.0.0-rc.1
+pnpm update @0disoft/universal-config-engine-core@1.0.0-rc.2 `
+  @0disoft/universal-config-engine-node@1.0.0-rc.2 `
+  @0disoft/universal-config-engine-cli@1.0.0-rc.2 `
+  @0disoft/universal-config-engine-validator-ajv@1.0.0-rc.2 `
+  @0disoft/universal-config-engine-validator-zod@1.0.0-rc.2
 ```
 
 Release candidates are published under the npm `next` tag. Installing a package

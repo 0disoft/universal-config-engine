@@ -188,7 +188,7 @@ supersedes routine manual publication with tag-driven Trusted Publisher
 automation. The `v0.1.0` GitHub release carries pre-publication inspection assets;
 `v0.1.1` is the
 first npm publication baseline, and the current package version is
-`1.0.0-rc.1`. The release candidate is available only through its exact version or
+`1.0.0-rc.2`. The release candidate is available only through its exact version or
 the npm `next` tag; stable installs still resolve to `0.6.0`. CLI
 golden fixtures cover local precedence, opt-in coercion, declared Ajv validation,
 validation failure, source-load failure, mapping policy failure, JSON usage errors,

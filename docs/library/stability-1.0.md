@@ -97,7 +97,7 @@ names `1.0.0-rc.2` as the reviewed candidate and requires `168` hours. The relea
 workflow derives the exact not-before timestamp from that GitHub prerelease's
 `publishedAt` value and fails closed while the candidate is missing or incomplete.
 
-`1.0.0-rc.1` may be prepared only when:
+A `1.0` release candidate may be prepared only when:
 
 - every public declaration has an explicit stability classification;
 - candidate API, report schema, CLI, Node range, and deprecation decisions are
