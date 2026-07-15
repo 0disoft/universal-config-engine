@@ -22,12 +22,14 @@ justifies built-in support.
 - CHECKLIST.md: checklist router
 - VALIDATION.md: validation names and reporting requirements
 - SECURITY.md: sensitive vulnerability and secret-exposure reporting policy
+- CHANGELOG.md: chronological consumer-visible release history
 - .agents/context-map.md: agent route map
 - docs/product/02-spec.md: product source of truth
 - docs/library/public-api.md: library API ownership
 - docs/cli/command-contract.md: CLI command behavior
 - packages/cli/fixtures/: executable CLI golden report fixtures
 - docs/: design, operations, architecture, and engineering standards
+- docs/releases/: reviewed GitHub Release notes keyed by tag
 - archive/scaffold/: non-authoritative backend scaffold material retained only for
   reference while the product boundary settles
 

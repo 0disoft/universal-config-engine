@@ -137,6 +137,20 @@ jobs:
           --version "$RELEASE_VERSION"
           --repository "$GITHUB_REPOSITORY"
 
+      - name: Assert release notes
+        id: release_notes
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          notes_file="docs/releases/${RELEASE_TAG}.md"
+          if [[ ! -s "$notes_file" ]]; then
+            echo "Missing or empty release notes: $notes_file" >&2
+            exit 1
+          fi
+          echo "path=$notes_file" >> "$GITHUB_OUTPUT"
+
       - name: Run repository check
         run: pnpm run check
 
@@ -217,20 +231,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
           RELEASE_PRERELEASE: ${{ steps.release.outputs.prerelease }}
+          RELEASE_NOTES_FILE: ${{ steps.release_notes.outputs.path }}
         shell: bash
         run: |
           set -euo pipefail
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" .tmp/release/*.tgz --repo "$GITHUB_REPOSITORY" --clobber
+            edit_args=(edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$RELEASE_NOTES_FILE")
             if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
-              gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --prerelease
+              edit_args+=(--prerelease)
             fi
+            gh release "${edit_args[@]}"
           else
             release_args=(create "$RELEASE_TAG" .tmp/release/*.tgz \
               --repo "$GITHUB_REPOSITORY" \
               --verify-tag \
               --title "$RELEASE_TAG" \
-              --notes "Release $RELEASE_TAG publishes Universal Config Engine packages from the validated tag.")
+              --notes-file "$RELEASE_NOTES_FILE")
             if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
               release_args+=(--prerelease)
             fi

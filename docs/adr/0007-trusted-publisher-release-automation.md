@@ -38,6 +38,7 @@ prerelease tags such as `v<major>.<minor>.<patch>` and `v1.0.0-rc.1`. It:
 - runs the release validation gates;
 - builds and packs each publishable workspace package;
 - uploads GitHub release tarballs from the validated tag;
+- requires `docs/releases/<tag>.md` and uses it as the GitHub Release body;
 - records package-level npm publication state before and after publication;
 - publishes the packed tarballs with npm CLI provenance enabled.
 

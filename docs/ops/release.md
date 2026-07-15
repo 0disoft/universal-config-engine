@@ -55,6 +55,8 @@ Before creating a release tag, dispatch `release.yml` from `main` with the inten
 tag text and `dry_run: true`. The workflow checks out that `main` commit, verifies
 its package versions against the tag text, builds the release tarballs, and runs npm
 publish in dry-run mode. Non-dry-run execution continues to require the named tag.
+The same commit must contain a non-empty `docs/releases/<tag>.md`; the workflow uses
+that reviewed file as the GitHub Release body and rejects generic generated notes.
 
 ## Publish Flow
 

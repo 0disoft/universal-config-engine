@@ -20,6 +20,8 @@ Status: Draft
 - 0.5.x migration guide: docs/library/migration-0.5.md
 - 0.6.x migration guide: docs/library/migration-0.6.md
 - 1.0 release-candidate migration guide: docs/library/migration-1.0.md
+- Release note source files: docs/releases/
+- Chronological release history: CHANGELOG.md
 - Adapter ecosystem source: docs/adapters/README.md
 - CLI command contract source: docs/cli/command-contract.md
 - CLI output and exit-code source: docs/cli/output-and-exit-codes.md
