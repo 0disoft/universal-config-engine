@@ -46,6 +46,12 @@ publish under `next` and create or update a GitHub prerelease. Post-publication
 verification fails if the expected dist-tag does not point to the released version
 or if a prerelease replaces npm `latest`.
 
+Stable tags additionally require an entry in `release-policy.json`. Before any
+stable publication, the workflow verifies the declared candidate GitHub
+prerelease, tarballs, complete after-publication manifest, minimum review duration,
+npm integrity and provenance, `next` and `latest` state, and an exact candidate
+registry installation smoke. An unlisted stable version fails closed.
+
 Publication state uses schema `0.1` and records the release version, tag, commit,
 workflow run and attempt, observation phase, and `published` or `missing` status for
 each of the five packages. A registry lookup failure is not treated as a missing
@@ -79,6 +85,8 @@ tag and cannot publish arbitrary branch contents.
 - Package version bumps must happen before tagging.
 - Future changes to publisher, environment, package scope, or release trigger must
   update this ADR and `docs/ops/release.md`.
+- Every stable version requires an explicit machine-readable candidate and review
+  policy entry before its dry-run or tag can pass.
 - npm publication is not atomic, but each attempt now leaves durable package-level
   evidence and can resume without trying to overwrite published versions.
 

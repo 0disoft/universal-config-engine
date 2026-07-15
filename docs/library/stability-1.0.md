@@ -92,6 +92,10 @@ stable release must not silently differ from the candidate that completed review
 Immediately before stable release preparation, rerun the main CI, runtime
 compatibility, consumer compatibility, release dry-run, exact registry package
 smoke, and npm dist-tag/provenance checks against the intended stable commit.
+`release-policy.json` is the machine-readable stable-release gate. For `1.0.0` it
+names `1.0.0-rc.2` as the reviewed candidate and requires `168` hours. The release
+workflow derives the exact not-before timestamp from that GitHub prerelease's
+`publishedAt` value and fails closed while the candidate is missing or incomplete.
 
 `1.0.0-rc.1` may be prepared only when:
 
@@ -107,8 +111,9 @@ smoke, and npm dist-tag/provenance checks against the intended stable commit.
 documented review period. Any newly discovered breaking requirement returns the
 work to another release candidate instead of changing the stable tag in place.
 
-The preparation gates above are satisfied for `1.0.0-rc.1`. The candidate was
-published at `2026-07-14T10:11:01Z`; its hosted release and exact registry package
-smoke passed. Stable `1.0.0` remains blocked until at least
-`2026-07-21T10:11:01Z` and until the final checks above pass without a confirmed
-breaking blocker.
+The preparation gates above were satisfied for `1.0.0-rc.1`, published at
+`2026-07-14T10:11:01Z`, and its hosted release and exact registry package smoke
+passed. Package documentation and release-gate improvements require
+`1.0.0-rc.2`, so the RC1 review window no longer authorizes stable publication.
+Stable `1.0.0` remains blocked until RC2 is published, its derived review window
+ends, and the final checks above pass without a confirmed breaking blocker.

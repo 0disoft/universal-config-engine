@@ -123,6 +123,12 @@ Stable `1.0.0` must follow the review-period and candidate-revalidation contract
 `docs/library/stability-1.0.md`; a successful candidate publication alone does not
 authorize immediate stable publication.
 
+`release-policy.json` is the machine-readable stable release authorization list.
+Every stable version must declare its reviewed candidate, previous stable version,
+and minimum review hours. The release workflow fails closed for unlisted stable
+versions and verifies the candidate release assets, complete publication evidence,
+npm integrity, provenance, dist-tags, and registry installation before continuing.
+
 ## Stop Conditions
 
 - Any required validation fails.
