@@ -186,6 +186,7 @@ function smokeConsumerInstall(tarballs) {
   );
 
   runNpm(["install", "--ignore-scripts"], consumerDir);
+  assertInstalledPackageReadmes(tarballs);
   const basicLibraryOutput = execFileSync(process.execPath, [join(consumerDir, "basic-library.mjs")], {
     cwd: consumerDir,
     encoding: "utf8"
@@ -229,6 +230,21 @@ function smokeConsumerInstall(tarballs) {
   const report = JSON.parse(output);
   if (report.command !== "validate" || report.status !== "ok") {
     throw new Error("Installed CLI binary smoke failed.");
+  }
+}
+
+function assertInstalledPackageReadmes(tarballs) {
+  for (const tarball of tarballs) {
+    const packagePath = join(consumerDir, "node_modules", ...tarball.name.split("/"));
+    const readmePath = join(packagePath, "README.md");
+    if (!existsSync(readmePath)) {
+      throw new Error(`${tarball.name} tarball does not include README.md.`);
+    }
+
+    const readme = readFileSync(readmePath, "utf8");
+    if (!readme.startsWith(`# ${tarball.name}\n`) || !readme.includes("github.com/0disoft/universal-config-engine")) {
+      throw new Error(`${tarball.name} README.md does not identify the package and repository.`);
+    }
   }
 }
 
