@@ -115,5 +115,8 @@ The preparation gates above were satisfied for `1.0.0-rc.1`, published at
 `2026-07-14T10:11:01Z`, and its hosted release and exact registry package smoke
 passed. Package documentation and release-gate improvements require
 `1.0.0-rc.2`, so the RC1 review window no longer authorizes stable publication.
-Stable `1.0.0` remains blocked until RC2 is published, its derived review window
-ends, and the final checks above pass without a confirmed breaking blocker.
+RC2 was published at `2026-07-15T04:19:37Z`; its hosted release, npm metadata,
+provenance, dist-tag, README, and exact registry package smoke checks passed.
+Stable `1.0.0` remains blocked until at least `2026-07-22T04:19:37Z` and until the
+final checks above pass without a confirmed breaking blocker. The machine gate
+derives and enforces the same boundary from the GitHub prerelease timestamp.

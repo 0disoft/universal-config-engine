@@ -140,9 +140,10 @@ Owner: UNASSIGNED
   and passing candidate registry smoke. Stable `1.0.0` remains gated by the
   seven-day review period and final revalidation in
   `docs/library/stability-1.0.md`.
-- Prepared `1.0.0-rc.2` with package-specific npm documentation, a machine-enforced
-  stable release gate, reviewed release notes, and packed declaration migration
-  checks. RC2 publication restarts the stable review period.
+- Published `1.0.0-rc.2` with package-specific npm documentation, a
+  machine-enforced stable release gate, reviewed release notes, and packed
+  declaration migration checks. Its hosted and public-registry verification passed;
+  stable review remains blocked until `2026-07-22T04:19:37Z`.
 
 ## Explicitly Deferred
 
