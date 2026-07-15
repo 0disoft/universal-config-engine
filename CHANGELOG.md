@@ -5,6 +5,13 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+### Stable Release Preparation
+
+- Promote the reviewed `1.0.0-rc.2` runtime, public API, and package contents as
+  `1.0.0` after the machine-enforced review window and final validation gates.
+- Publish the stable release with the migration guidance and compatibility
+  contracts established during the RC line.
+
 ## 1.0.0-rc.2 - 2026-07-15
 
 ### Added

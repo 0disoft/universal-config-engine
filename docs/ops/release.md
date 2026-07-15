@@ -131,6 +131,10 @@ and minimum review hours. The release workflow fails closed for unlisted stable
 versions and verifies the candidate release assets, complete publication evidence,
 npm integrity, provenance, dist-tags, and registry installation before continuing.
 
+The stable `1.0.0` preparation and publication sequence is tracked in
+`docs/ops/stable-1.0-release-checklist.md`. Its allowed-diff rule prevents stable
+package contents from drifting beyond the reviewed RC2 candidate.
+
 ## Stop Conditions
 
 - Any required validation fails.
