@@ -12,6 +12,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   minimum review duration, release assets, publication evidence, npm dist-tags,
   integrity, provenance, and registry installation.
 - Tag-specific release note files consumed directly by the release workflow.
+- Packed strict TypeScript migration checks that keep removed legacy validator
+  fields out of the distributed declaration contract.
 
 ## 1.0.0-rc.1 - 2026-07-14
 

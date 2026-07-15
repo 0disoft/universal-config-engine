@@ -11,5 +11,5 @@
     "skipLibCheck": false,
     "outDir": "dist"
   },
-  "include": ["index.ts"]
+  "include": ["index.ts", "validator-1.0-types.ts"]
 }

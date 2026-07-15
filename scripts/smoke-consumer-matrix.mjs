@@ -65,6 +65,10 @@ function runModuleScenario(name, workspacePackages, registryDependencies = {}) {
 
 function runStrictTypeScriptCoreScenario() {
   const directory = join(consumerRoot, "core");
+  cpSync(
+    join(root, "fixtures", "consumer", "validator-1.0-types.ts"),
+    join(directory, "validator-1.0-types.ts")
+  );
   const typescriptCli = join(root, "node_modules", "typescript", "bin", "tsc");
   execFileSync(process.execPath, [typescriptCli, "-p", join(directory, "tsconfig.json")], {
     cwd: directory,

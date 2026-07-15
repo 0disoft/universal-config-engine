@@ -156,6 +156,10 @@ function smokeConsumerInstall(tarballs) {
   copyFileSync(join(root, "examples", "uce.json"), join(consumerDir, "uce.json"));
   copyFileSync(join(root, "examples", "basic-library.mjs"), join(consumerDir, "basic-library.mjs"));
   copyFileSync(join(root, "fixtures", "consumer", "validator-0.2.ts"), join(consumerDir, "validator-0.2.ts"));
+  copyFileSync(
+    join(root, "fixtures", "consumer", "validator-1.0-types.ts"),
+    join(consumerDir, "validator-1.0-types.ts")
+  );
   copyFileSync(join(root, "fixtures", "consumer", "tsconfig.json"), join(consumerDir, "tsconfig.json"));
   writeFileSync(
     join(consumerDir, "consumer-smoke.mjs"),
