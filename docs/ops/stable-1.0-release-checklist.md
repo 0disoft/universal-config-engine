@@ -41,8 +41,9 @@ requires another release candidate and a restarted review period.
 - [ ] Review `docs/releases/v1.0.0.md` against the prepared package contents.
 - [ ] Run the repository `check` validation.
 - [ ] Run packed package and consumer-matrix smoke validations serially.
-- [ ] Run workflow validation, dependency audit, repository diff hygiene, and
-  scaffold health checks.
+- [ ] Run `pnpm run check:workflow-actions` and `actionlint`.
+- [ ] Run `pnpm audit --audit-level=high`.
+- [ ] Run repository diff hygiene and scaffold health checks.
 - [ ] Commit and push the stable preparation commit with a clean worktree.
 
 ## Hosted And Dry-Run Validation
@@ -50,6 +51,7 @@ requires another release candidate and a restarted review period.
 - [ ] Main CI succeeds on the stable preparation SHA.
 - [ ] Runtime Compatibility succeeds on exact Node.js `24.0.0` and current Node.js.
 - [ ] Consumer Compatibility succeeds on Ubuntu and Windows.
+- [ ] CodeQL succeeds on the stable preparation SHA and any alert is triaged.
 - [ ] `release.yml` dry-run for `v1.0.0` succeeds from the same SHA.
 - [ ] The dry-run stable gate installs and smokes exact RC2 registry packages.
 

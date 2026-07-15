@@ -33,6 +33,8 @@ Run these checks from the repository root:
 pnpm run check
 pnpm run smoke:core-package
 pnpm run smoke:packages
+actionlint
+pnpm audit --audit-level=high
 git diff --check
 ssealed doctor
 ```
@@ -50,6 +52,8 @@ Before publishing, also verify:
   `uce` binary before declaring publication successful;
 - npm Trusted Publisher is registered for every publishable package;
 - no secret-like values appear in tracked files or generated reports.
+- all remote GitHub Actions references are immutable commit SHAs and the latest
+  CodeQL run for the candidate commit completed without an untriaged blocker.
 
 Before creating a release tag, dispatch `release.yml` from `main` with the intended
 tag text and `dry_run: true`. The workflow checks out that `main` commit, verifies

@@ -23,6 +23,7 @@
     "clean:build": "node scripts/clean-build-output.mjs",
     "check:adapter-fixtures": "node scripts/check-adapter-fixtures.mjs",
     "check:release-scripts": "node --test scripts/record-publication-state.test.mjs scripts/check-stable-release-readiness.test.mjs",
+    "check:workflow-actions": "node --test scripts/check-workflow-action-pins.test.mjs && node scripts/check-workflow-action-pins.mjs",
     "check:complexity": "pnpm --filter @0disoft/universal-config-engine-node... build && node scripts/check-complexity-bounds.mjs",
     "check:no-secret-snapshots": "node scripts/check-no-secret-snapshots.mjs",
     "check:api-snapshot": "pnpm run build && node scripts/check-public-api-snapshot.mjs",
@@ -33,7 +34,7 @@
     "smoke:packages": "node scripts/smoke-packages.mjs",
     "smoke:consumer-matrix": "node scripts/smoke-consumer-matrix.mjs",
     "smoke:registry-packages": "node scripts/smoke-registry-packages.mjs",
-    "check": "pnpm run typecheck && node scripts/check-public-api-snapshot.mjs && pnpm run test && pnpm run check:no-secret-snapshots && pnpm run check:adapter-fixtures && pnpm run check:release-scripts && pnpm run check:complexity && pnpm run clean:build"
+    "check": "pnpm run typecheck && node scripts/check-public-api-snapshot.mjs && pnpm run test && pnpm run check:no-secret-snapshots && pnpm run check:adapter-fixtures && pnpm run check:release-scripts && pnpm run check:workflow-actions && pnpm run check:complexity && pnpm run clean:build"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",

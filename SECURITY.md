@@ -44,5 +44,11 @@ git diff --check
 ssealed doctor
 ```
 
+CodeQL analyzes JavaScript and TypeScript sources with the `security-extended`
+query suite on `main`, pull requests, a weekly schedule, and manual dispatch. All
+remote workflow actions must be pinned to full commit SHAs; Docker actions must be
+pinned by digest. A failed scan or confirmed untriaged security finding blocks a
+release.
+
 Release is blocked if tracked files, fixtures, generated reports, package artifacts,
 or CLI output expose raw secret values.

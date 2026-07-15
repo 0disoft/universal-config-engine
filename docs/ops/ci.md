@@ -29,6 +29,7 @@ pnpm run smoke:packages
 - secret snapshot guard
 - adapter compatibility fixture guard
 - packed declaration API snapshot guard
+- immutable GitHub Actions reference guard
 - build output cleanup
 
 The smoke commands verify package buildability and package contents for the core, node, CLI, and
@@ -75,10 +76,21 @@ TypeScript, adapter, and installed binary checks across Ubuntu and Windows on ex
 Node.js `24.0.0` and the latest stable Node.js release. Workspace links are not used
 inside those consumers.
 
+`.github/workflows/codeql.yml` runs CodeQL advanced setup for
+`javascript-typescript` on `main` pushes, pull requests targeting `main`, a weekly
+schedule, and manual dispatch. It uses the `security-extended` query suite and
+uploads results with only `contents: read` and `security-events: write` permissions.
+The workflow does not build or publish packages.
+
+Every remote action in `.github/workflows/*.yml` must use a full 40-character
+commit SHA. `pnpm run check:workflow-actions` tests this policy and scans all
+workflow files; local actions remain repository-bound, and Docker actions must use
+a `sha256` digest. Run `actionlint` separately when workflow structure changes.
+
 ## Validation
 
 - Required validation names: typecheck, test, smoke, check.
 - Release blocker status: public API, CLI, or package-surface changes are blocked when local `check`,
-  smoke, hosted CI, or runtime compatibility fails.
+  smoke, hosted CI, runtime compatibility, consumer compatibility, or CodeQL fails.
 - Remaining operational risk: publication still runs on Ubuntu. Windows CI covers
   package behavior and smoke installation, but not the Trusted Publisher release job.
