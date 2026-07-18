@@ -28,6 +28,10 @@ against the workflow contract.
 - The pull-request rule requires zero approvals because the repository currently has
   one administrator and no backup owner. It still requires the pull-request audit
   trail and cannot be satisfied by a direct push.
+- The primary owner is the only pull-request-only bypass actor. This allows the sole
+  administrator to complete their own pull request but never permits a direct push
+  to the default branch. Use the bypass only after the required checks pass or for a
+  documented emergency recovery.
 - Repository auto-merge is enabled so a pull request can complete with squash or
   rebase after every ruleset requirement passes. Auto-merge does not bypass a
   required check or unresolved review conversation.
