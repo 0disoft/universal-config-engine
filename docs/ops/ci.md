@@ -28,6 +28,9 @@ against the workflow contract.
 - The pull-request rule requires zero approvals because the repository currently has
   one administrator and no backup owner. It still requires the pull-request audit
   trail and cannot be satisfied by a direct push.
+- Repository auto-merge is enabled so a pull request can complete with squash or
+  rebase after every ruleset requirement passes. Auto-merge does not bypass a
+  required check or unresolved review conversation.
 - Required checks must pass on the latest default-branch state and must originate
   from the GitHub Actions application. The required contexts are:
   - `check`
