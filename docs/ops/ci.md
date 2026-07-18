@@ -12,6 +12,47 @@ Cover required checks, branch protection, pipeline stages, artifacts, failure po
 - Backup owner: UNASSIGNED
 - Escalation path: repository issues for non-sensitive failures; SECURITY.md for sensitive failures
 
+## Repository Governance
+
+GitHub repository settings are the live source of truth for enforcement. This
+document records the intended policy so changes to remote settings can be reviewed
+against the workflow contract.
+
+- GitHub Actions is enabled for the repository, and every remote action is required
+  by the platform to use a full-length commit SHA. The repository workflow guard
+  remains a second line of defense.
+- The active [`Protect main`](https://github.com/0disoft/universal-config-engine/rules/19141495)
+  ruleset targets the default branch. Changes must arrive through a pull request,
+  all review conversations must be resolved, and the branch must retain linear
+  history. The ruleset blocks branch deletion and force pushes.
+- The pull-request rule requires zero approvals because the repository currently has
+  one administrator and no backup owner. It still requires the pull-request audit
+  trail and cannot be satisfied by a direct push.
+- The primary owner is the only pull-request-only bypass actor. This allows the sole
+  administrator to complete their own pull request but never permits a direct push
+  to the default branch. Use the bypass only after the required checks pass or for a
+  documented emergency recovery.
+- Repository auto-merge is enabled so a pull request can complete with squash or
+  rebase after every ruleset requirement passes. Auto-merge does not bypass a
+  required check or unresolved review conversation.
+- Required checks must pass on the latest default-branch state and must originate
+  from the GitHub Actions application. The required contexts are:
+  - `check`
+  - `windows-check`
+  - `analyze-javascript-typescript`
+  - `node-runtime-minimum`
+  - `node-runtime-current`
+  - `packed-consumer-ubuntu-minimum`
+  - `packed-consumer-ubuntu-current`
+  - `packed-consumer-windows-minimum`
+  - `packed-consumer-windows-current`
+- Third-party advisory checks such as `Socket Security: Project Report` are not
+  merge requirements. Their outages must not prevent an otherwise validated
+  security fix from merging.
+- The active [`Protect release tags`](https://github.com/0disoft/universal-config-engine/rules/19141487)
+  ruleset allows new `v*` tags but prevents existing release tags from being
+  updated or deleted.
+
 ## Local Check Contract
 
 The current local CI equivalent is:
@@ -59,9 +100,8 @@ workspace builds or locally packed tarballs.
 
 The `windows-check` job uses the same pinned Node.js and pnpm versions on
 `windows-latest`. It runs the repository check, packed workspace package smoke, and
-diff hygiene. The Ubuntu job name remains stable for existing branch protection;
-Windows coverage is a separate status that can be made required without renaming
-the existing gate.
+diff hygiene. Both `check` and `windows-check` are required by the default-branch
+ruleset and their job names are part of the repository governance contract.
 
 `.github/workflows/runtime-compatibility.yml` independently checks the package
 runtime claim on Ubuntu. Its `minimum` job uses exact Node.js `24.0.0`; its
@@ -92,5 +132,8 @@ a `sha256` digest. Run `actionlint` separately when workflow structure changes.
 - Required validation names: typecheck, test, smoke, check.
 - Release blocker status: public API, CLI, or package-surface changes are blocked when local `check`,
   smoke, hosted CI, runtime compatibility, consumer compatibility, or CodeQL fails.
-- Remaining operational risk: publication still runs on Ubuntu. Windows CI covers
-  package behavior and smoke installation, but not the Trusted Publisher release job.
+- Remaining operational risks:
+  - publication still runs on Ubuntu. Windows CI covers package behavior and smoke
+    installation, but not the Trusted Publisher release job;
+  - the repository still has no backup owner, so recovery from a mistaken remote
+    ruleset change depends on the primary administrator retaining account access.
