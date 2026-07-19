@@ -112,6 +112,25 @@ commit SHA. `pnpm run check:workflow-actions` tests this policy and scans all
 workflow files; local actions remain repository-bound, and Docker actions must use
 a `sha256` digest. Run `actionlint` separately when workflow structure changes.
 
+## Dependency Automation
+
+`.github/dependabot.yml` checks npm dependencies every Friday at 09:00 Asia/Seoul
+and GitHub Actions every Friday at 09:30. The schedule intentionally starts after
+the stable `1.0.0` review gate rather than creating dependency churn during the RC2
+freeze.
+
+- npm production and development minor/patch updates are grouped separately;
+- npm major updates remain isolated so migration and rollback cost stay visible;
+- GitHub Actions minor/patch updates are grouped, while major updates remain
+  isolated;
+- version updates use three-day patch, seven-day minor, and fourteen-day major
+  cooldowns. Dependabot security updates are not delayed by these cooldowns;
+- automatic rebasing is disabled to avoid background branch churn. Merge an update
+  only after its exact commit passes the relevant hosted checks;
+- SHA-pinned action updates must preserve a full commit SHA. When action version
+  comments are normalized after the stable release, keep the version comment on
+  the same line as `uses:` so Dependabot updates both together.
+
 ## Validation
 
 - Required validation names: typecheck, test, smoke, check.
