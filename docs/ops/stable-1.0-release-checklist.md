@@ -52,8 +52,19 @@ requires another release candidate and a restarted review period.
 - [ ] Runtime Compatibility succeeds on exact Node.js `24.0.0` and current Node.js.
 - [ ] Consumer Compatibility succeeds on Ubuntu and Windows.
 - [ ] CodeQL succeeds on the stable preparation SHA and any alert is triaged.
+- [ ] Open CodeQL, Dependabot, and secret-scanning alert counts are all zero.
+- [ ] Repository Actions policy still requires immutable action SHAs.
+- [ ] The active main ruleset still prevents deletion and non-fast-forward
+      updates, and the active release-tag ruleset still prevents deletion or
+      updates of `v*` tags.
 - [ ] `release.yml` dry-run for `v1.0.0` succeeds from the same SHA.
 - [ ] The dry-run stable gate installs and smokes exact RC2 registry packages.
+- [ ] While `main` still points to the validated preparation SHA, export the
+      GitHub Dependency Graph SPDX 2.3 SBOM as
+      `universal-config-engine-1.0.0.spdx.json`.
+- [ ] Record the exact SHA before and after export, export timestamp, SPDX
+      version, package count, relationship count, and SBOM SHA-256 digest in the
+      stable release tracking issue.
 
 ## Publication
 
@@ -61,6 +72,9 @@ requires another release candidate and a restarted review period.
 - [ ] Create and push annotated tag `v1.0.0` from the validated SHA.
 - [ ] Confirm the GitHub Release is published, non-draft, and not a prerelease.
 - [ ] Confirm all five tarballs and before/after publication manifests are attached.
+- [ ] Attach `universal-config-engine-1.0.0.spdx.json` to the GitHub Release.
+- [ ] Download the attached SBOM and confirm its SHA-256 digest matches the value
+      recorded before tagging.
 - [ ] Confirm the after manifest reports `5/5` published and `complete=true`.
 - [ ] Confirm npm `latest` points all five packages to `1.0.0`.
 - [ ] Confirm npm `next` still points all five packages to `1.0.0-rc.2`.
@@ -73,4 +87,7 @@ Do not move or overwrite a published tag. If publication is partial, preserve th
 publication manifests and rerun the same tagged workflow. If a defect is found
 before stable publication, stop and prepare another release candidate. If a defect
 is found after publication, deprecate the affected version when appropriate and
-publish a forward-fix patch under the rollback contract.
+publish a forward-fix patch under the rollback contract. Stop before tagging if the
+SBOM export cannot be tied to the stable preparation SHA or contains sensitive local
+data. If the attached SBOM digest differs from the recorded pre-tag digest, replace
+the asset with the reviewed bytes and verify the download before continuing.

@@ -118,6 +118,28 @@ gh release view <tag> --repo 0disoft/universal-config-engine --json assets,tagNa
 pnpm run clean:build
 ```
 
+## SBOM Evidence
+
+GitHub Dependency Graph can export the repository dependency inventory as an
+SPDX 2.3 SBOM. That export describes the current default branch, not a release
+tag by itself, so release evidence must bind it to the validated release commit.
+
+For a stable release, keep `main` at the validated preparation SHA while the
+SBOM is exported. Record the `main` object ID immediately before and after the
+export, and require both values to match the preparation SHA. Save the export as
+`universal-config-engine-<version>.spdx.json`, then record its SHA-256 digest,
+export timestamp, SPDX version, package count, and relationship count in the
+release tracking issue.
+
+Review the exported document before publication. Its described repository and
+root package must match this repository, and package locations must not expose
+local paths, temporary workspace names, credentials, or raw secret values. After
+the GitHub Release exists, attach the SBOM, download the attached asset again,
+and require its SHA-256 digest to match the value recorded before tagging.
+
+The SBOM supplements the release tarball digests, npm integrity metadata, and
+SLSA provenance. It does not replace any of those artifact checks.
+
 The `v0.1.0` release includes pre-publication tarballs for core, node, CLI, Ajv
 validator, and Zod validator packages under the superseded package scope. The
 `v0.1.1` release is the first npm publication baseline under `@0disoft`. Later
@@ -147,6 +169,8 @@ package contents from drifting beyond the reviewed RC2 candidate.
 - Package metadata does not match ADR 0005.
 - A report, fixture, or package artifact exposes raw secret values.
 - GitHub release assets cannot be reproduced from the validated tag.
+- The stable SBOM cannot be bound to the validated preparation SHA, exposes
+  sensitive local data, or changes digest after it is attached to the release.
 - Publication state cannot be read reliably from npm or preserved on the GitHub
   Release.
 

@@ -92,6 +92,9 @@ stable release must not silently differ from the candidate that completed review
 Immediately before stable release preparation, rerun the main CI, runtime
 compatibility, consumer compatibility, release dry-run, exact registry package
 smoke, and npm dist-tag/provenance checks against the intended stable commit.
+Export the GitHub Dependency Graph SPDX SBOM while `main` still points to that
+validated commit, record its SHA-256 digest before tagging, and require the
+downloaded GitHub Release asset to match that digest after publication.
 `release-policy.json` is the machine-readable stable-release gate. For `1.0.0` it
 names `1.0.0-rc.2` as the reviewed candidate and requires `168` hours. The release
 workflow derives the exact not-before timestamp from that GitHub prerelease's
