@@ -145,6 +145,18 @@ Owner: UNASSIGNED
   declaration migration checks. Its hosted and public-registry verification passed;
   stable review remains blocked until `2026-07-22T04:19:37Z`.
 
+## Post-1.0 Hardening Candidates
+
+- Add an Ajv adapter regression case and a stable safe fallback code for custom
+  keyword names that Ajv accepts but the core diagnostic-code grammar rejects,
+  including names beginning with `$` or `_` and names containing `$`. Preserve
+  existing codes for standard keywords and do not copy arbitrary keyword text into
+  diagnostic prose.
+- Add installed CLI failure-path coverage that executes the packed `uce` entry
+  point and verifies stdout, stderr, and exit codes for missing declarations and
+  bounded-input failures on Windows and Linux. This complements the current packed
+  success-path smoke and direct `runCli` tests.
+
 ## Explicitly Deferred
 
 - Remote config service.

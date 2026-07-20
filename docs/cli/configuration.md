@@ -41,6 +41,24 @@ The CLI retains the canonical identity of the declaration file that was actually
 opened and uses its directory for every relative source. Retargeting a declaration
 symlink or junction after the read cannot switch the source directory.
 
+### Simple Dotenv Grammar
+
+The built-in dotenv source intentionally accepts a line-oriented subset, not the
+full grammar implemented by shell-aware dotenv tools:
+
+- blank lines and lines whose first non-whitespace character is `#` are ignored;
+- the first `=` separates a valid environment name from its value, so later `=`
+  characters remain part of the value;
+- matching outer single or double quotes are removed, but escape sequences,
+  variable expansion, inline comments, and shell syntax are not interpreted;
+- `export KEY=VALUE` and multiline quoted values are unsupported and produce
+  bounded parse diagnostics instead of one expanded value; and
+- repeated names use the last parsed value and retain that line as the source
+  location.
+
+Use a separate adapter when a project needs a broader dotenv dialect. Expanding
+this built-in grammar is a compatibility decision, not an implicit parser upgrade.
+
 The CLI validates the declaration shape before loading sources. Unsupported source
 kinds, unknown declaration fields, missing or duplicate source ids, missing file
 paths, malformed redaction policies, malformed override mappings, malformed
