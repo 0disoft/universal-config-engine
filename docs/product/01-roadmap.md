@@ -142,8 +142,11 @@ Owner: UNASSIGNED
   `docs/library/stability-1.0.md`.
 - Published `1.0.0-rc.2` with package-specific npm documentation, a
   machine-enforced stable release gate, reviewed release notes, and packed
-  declaration migration checks. Its hosted and public-registry verification passed;
-  stable review remains blocked until `2026-07-22T04:19:37Z`.
+  declaration migration checks. Its hosted and public-registry verification passed,
+  but a newly published high-severity `fast-uri` advisory blocked stable promotion
+  when the required audit ran after the review gate.
+- Prepared `1.0.0-rc.3` with the patched transitive lock resolution. Stable review
+  restarts from the RC3 GitHub prerelease publication timestamp.
 
 ## Post-1.0 Hardening Candidates
 

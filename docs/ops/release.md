@@ -78,7 +78,7 @@ an npm `404` from registry lookup failure and resumes only packages recorded as
 missing. Preserve these manifests when investigating a partial release.
 
 The post-publication smoke can also be reproduced with
-`$env:RELEASE_VERSION = "1.0.0-rc.2"; pnpm run smoke:registry-packages`.
+`$env:RELEASE_VERSION = "1.0.0-rc.3"; pnpm run smoke:registry-packages`.
 
 Stable tags publish with the npm `latest` dist-tag. Semantic-version prerelease
 tags publish with `next`; the workflow verifies both that `next` points to the

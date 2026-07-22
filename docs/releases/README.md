@@ -14,6 +14,7 @@ Do not claim that a hosted check, registry publication, or review period passed
 before current evidence exists. Preparation notes may describe the checks that the
 workflow will run.
 
-The stable `1.0.0` publication copy is `docs/releases/v1.0.0.md`. Its operational
-gate and allowed preparation diff are maintained in
+The current candidate publication copy is `docs/releases/v1.0.0-rc.3.md`. The
+stable `1.0.0` publication copy is `docs/releases/v1.0.0.md`. Its operational gate
+and allowed preparation diff are maintained in
 `docs/ops/stable-1.0-release-checklist.md`.

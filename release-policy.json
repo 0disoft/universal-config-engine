@@ -2,7 +2,7 @@
   "schemaVersion": "0.1",
   "stableReleases": {
     "1.0.0": {
-      "candidateVersion": "1.0.0-rc.2",
+      "candidateVersion": "1.0.0-rc.3",
       "previousStableVersion": "0.6.0",
       "minimumReviewHours": 168
     }

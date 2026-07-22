@@ -7,10 +7,20 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Stable Release Preparation
 
-- Promote the reviewed `1.0.0-rc.2` runtime, public API, and package contents as
+- Promote the reviewed `1.0.0-rc.3` runtime, public API, and package contents as
   `1.0.0` after the machine-enforced review window and final validation gates.
 - Publish the stable release with the migration guidance and compatibility
   contracts established during the RC line.
+
+## 1.0.0-rc.3 - 2026-07-22
+
+### Security
+
+- Pinned the Ajv transitive `fast-uri` resolution to patched `3.1.4` after
+  `GHSA-v2hh-gcrm-f6hx` made the reviewed RC2 lock fail the required high-severity
+  audit gate.
+- Restarted the stable review window because the dependency lock changed after
+  RC2 completed review.
 
 ## 1.0.0-rc.2 - 2026-07-15
 
@@ -54,7 +64,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 - Kept opened-file identity verification compatible with Windows Node.js `24.0.0`
   when path metadata does not expose a usable device identifier.
 
-[Unreleased]: https://github.com/0disoft/universal-config-engine/compare/v1.0.0-rc.2...HEAD
+[Unreleased]: https://github.com/0disoft/universal-config-engine/compare/v1.0.0-rc.3...HEAD
+[1.0.0-rc.3]: https://github.com/0disoft/universal-config-engine/compare/v1.0.0-rc.2...v1.0.0-rc.3
 [1.0.0-rc.2]: https://github.com/0disoft/universal-config-engine/compare/v1.0.0-rc.1...v1.0.0-rc.2
 [1.0.0-rc.1]: https://github.com/0disoft/universal-config-engine/compare/v0.6.0...v1.0.0-rc.1
 [0.6.0]: https://github.com/0disoft/universal-config-engine/releases/tag/v0.6.0

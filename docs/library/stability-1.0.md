@@ -96,7 +96,7 @@ Export the GitHub Dependency Graph SPDX SBOM while `main` still points to that
 validated commit, record its SHA-256 digest before tagging, and require the
 downloaded GitHub Release asset to match that digest after publication.
 `release-policy.json` is the machine-readable stable-release gate. For `1.0.0` it
-names `1.0.0-rc.2` as the reviewed candidate and requires `168` hours. The release
+names `1.0.0-rc.3` as the reviewed candidate and requires `168` hours. The release
 workflow derives the exact not-before timestamp from that GitHub prerelease's
 `publishedAt` value and fails closed while the candidate is missing or incomplete.
 
@@ -120,6 +120,10 @@ passed. Package documentation and release-gate improvements require
 `1.0.0-rc.2`, so the RC1 review window no longer authorizes stable publication.
 RC2 was published at `2026-07-15T04:19:37Z`; its hosted release, npm metadata,
 provenance, dist-tag, README, and exact registry package smoke checks passed.
-Stable `1.0.0` remains blocked until at least `2026-07-22T04:19:37Z` and until the
-final checks above pass without a confirmed breaking blocker. The machine gate
-derives and enforces the same boundary from the GitHub prerelease timestamp.
+The RC2 review-time gate completed at `2026-07-22T04:19:37Z`, but the required
+high-severity audit then found `GHSA-v2hh-gcrm-f6hx` in the locked
+`fast-uri@3.1.3` transitive dependency. RC3 pins patched `fast-uri@3.1.4` without
+changing runtime source, public declarations, package READMEs, fixtures, smoke
+logic, or the release runner. Because the dependency lock changed after RC2 review,
+stable authorization now names `1.0.0-rc.3` and the 168-hour clock restarts from
+the RC3 GitHub prerelease `publishedAt` timestamp.
