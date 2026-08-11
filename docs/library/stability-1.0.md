@@ -96,7 +96,7 @@ Export the GitHub Dependency Graph SPDX SBOM while `main` still points to that
 validated commit, record its SHA-256 digest before tagging, and require the
 downloaded GitHub Release asset to match that digest after publication.
 `release-policy.json` is the machine-readable stable-release gate. For `1.0.0` it
-names `1.0.0-rc.3` as the reviewed candidate and requires `168` hours. The release
+names `1.0.0-rc.4` as the reviewed candidate and requires `168` hours. The release
 workflow derives the exact not-before timestamp from that GitHub prerelease's
 `publishedAt` value and fails closed while the candidate is missing or incomplete.
 
@@ -125,5 +125,11 @@ high-severity audit then found `GHSA-v2hh-gcrm-f6hx` in the locked
 `fast-uri@3.1.3` transitive dependency. RC3 pins patched `fast-uri@3.1.4` without
 changing runtime source, public declarations, package READMEs, fixtures, smoke
 logic, or the release runner. Because the dependency lock changed after RC2 review,
-stable authorization now names `1.0.0-rc.3` and the 168-hour clock restarts from
-the RC3 GitHub prerelease `publishedAt` timestamp.
+stable authorization named `1.0.0-rc.3` and restarted the 168-hour clock from the
+RC3 GitHub prerelease `publishedAt` timestamp. After that review completed, new
+high-severity advisories affected the locked `fast-uri@3.1.4` runtime path and
+`postcss@8.5.16` development path. RC4 resolves them to `fast-uri@3.1.5` and
+`postcss@8.5.26` without changing runtime source, public declarations, package
+READMEs, fixtures, smoke logic, or the release runner. Stable authorization now
+names `1.0.0-rc.4`, and the 168-hour clock restarts from the RC4 GitHub prerelease
+`publishedAt` timestamp.

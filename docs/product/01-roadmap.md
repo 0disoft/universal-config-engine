@@ -145,8 +145,11 @@ Owner: UNASSIGNED
   declaration migration checks. Its hosted and public-registry verification passed,
   but a newly published high-severity `fast-uri` advisory blocked stable promotion
   when the required audit ran after the review gate.
-- Prepared `1.0.0-rc.3` with the patched transitive lock resolution. Stable review
-  restarts from the RC3 GitHub prerelease publication timestamp.
+- Published `1.0.0-rc.3` with the patched transitive lock resolution and completed
+  its 168-hour review. New high-severity advisories then affected the locked
+  `fast-uri` runtime path and `postcss` development path before stable promotion.
+- Prepared `1.0.0-rc.4` with narrow patched transitive resolutions. Stable review
+  restarts from the RC4 GitHub prerelease publication timestamp.
 
 ## Post-1.0 Hardening Candidates
 
