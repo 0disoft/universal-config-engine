@@ -2,4 +2,5 @@ packages:
   - "packages/*"
 
 overrides:
-  fast-uri: 3.1.4
+  fast-uri: ^3.1.5
+  postcss: ^8.5.26
