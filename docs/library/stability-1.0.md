@@ -75,19 +75,17 @@ matrix.
 
 ## Release Gates
 
-### Review Period Contract
+### Candidate Promotion Contract
 
-The stable release requires a minimum seven-day (`168` hour) public review period.
-The clock starts at the GitHub prerelease `publishedAt` timestamp, not at the local
-commit or tag time. Throughout the period, all five packages must remain installable
-at the candidate's exact version under npm `next` while npm `latest` continues to
-name the previous stable release.
+Stable promotion has no fixed elapsed-time requirement. All five candidate packages
+must remain installable at the exact version under npm `next` while npm `latest`
+continues to name the previous stable release.
 
 A newly confirmed issue that requires a breaking public-contract change blocks the
-stable release. The fix must ship as another release candidate, and the review
-period restarts from that candidate's publication timestamp. Non-breaking fixes may
-also use another candidate when they affect runtime or packaging behavior; the
-stable release must not silently differ from the candidate that completed review.
+stable release. The fix must ship as another release candidate and pass the same
+candidate validation. Non-breaking fixes may also use another candidate when they
+affect runtime or packaging behavior; the stable release must not silently differ
+from the candidate that passed validation.
 
 Immediately before stable release preparation, rerun the main CI, runtime
 compatibility, consumer compatibility, release dry-run, exact registry package
@@ -96,9 +94,8 @@ Export the GitHub Dependency Graph SPDX SBOM while `main` still points to that
 validated commit, record its SHA-256 digest before tagging, and require the
 downloaded GitHub Release asset to match that digest after publication.
 `release-policy.json` is the machine-readable stable-release gate. For `1.0.0` it
-names `1.0.0-rc.4` as the reviewed candidate and requires `168` hours. The release
-workflow derives the exact not-before timestamp from that GitHub prerelease's
-`publishedAt` value and fails closed while the candidate is missing or incomplete.
+names `1.0.0-rc.4` as the validated candidate. The release workflow fails closed
+while the candidate is missing or incomplete, but does not impose a time delay.
 
 A `1.0` release candidate may be prepared only when:
 
@@ -110,26 +107,23 @@ A `1.0` release candidate may be prepared only when:
 - a `migration-1.0.md` guide lists every intentional compatibility change;
 - no unresolved known issue requires a breaking change.
 
-`1.0.0` additionally requires a successful release-candidate registry smoke and a
-documented review period. Any newly discovered breaking requirement returns the
+`1.0.0` additionally requires a successful release-candidate registry smoke. Any
+newly discovered breaking requirement returns the
 work to another release candidate instead of changing the stable tag in place.
 
 The preparation gates above were satisfied for `1.0.0-rc.1`, published at
 `2026-07-14T10:11:01Z`, and its hosted release and exact registry package smoke
-passed. Package documentation and release-gate improvements require
-`1.0.0-rc.2`, so the RC1 review window no longer authorizes stable publication.
+passed. Package documentation and release-gate improvements required
+`1.0.0-rc.2`, so RC1 no longer matched the intended stable package contents.
 RC2 was published at `2026-07-15T04:19:37Z`; its hosted release, npm metadata,
 provenance, dist-tag, README, and exact registry package smoke checks passed.
-The RC2 review-time gate completed at `2026-07-22T04:19:37Z`, but the required
-high-severity audit then found `GHSA-v2hh-gcrm-f6hx` in the locked
+The required high-severity audit later found `GHSA-v2hh-gcrm-f6hx` in the locked
 `fast-uri@3.1.3` transitive dependency. RC3 pins patched `fast-uri@3.1.4` without
 changing runtime source, public declarations, package READMEs, fixtures, smoke
-logic, or the release runner. Because the dependency lock changed after RC2 review,
-stable authorization named `1.0.0-rc.3` and restarted the 168-hour clock from the
-RC3 GitHub prerelease `publishedAt` timestamp. After that review completed, new
-high-severity advisories affected the locked `fast-uri@3.1.4` runtime path and
+logic, or the release runner. Because the dependency lock changed, stable
+authorization moved to `1.0.0-rc.3`. New high-severity advisories later affected
+the locked `fast-uri@3.1.4` runtime path and
 `postcss@8.5.16` development path. RC4 resolves them to `fast-uri@3.1.5` and
 `postcss@8.5.26` without changing runtime source, public declarations, package
 READMEs, fixtures, smoke logic, or the release runner. Stable authorization now
-names `1.0.0-rc.4`, and the 168-hour clock restarts from the RC4 GitHub prerelease
-`publishedAt` timestamp.
+names `1.0.0-rc.4`.

@@ -127,8 +127,8 @@ jobs:
           }
           NODE
 
-      - name: Check stable release readiness
-        id: stable_gate
+      - name: Verify stable release candidate
+        id: candidate_gate
         env:
           GITHUB_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
@@ -160,10 +160,10 @@ jobs:
       - name: Smoke workspace packages
         run: pnpm run smoke:packages
 
-      - name: Smoke reviewed candidate registry packages
-        if: steps.stable_gate.outputs.required == 'true'
+      - name: Smoke stable candidate registry packages
+        if: steps.candidate_gate.outputs.required == 'true'
         env:
-          RELEASE_VERSION: ${{ steps.stable_gate.outputs.candidate_version }}
+          RELEASE_VERSION: ${{ steps.candidate_gate.outputs.candidate_version }}
         run: pnpm run smoke:registry-packages
 
       - name: Check repository diff hygiene

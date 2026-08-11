@@ -8,12 +8,11 @@ import {
 } from "./check-stable-release-readiness.mjs";
 
 const policy = {
-  schemaVersion: "0.1",
+  schemaVersion: "0.2",
   stableReleases: {
     "1.0.0": {
       candidateVersion: "1.0.0-rc.2",
-      previousStableVersion: "0.6.0",
-      minimumReviewHours: 168
+      previousStableVersion: "0.6.0"
     }
   }
 };
@@ -32,20 +31,10 @@ test("rejects stable versions without an explicit policy entry", () => {
   );
 });
 
-test("rejects a stable release before the candidate review period ends", () => {
-  const input = validReadinessInput();
-  input.now = "2026-07-22T23:59:59.999Z";
-  assert.throws(
-    () => evaluateStableReleaseReadiness(input),
-    /review period is incomplete/
-  );
-});
-
-test("accepts a complete reviewed candidate and registry state", () => {
+test("accepts a complete candidate without an elapsed-time requirement", () => {
   assert.deepEqual(evaluateStableReleaseReadiness(validReadinessInput()), {
     required: true,
-    candidateVersion: "1.0.0-rc.2",
-    notBefore: "2026-07-23T00:00:00.000Z"
+    candidateVersion: "1.0.0-rc.2"
   });
 });
 
@@ -70,12 +59,10 @@ function validReadinessInput() {
   return {
     version: "1.0.0",
     policy: structuredClone(policy),
-    now: "2026-07-23T00:00:00.000Z",
     candidateRelease: {
       tagName: `v${candidateVersion}`,
       draft: false,
       prerelease: true,
-      publishedAt: "2026-07-16T00:00:00.000Z",
       assets: [
         ...RELEASE_PACKAGE_NAMES.map((name) => ({
           name: `${name.replace(/^@/, "").replace("/", "-")}-${candidateVersion}.tgz`

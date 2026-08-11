@@ -10,7 +10,7 @@ Release notes summarize consumer-visible behavior, installation choices, breakin
 changes, and migration links. `CHANGELOG.md` remains the chronological project
 record; tag-specific notes are the publication copy for one release.
 
-Do not claim that a hosted check, registry publication, or review period passed
+Do not claim that a hosted check, registry publication, or validation gate passed
 before current evidence exists. Preparation notes may describe the checks that the
 workflow will run.
 

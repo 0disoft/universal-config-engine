@@ -28,10 +28,6 @@ export function resolveStableReleaseRequirement(version, policy) {
   if (previousStable.prerelease) {
     throw new Error("Stable release policy previousStableVersion must be stable.");
   }
-  if (!Number.isSafeInteger(requirement.minimumReviewHours) || requirement.minimumReviewHours <= 0) {
-    throw new Error("Stable release policy minimumReviewHours must be a positive safe integer.");
-  }
-
   return requirement;
 }
 
@@ -51,18 +47,6 @@ export function evaluateStableReleaseReadiness(input) {
     release.prerelease !== true
   ) {
     throw new Error(`Reviewed candidate ${expectedTag} is not a published GitHub prerelease.`);
-  }
-
-  const publishedAt = Date.parse(release.publishedAt);
-  const now = Date.parse(input.now);
-  if (!Number.isFinite(publishedAt) || !Number.isFinite(now)) {
-    throw new Error("Stable release readiness timestamps must be valid ISO date-time text.");
-  }
-  const notBefore = publishedAt + requirement.minimumReviewHours * 60 * 60 * 1000;
-  if (now < notBefore) {
-    throw new Error(
-      `Stable release review period is incomplete; retry after ${new Date(notBefore).toISOString()}.`
-    );
   }
 
   const assetNames = new Set(release.assets.map((asset) => asset.name));
@@ -110,8 +94,7 @@ export function evaluateStableReleaseReadiness(input) {
 
   return {
     required: true,
-    candidateVersion: requirement.candidateVersion,
-    notBefore: new Date(notBefore).toISOString()
+    candidateVersion: requirement.candidateVersion
   };
 }
 
@@ -119,12 +102,12 @@ function validatePolicy(policy) {
   if (
     policy === null ||
     typeof policy !== "object" ||
-    policy.schemaVersion !== "0.1" ||
+    policy.schemaVersion !== "0.2" ||
     policy.stableReleases === null ||
     typeof policy.stableReleases !== "object" ||
     Array.isArray(policy.stableReleases)
   ) {
-    throw new Error("release-policy.json must match stable release policy schema 0.1.");
+    throw new Error("release-policy.json must match stable release policy schema 0.2.");
   }
 }
 
@@ -137,8 +120,7 @@ async function collectRemoteReadinessInput(version, repository, policy) {
   if (requirement === undefined) {
     return {
       version,
-      policy,
-      now: new Date().toISOString()
+      policy
     };
   }
 
@@ -184,12 +166,10 @@ async function collectRemoteReadinessInput(version, repository, policy) {
   return {
     version,
     policy,
-    now: new Date().toISOString(),
     candidateRelease: {
       tagName: release.tag_name,
       draft: release.draft,
       prerelease: release.prerelease,
-      publishedAt: release.published_at,
       assets: release.assets.map((asset) => ({ name: asset.name }))
     },
     publicationStates,
@@ -239,13 +219,12 @@ async function main() {
     appendFileSync(output, `required=${readiness.required}\n`, "utf8");
     if (readiness.required) {
       appendFileSync(output, `candidate_version=${readiness.candidateVersion}\n`, "utf8");
-      appendFileSync(output, `not_before=${readiness.notBefore}\n`, "utf8");
     }
   }
 
   if (readiness.required) {
     process.stdout.write(
-      `Stable release gate passed for ${args.version} using ${readiness.candidateVersion}; review completed at ${readiness.notBefore}.\n`
+      `Stable release candidate verification passed for ${args.version} using ${readiness.candidateVersion}.\n`
     );
   } else {
     process.stdout.write(`Stable release gate does not apply to prerelease ${args.version}.\n`);

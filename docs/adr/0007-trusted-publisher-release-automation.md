@@ -49,7 +49,7 @@ or if a prerelease replaces npm `latest`.
 
 Stable tags additionally require an entry in `release-policy.json`. Before any
 stable publication, the workflow verifies the declared candidate GitHub
-prerelease, tarballs, complete after-publication manifest, minimum review duration,
+prerelease, tarballs, complete after-publication manifest,
 npm integrity and provenance, `next` and `latest` state, and an exact candidate
 registry installation smoke. An unlisted stable version fails closed.
 

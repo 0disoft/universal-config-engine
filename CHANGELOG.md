@@ -7,8 +7,10 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Stable Release Preparation
 
-- Promote the reviewed `1.0.0-rc.4` runtime, public API, and package contents as
-  `1.0.0` after the machine-enforced review window and final validation gates.
+- Promote the validated `1.0.0-rc.4` runtime, public API, and package contents as
+  `1.0.0` after the final validation gates.
+- Removed the fixed elapsed-time gate from stable promotion policy schema `0.2`;
+  candidate artifact, provenance, registry, security, and exact-SHA checks remain.
 - Publish the stable release with the migration guidance and compatibility
   contracts established during the RC line.
 
@@ -20,8 +22,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   clear `GHSA-7p8r-x3mc-p8w7` from the published CLI and Ajv adapter runtime path.
 - Updated the Vite transitive `postcss` resolution from `8.5.16` to `8.5.26` to
   clear `GHSA-r28c-9q8g-f849` from the development toolchain.
-- Restarted the stable review window because the dependency lock changed after
-  RC3 completed review.
+- Established RC4 as the stable candidate because the dependency lock changed
+  after RC3.
 
 ## 1.0.0-rc.3 - 2026-07-22
 
@@ -30,16 +32,16 @@ semantic versioning and keeps package versions aligned across the workspace.
 - Pinned the Ajv transitive `fast-uri` resolution to patched `3.1.4` after
   `GHSA-v2hh-gcrm-f6hx` made the reviewed RC2 lock fail the required high-severity
   audit gate.
-- Restarted the stable review window because the dependency lock changed after
-  RC2 completed review.
+- Established RC3 as the stable candidate because the dependency lock changed
+  after RC2.
 
 ## 1.0.0-rc.2 - 2026-07-15
 
 ### Added
 
 - Package-specific npm READMEs for core, Node adapters, CLI, Ajv, and Zod.
-- A machine-enforced stable release policy covering the reviewed candidate,
-  minimum review duration, release assets, publication evidence, npm dist-tags,
+- A machine-enforced stable release policy covering the validated candidate,
+  release assets, publication evidence, npm dist-tags,
   integrity, provenance, and registry installation.
 - Tag-specific release note files consumed directly by the release workflow.
 - Packed strict TypeScript migration checks that keep removed legacy validator

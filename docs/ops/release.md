@@ -147,13 +147,13 @@ releases, including the `0.2.x` through `0.6.x` lines, are published by
 `.github/workflows/release.yml`. The `1.0.0-rc.1` line is the first prerelease
 published under npm `next`.
 
-Stable `1.0.0` must follow the review-period and candidate-revalidation contract in
+Stable `1.0.0` must follow the candidate-revalidation contract in
 `docs/library/stability-1.0.md`; a successful candidate publication alone does not
-authorize immediate stable publication.
+replace final validation of the stable preparation commit.
 
 `release-policy.json` is the machine-readable stable release authorization list.
-Every stable version must declare its reviewed candidate, previous stable version,
-and minimum review hours. The release workflow fails closed for unlisted stable
+Every stable version must declare its validated candidate and previous stable
+version. The release workflow fails closed for unlisted stable
 versions and verifies the candidate release assets, complete publication evidence,
 npm integrity, provenance, dist-tags, and registry installation before continuing.
 

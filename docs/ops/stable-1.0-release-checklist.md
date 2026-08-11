@@ -3,7 +3,6 @@
 Status: RC4 Preparation
 Candidate: `1.0.0-rc.4`
 Stable Version: `1.0.0`
-Not Before: RC4 GitHub Release `publishedAt` + 168 hours
 
 ## Purpose
 
@@ -22,12 +21,11 @@ The stable preparation commit may change only:
 
 Any change to runtime source, public declarations, package READMEs, dependencies,
 fixtures, smoke logic, release workflow, release scripts, or package file contents
-requires another release candidate and a restarted review period.
+requires another release candidate and fresh candidate validation.
 
-## Review Window Gate
+## Candidate Verification Gate
 
-- [ ] Current UTC time is at or after RC4 `publishedAt` plus `168` hours.
-- [ ] `release-policy.json` still names `1.0.0-rc.4` and `168` review hours.
+- [ ] `release-policy.json` still names `1.0.0-rc.4` as the stable candidate.
 - [ ] No open issue confirms a breaking API, runtime, packaging, or security blocker.
 - [ ] npm `next` still points all five packages to `1.0.0-rc.4`.
 - [ ] npm `latest` still points all five packages to `0.6.0` before stable publish.

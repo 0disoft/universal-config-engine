@@ -137,19 +137,18 @@ Owner: UNASSIGNED
 - Validated packed release candidates across JavaScript, strict TypeScript, adapter,
   CLI, operating-system, and supported-Node consumers.
 - Published `1.0.0-rc.1` under npm `next` after satisfying all preparation gates
-  and passing candidate registry smoke. Stable `1.0.0` remains gated by the
-  seven-day review period and final revalidation in
-  `docs/library/stability-1.0.md`.
+  and passing candidate registry smoke. Stable `1.0.0` remains gated by final
+  revalidation in `docs/library/stability-1.0.md`.
 - Published `1.0.0-rc.2` with package-specific npm documentation, a
   machine-enforced stable release gate, reviewed release notes, and packed
   declaration migration checks. Its hosted and public-registry verification passed,
   but a newly published high-severity `fast-uri` advisory blocked stable promotion
-  when the required audit ran after the review gate.
-- Published `1.0.0-rc.3` with the patched transitive lock resolution and completed
-  its 168-hour review. New high-severity advisories then affected the locked
+  when the required audit ran.
+- Published `1.0.0-rc.3` with the patched transitive lock resolution. New
+  high-severity advisories then affected the locked
   `fast-uri` runtime path and `postcss` development path before stable promotion.
-- Prepared `1.0.0-rc.4` with narrow patched transitive resolutions. Stable review
-  restarts from the RC4 GitHub prerelease publication timestamp.
+- Published `1.0.0-rc.4` with narrow patched transitive resolutions and selected it
+  as the stable promotion candidate.
 
 ## Post-1.0 Hardening Candidates
 
