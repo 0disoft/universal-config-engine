@@ -79,9 +79,15 @@ pnpm run smoke:packages
 The smoke commands verify package buildability and package contents for the core, node, CLI, and
 validator packages.
 
-Package-level `typecheck` and `test` scripts rebuild their workspace dependency graph before
-running package-local checks, so a package test is expected to pass from a clean build-output
-state after `pnpm run clean:build`.
+Workspace `check` builds the dependency graph once, then uses the `:built` tasks
+for typechecking, tests, and complexity checks. Those internal tasks require built
+workspace dependencies and must not start nested builds. Root `typecheck` and
+`test` each perform one workspace build before their respective `:built` tasks.
+
+Package-level `typecheck` and `test` remain standalone entry points: they build
+their dependency graph before calling the package's `:built` task, so a focused
+package check still works after `pnpm run clean:build`. Workspace orchestration
+never runs these wrappers in parallel against shared build output.
 
 ## Hosted Workflow
 

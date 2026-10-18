@@ -39,7 +39,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "pnpm run build",
-    "typecheck": "tsc -p tsconfig.test.json",
-    "test": "vitest run"
+    "typecheck": "pnpm run typecheck:built",
+    "typecheck:built": "tsc -p tsconfig.test.json",
+    "test": "pnpm run test:built",
+    "test:built": "vitest run"
   }
 }
