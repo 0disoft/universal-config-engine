@@ -85,6 +85,13 @@ state after `pnpm run clean:build`.
 
 ## Hosted Workflow
 
+All setup-node calls use the reviewed v7.0.0 commit
+`820762786026740c76f36085b0efc47a31fe5020`, with same-line version comments.
+This pre-stable runner change is intentionally included in the next release
+candidate validation; it is not part of a metadata-only RC4 promotion. Supported
+Node versions and the exact-floor, pinned-baseline, and rolling-current matrices
+are unchanged.
+
 GitHub Actions runs `.github/workflows/ci.yml` on `main` pushes and pull requests.
 The existing `check` job remains the Ubuntu compatibility gate and:
 
