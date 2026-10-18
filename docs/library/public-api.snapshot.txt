@@ -16,6 +16,14 @@ export interface ApplyCoercionRulesResult {
 }
 export declare function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercionRulesResult;
 
+### diagnostics.d.ts
+import type { ConfigIssue } from "./types.js";
+/** Append in order, reserving the final slot for a marker only when input overflows. */
+export declare function appendBoundedIssues(destination: ConfigIssue[], nextIssues: readonly ConfigIssue[], maxDiagnostics: number): void;
+export declare function markDiagnosticsOverflow(issues: ConfigIssue[], maxDiagnostics: number): void;
+export declare function isDiagnosticsOverflowMarker(issue: ConfigIssue): boolean;
+export declare function isDiagnosticsLimitReached(issues: readonly ConfigIssue[], maxDiagnostics: number): boolean;
+
 ### index.d.ts
 export { DEFAULT_MERGE_POLICY, DEFAULT_RESOURCE_LIMITS, resolveConfig } from "./merge.js";
 export { applyCoercionRules } from "./coercion.js";
@@ -467,7 +475,7 @@ export { loadDeclaredSources } from "./pipeline/source-loading.js";
 export { PipelineDeclarationError, sourceLoadFailedIssue, sourceLoadFailedIssues } from "./pipeline/declaration-diagnostics.js";
 
 ### pipeline/declaration-diagnostics.d.ts
-import type { ConfigPath, ConfigIssue } from "@0disoft/universal-config-engine-core";
+import { type ConfigPath, type ConfigIssue } from "@0disoft/universal-config-engine-core";
 export declare class PipelineDeclarationError extends Error {
     readonly issues: readonly ConfigIssue[];
     constructor(issues: readonly ConfigIssue[]);

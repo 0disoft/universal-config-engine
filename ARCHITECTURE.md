@@ -45,6 +45,11 @@ The implemented package layout follows a layered boundary:
 
 Core must not import file-system, process, CLI, parser, or validator libraries.
 
+Core's internal `diagnostics.ts` owns ordered, bounded issue collection and overflow
+markers for loading, merging, validation, and the pipeline facade. CLI declaration
+checks reuse the public `combineConfigIssues` facade with their fixed bootstrap
+budget and CLI-specific overflow wording; they do not import core internals.
+
 ## CLI Declaration Processing
 
 `packages/cli/src/pipeline.ts` keeps the existing declaration-loading entry points

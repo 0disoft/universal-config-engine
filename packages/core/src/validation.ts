@@ -1,3 +1,4 @@
+import { appendBoundedIssues, isDiagnosticsLimitReached, markDiagnosticsOverflow } from "./diagnostics.js";
 import { normalizeResourceLimits } from "./limits.js";
 import { cloneConfigValue } from "./path.js";
 import type {
@@ -41,7 +42,7 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
 
   for (const validator of input.validators) {
     if (provenance.length >= limits.maxProvenanceEvents) {
-      pushBoundedIssues(issues, [provenanceLimitIssue(limits.maxProvenanceEvents)], maxDiagnostics);
+      appendBoundedIssues(issues, [provenanceLimitIssue(limits.maxProvenanceEvents)], maxDiagnostics);
       break;
     }
     if (isDiagnosticsLimitReached(issues, maxDiagnostics)) {
@@ -54,7 +55,7 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
         provenance: validatorProvenance
       });
       if (!isValidatorResult(result)) {
-        pushBoundedIssues(issues, [invalidValidatorResultIssue(validator.id)], maxDiagnostics);
+        appendBoundedIssues(issues, [invalidValidatorResultIssue(validator.id)], maxDiagnostics);
         provenance.push({
           path: [],
           action: "validated",
@@ -69,9 +70,9 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
         result.issues,
         Math.max(0, maxDiagnostics - issues.length)
       );
-      pushBoundedIssues(issues, validatorIssues, maxDiagnostics);
+      appendBoundedIssues(issues, validatorIssues, maxDiagnostics);
       if (!result.ok && !validatorIssues.some((issue) => issue.severity === "error")) {
-        pushBoundedIssues(issues, [validatorFailedWithoutIssuesIssue(validator.id)], maxDiagnostics);
+        appendBoundedIssues(issues, [validatorFailedWithoutIssuesIssue(validator.id)], maxDiagnostics);
       }
       provenance.push({
         path: [],
@@ -80,7 +81,7 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
         message: `Validator ${validator.id} completed with status ${validatorStatus(result, validatorIssues)}.`
       });
     } catch {
-      pushBoundedIssues(
+      appendBoundedIssues(
         issues,
         [
           {
@@ -155,14 +156,14 @@ function normalizeValidatorIssues(
 
   for (const [index, issue] of issues.entries()) {
     if (normalizedIssues.length >= maxDiagnostics) {
-      replaceLastIssueWithDiagnosticsExceededMarker(normalizedIssues, maxDiagnostics);
+      markDiagnosticsOverflow(normalizedIssues, maxDiagnostics);
       break;
     }
 
     if (!isValidatorIssue(issue)) {
       normalizedIssues.push(invalidValidatorIssue(validatorId, index));
       if (index < issues.length - 1 && normalizedIssues.length >= maxDiagnostics) {
-        replaceLastIssueWithDiagnosticsExceededMarker(normalizedIssues, maxDiagnostics);
+        markDiagnosticsOverflow(normalizedIssues, maxDiagnostics);
         break;
       }
       continue;
@@ -177,57 +178,12 @@ function normalizeValidatorIssues(
       sourceId: validatorId
     });
     if (index < issues.length - 1 && normalizedIssues.length >= maxDiagnostics) {
-      replaceLastIssueWithDiagnosticsExceededMarker(normalizedIssues, maxDiagnostics);
+      markDiagnosticsOverflow(normalizedIssues, maxDiagnostics);
       break;
     }
   }
 
   return normalizedIssues;
-}
-
-function pushBoundedIssues(
-  destination: ConfigIssue[],
-  nextIssues: readonly ConfigIssue[],
-  maxDiagnostics: number
-): void {
-  for (const [index, issue] of nextIssues.entries()) {
-    if (destination.length >= maxDiagnostics) {
-      replaceLastIssueWithDiagnosticsExceededMarker(destination, maxDiagnostics);
-      return;
-    }
-    destination.push(issue);
-    if (index < nextIssues.length - 1 && destination.length >= maxDiagnostics) {
-      replaceLastIssueWithDiagnosticsExceededMarker(destination, maxDiagnostics);
-      return;
-    }
-  }
-}
-
-function isDiagnosticsLimitReached(issues: readonly ConfigIssue[], maxDiagnostics: number): boolean {
-  return (
-    issues.length >= maxDiagnostics &&
-    issues.some((issue) => issue.category === "resource-limit" && issue.code === "max_diagnostics_exceeded")
-  );
-}
-
-function replaceLastIssueWithDiagnosticsExceededMarker(issues: ConfigIssue[], maxDiagnostics: number): void {
-  if (issues.some((issue) => issue.category === "resource-limit" && issue.code === "max_diagnostics_exceeded")) {
-    return;
-  }
-
-  const marker: ConfigIssue = {
-    category: "resource-limit",
-    code: "max_diagnostics_exceeded",
-    severity: "error",
-    message: `Diagnostics exceeded the maximum of ${maxDiagnostics}.`
-  };
-
-  if (issues.length === 0) {
-    issues.push(marker);
-    return;
-  }
-
-  issues[issues.length - 1] = marker;
 }
 
 function isValidatorResult(value: unknown): value is ValidatorResult {

@@ -1,7 +1,8 @@
+import { appendBoundedIssues } from "./diagnostics.js";
 import { applyCoercionRules } from "./coercion.js";
 import { getConfigValueAtPath, pathToKey, setConfigValueAtPath } from "./path.js";
 import { flattenConfigObject } from "./value.js";
-import { DEFAULT_RESOURCE_LIMITS, normalizeResourceLimits } from "./limits.js";
+import { normalizeResourceLimits } from "./limits.js";
 import type {
   ConfigIssue,
   ConfigResult,
@@ -92,7 +93,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     const sourceIssues = [...(source.issues ?? [])];
     const flattened = flattenSourceValue(source, limits);
     sourceIssues.push(...flattened.issues);
-    pushBoundedIssues(issues, sourceIssues, limits);
+    appendBoundedIssues(issues, sourceIssues, limits.maxDiagnostics);
 
     if (sourceIssues.some((issue) => issue.severity === "error")) {
       const event: ProvenanceEvent = {
@@ -133,7 +134,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
       rules: input.coercionRules
     });
     config = coercionResult.config as Record<string, ConfigValue>;
-    pushBoundedIssues(issues, coercionResult.issues, limits);
+    appendBoundedIssues(issues, coercionResult.issues, limits.maxDiagnostics);
     for (const event of coercionResult.provenance) {
       if (provenance.length < limits.maxProvenanceEvents) {
         provenance.push(event);
@@ -144,7 +145,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
   }
 
   const finalStructure = flattenConfigObject("core:resolved-config", config, limits);
-  pushBoundedIssues(issues, finalStructure.issues, limits);
+  appendBoundedIssues(issues, finalStructure.issues, limits.maxDiagnostics);
   const resolvedPaths = Array.from(resolvedIndex.byPath.values());
   if (resolvedPaths.length > limits.maxResolvedPaths) {
     pushResourceLimitIssueOnce(issues, "max_resolved_paths_exceeded", limits.maxResolvedPaths, limits);
@@ -184,7 +185,7 @@ function duplicateSourceIdIssues(
       firstIndexById.set(source.descriptor.id, index);
       continue;
     }
-    pushBoundedIssues(
+    appendBoundedIssues(
       issues,
       [
         {
@@ -195,7 +196,7 @@ function duplicateSourceIdIssues(
           message: `Source id duplicates the source declared at sorted index ${firstIndex}.`
         }
       ],
-      { ...DEFAULT_RESOURCE_LIMITS, maxDiagnostics }
+      maxDiagnostics
     );
   }
 
@@ -573,49 +574,10 @@ function collectOverriddenLocations(
   return locations;
 }
 
-function pushBoundedIssues(
-  destination: ConfigIssue[],
-  nextIssues: readonly ConfigIssue[],
-  limits: ResourceLimitPolicy
-): void {
-  const maxDiagnostics = Math.max(1, limits.maxDiagnostics);
-  for (const [index, issue] of nextIssues.entries()) {
-    if (destination.length >= maxDiagnostics) {
-      replaceLastIssueWithDiagnosticsExceededMarker(destination, limits);
-      return;
-    }
-    destination.push(issue);
-    if (index < nextIssues.length - 1 && destination.length >= maxDiagnostics) {
-      replaceLastIssueWithDiagnosticsExceededMarker(destination, limits);
-      return;
-    }
-  }
-}
-
 function pushBoundedIssue(
   destination: ConfigIssue[],
   issue: ConfigIssue,
   limits: ResourceLimitPolicy
 ): void {
-  pushBoundedIssues(destination, [issue], limits);
-}
-
-function replaceLastIssueWithDiagnosticsExceededMarker(issues: ConfigIssue[], limits: ResourceLimitPolicy): void {
-  if (issues.some((issue) => issue.category === "resource-limit" && issue.code === "max_diagnostics_exceeded")) {
-    return;
-  }
-
-  const marker: ConfigIssue = {
-    category: "resource-limit",
-    code: "max_diagnostics_exceeded",
-    severity: "error",
-    message: `Diagnostics exceeded the maximum of ${limits.maxDiagnostics}.`
-  };
-
-  if (issues.length === 0) {
-    issues.push(marker);
-    return;
-  }
-
-  issues[issues.length - 1] = marker;
+  appendBoundedIssues(destination, [issue], limits.maxDiagnostics);
 }

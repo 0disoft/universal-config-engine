@@ -1,4 +1,4 @@
-import type { ConfigPath, ConfigIssue } from "@0disoft/universal-config-engine-core";
+import { combineConfigIssues, type ConfigPath, type ConfigIssue } from "@0disoft/universal-config-engine-core";
 import { MAX_PIPELINE_DECLARATION_DIAGNOSTICS } from "./declaration-fields.js";
 
 export class PipelineDeclarationError extends Error {
@@ -55,47 +55,28 @@ export function appendDeclarationIssues(
   destination: ConfigIssue[],
   nextIssues: readonly ConfigIssue[]
 ): boolean {
-  for (const [index, issue] of nextIssues.entries()) {
-    if (destination.length >= MAX_PIPELINE_DECLARATION_DIAGNOSTICS) {
-      replaceLastDeclarationIssueWithOverflowMarker(destination);
-      return false;
-    }
-    destination.push(issue);
-    if (
-      index < nextIssues.length - 1 &&
-      destination.length >= MAX_PIPELINE_DECLARATION_DIAGNOSTICS
-    ) {
-      replaceLastDeclarationIssueWithOverflowMarker(destination);
-      return false;
-    }
-  }
+  const combined = combineConfigIssues(destination, nextIssues, MAX_PIPELINE_DECLARATION_DIAGNOSTICS);
+  // Keep caller-supplied markers intact; only the marker created by core gets CLI wording.
+  const bounded = combined.map((issue) =>
+    isDeclarationDiagnosticsOverflowMarker(issue) &&
+    !destination.includes(issue) &&
+    !nextIssues.includes(issue)
+      ? {
+          ...issue,
+          message: `Pipeline declaration diagnostics exceeded the bootstrap maximum of ${MAX_PIPELINE_DECLARATION_DIAGNOSTICS}.`
+        }
+      : issue
+  );
+  destination.splice(0, destination.length, ...bounded);
   return !destination.some(isDeclarationDiagnosticsOverflowMarker);
-}
-
-function replaceLastDeclarationIssueWithOverflowMarker(issues: ConfigIssue[]): void {
-  if (issues.some(isDeclarationDiagnosticsOverflowMarker)) {
-    return;
-  }
-  const marker: ConfigIssue = {
-    category: "resource-limit",
-    code: "max_diagnostics_exceeded",
-    severity: "error",
-    message: `Pipeline declaration diagnostics exceeded the bootstrap maximum of ${MAX_PIPELINE_DECLARATION_DIAGNOSTICS}.`
-  };
-  if (issues.length === 0) {
-    issues.push(marker);
-  } else {
-    issues.length = Math.min(issues.length, MAX_PIPELINE_DECLARATION_DIAGNOSTICS);
-    issues[issues.length - 1] = marker;
-  }
 }
 
 function boundPipelineDeclarationIssues(issues: readonly ConfigIssue[]): readonly ConfigIssue[] {
   if (issues.length <= MAX_PIPELINE_DECLARATION_DIAGNOSTICS) {
     return issues;
   }
-  const bounded = issues.slice(0, MAX_PIPELINE_DECLARATION_DIAGNOSTICS);
-  replaceLastDeclarationIssueWithOverflowMarker(bounded);
+  const bounded: ConfigIssue[] = [];
+  appendDeclarationIssues(bounded, issues);
   return bounded;
 }
 

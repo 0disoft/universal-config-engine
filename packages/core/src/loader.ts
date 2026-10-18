@@ -1,3 +1,4 @@
+import { appendBoundedIssues } from "./diagnostics.js";
 import type {
   ConfigIssue,
   ConfigLoader,
@@ -58,7 +59,7 @@ export async function loadConfigSources<TContext = undefined>(
       const result = await loader.load(input.context);
       const source = toLoadedSource(loader, result, maxDiagnostics);
       sources.push(source);
-      pushBoundedIssues(issues, source.issues ?? [], maxDiagnostics);
+      appendBoundedIssues(issues, source.issues ?? [], maxDiagnostics);
     } catch {
       const issue = loaderThrewIssue(loader);
       const source: LoadedSource = {
@@ -67,7 +68,7 @@ export async function loadConfigSources<TContext = undefined>(
         issues: [issue]
       };
       sources.push(source);
-      pushBoundedIssues(issues, [issue], maxDiagnostics);
+      appendBoundedIssues(issues, [issue], maxDiagnostics);
     }
   }
 
@@ -228,42 +229,8 @@ function isPositiveSafeInteger(value: unknown): value is number {
 
 function boundIssues(input: readonly ConfigIssue[], maxDiagnostics: number): readonly ConfigIssue[] {
   const issues: ConfigIssue[] = [];
-  pushBoundedIssues(issues, input, maxDiagnostics);
+  appendBoundedIssues(issues, input, maxDiagnostics);
   return issues;
-}
-
-function pushBoundedIssues(
-  destination: ConfigIssue[],
-  nextIssues: readonly ConfigIssue[],
-  maxDiagnostics: number
-): void {
-  for (let index = 0; index < nextIssues.length; index += 1) {
-    if (destination.length >= maxDiagnostics) {
-      replaceLastIssueWithOverflowMarker(destination, maxDiagnostics);
-      return;
-    }
-    destination.push(nextIssues[index]!);
-    if (index < nextIssues.length - 1 && destination.length >= maxDiagnostics) {
-      replaceLastIssueWithOverflowMarker(destination, maxDiagnostics);
-      return;
-    }
-  }
-}
-
-function replaceLastIssueWithOverflowMarker(issues: ConfigIssue[], maxDiagnostics: number): void {
-  if (issues.some(isDiagnosticsOverflowMarker)) {
-    return;
-  }
-  issues[issues.length - 1] = {
-    category: "resource-limit",
-    code: "max_diagnostics_exceeded",
-    severity: "error",
-    message: `Diagnostics exceeded the maximum of ${maxDiagnostics}.`
-  };
-}
-
-function isDiagnosticsOverflowMarker(issue: ConfigIssue): boolean {
-  return issue.category === "resource-limit" && issue.code === "max_diagnostics_exceeded";
 }
 
 function loaderThrewIssue<TContext>(loader: ConfigLoader<TContext>): ConfigIssue {

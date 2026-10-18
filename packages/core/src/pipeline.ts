@@ -1,3 +1,4 @@
+import { appendBoundedIssues } from "./diagnostics.js";
 import { loadConfigSources } from "./loader.js";
 import { resolveConfig } from "./merge.js";
 import {
@@ -104,37 +105,7 @@ export function combineConfigIssues(
   const maxDiagnostics = Math.max(1, declaredMaxDiagnostics);
   const combined = [...existing.slice(0, maxDiagnostics)];
 
-  for (const issue of next) {
-    if (combined.length >= maxDiagnostics) {
-      replaceLastIssueWithOverflowMarker(combined, maxDiagnostics);
-      break;
-    }
-    combined.push(issue);
-  }
+  appendBoundedIssues(combined, next, maxDiagnostics);
 
   return combined;
-}
-
-function replaceLastIssueWithOverflowMarker(issues: ConfigIssue[], maxDiagnostics: number): void {
-  if (issues.some(isDiagnosticsOverflowMarker)) {
-    return;
-  }
-
-  const marker: ConfigIssue = {
-    category: "resource-limit",
-    code: "max_diagnostics_exceeded",
-    severity: "error",
-    message: `Diagnostics exceeded the maximum of ${maxDiagnostics}.`
-  };
-
-  if (issues.length === 0) {
-    issues.push(marker);
-    return;
-  }
-
-  issues[issues.length - 1] = marker;
-}
-
-function isDiagnosticsOverflowMarker(issue: ConfigIssue): boolean {
-  return issue.category === "resource-limit" && issue.code === "max_diagnostics_exceeded";
 }
