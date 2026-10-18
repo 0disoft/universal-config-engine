@@ -1,12 +1,12 @@
 # Stable 1.0 Release Checklist
 
-Status: RC4 Preparation
-Candidate: `1.0.0-rc.4`
+Status: blocked on RC5 publication and validation
+Candidate: `1.0.0-rc.5` (prepared, unpublished)
 Stable Version: `1.0.0`
 
 ## Purpose
 
-Promote the reviewed RC4 package contents without slipping unreviewed runtime,
+Publish and validate RC5, then promote its reviewed package contents without slipping unreviewed runtime,
 public API, package-content, dependency, or release-runner changes into stable
 `1.0.0`.
 
@@ -14,7 +14,9 @@ public API, package-content, dependency, or release-runner changes into stable
 
 The stable preparation commit may change only:
 
-- the five publishable package versions from `1.0.0-rc.4` to `1.0.0`;
+- the five publishable package versions from `1.0.0-rc.5` to `1.0.0`;
+- `release-policy.json` to authorize the published RC5 version and its exact
+  validated `candidateCommitSha`, with previous stable `0.6.0`;
 - current-version and installation examples that must name `1.0.0`;
 - `CHANGELOG.md` to finalize the stable heading and publication date;
 - release, roadmap, migration, and stability status documentation.
@@ -25,9 +27,11 @@ requires another release candidate and fresh candidate validation.
 
 ## Candidate Verification Gate
 
-- [ ] `release-policy.json` still names `1.0.0-rc.4` as the stable candidate.
+- [ ] RC5 is published, independently verified, and authorized in
+      `release-policy.json` with its full candidate commit SHA. The current empty
+      authorization list deliberately blocks RC4 promotion.
 - [ ] No open issue confirms a breaking API, runtime, packaging, or security blocker.
-- [ ] npm `next` still points all five packages to `1.0.0-rc.4`.
+- [ ] npm `next` points all five packages to `1.0.0-rc.5`.
 - [ ] npm `latest` still points all five packages to `0.6.0` before stable publish.
 - [ ] The stable release readiness script passes against current GitHub and npm state.
 
@@ -66,7 +70,7 @@ itself inside this check. Governance and SBOM checks remain maintainer operation
       updates, and the active release-tag ruleset still prevents deletion or
       updates of `v*` tags.
 - [ ] `release.yml` dry-run for `v1.0.0` succeeds from the same SHA.
-- [ ] The dry-run stable gate installs and smokes exact RC4 registry packages.
+- [ ] The dry-run stable gate installs and smokes exact RC5 registry packages.
 - [ ] While `main` still points to the validated preparation SHA, export the
       GitHub Dependency Graph SPDX 2.3 SBOM as
       `universal-config-engine-1.0.0.spdx.json`.
@@ -85,7 +89,7 @@ itself inside this check. Governance and SBOM checks remain maintainer operation
       recorded before tagging.
 - [ ] Confirm the after manifest reports `5/5` published and `complete=true`.
 - [ ] Confirm npm `latest` points all five packages to `1.0.0`.
-- [ ] Confirm npm `next` still points all five packages to `1.0.0-rc.4`.
+- [ ] Confirm npm `next` still points all five packages to `1.0.0-rc.5`.
 - [ ] Confirm package README metadata, integrity, and SLSA provenance.
 - [ ] Run the exact `1.0.0` public-registry package smoke.
 

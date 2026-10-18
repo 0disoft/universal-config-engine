@@ -5,6 +5,10 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+Stable `1.0.0` remains unpublished and unauthorized pending RC5 validation.
+
+## 1.0.0-rc.5 - Unpublished
+
 ### Fixed
 
 - Return `ajv_custom_keyword` for Ajv custom keywords outside the core diagnostic
@@ -18,8 +22,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Stable Release Preparation
 
-- Promote the validated `1.0.0-rc.4` runtime, public API, and package contents as
-  `1.0.0` after the final validation gates.
+- Prepare RC5 because Ajv behavior, dependency resolutions, packed smoke coverage,
+  and the release runner have changed since RC4. Stable authorization is withdrawn
+  until RC5 is published and its exact candidate commit is reviewed.
 - Removed the fixed elapsed-time gate from stable promotion policy schema `0.2`;
   candidate artifact, provenance, registry, security, and exact-SHA checks remain.
 - Publish the stable release with the migration guidance and compatibility

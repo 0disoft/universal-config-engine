@@ -152,6 +152,10 @@ Owner: UNASSIGNED
 
 ## Post-1.0 Hardening Candidates
 
+The following hardening is implemented before stable in the unpublished RC5
+workspace. RC4 is no longer a valid metadata-only promotion baseline. RC5 must
+pass hosted checks and publication verification before stable preparation resumes.
+
 - Implemented an Ajv adapter regression case and a stable safe fallback code for custom
   keyword names that Ajv accepts but the core diagnostic-code grammar rejects,
   including names beginning with `$` or `_` and names containing `$`. Preserve

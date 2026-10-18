@@ -159,7 +159,8 @@ npm integrity, provenance, dist-tags, and registry installation before continuin
 
 The stable `1.0.0` preparation and publication sequence is tracked in
 `docs/ops/stable-1.0-release-checklist.md`. Its allowed-diff rule prevents stable
-package contents from drifting beyond the reviewed RC2 candidate.
+package contents from drifting beyond the next published, explicitly authorized
+candidate. RC4 promotion is withdrawn; the workspace prepares unpublished RC5.
 
 ## Stop Conditions
 

@@ -94,7 +94,7 @@ Export the GitHub Dependency Graph SPDX SBOM while `main` still points to that
 validated commit, record its SHA-256 digest before tagging, and require the
 downloaded GitHub Release asset to match that digest after publication.
 `release-policy.json` is the machine-readable stable-release gate. For `1.0.0` it
-names `1.0.0-rc.4` as the validated candidate. The release workflow fails closed
+currently authorizes no stable version while `1.0.0-rc.5` is prepared. The release workflow fails closed
 while the candidate is missing or incomplete, but does not impose a time delay.
 
 The candidate policy includes its exact `candidateCommitSha`. Stable readiness
@@ -133,3 +133,10 @@ the locked `fast-uri@3.1.4` runtime path and
 `postcss@8.5.26` without changing runtime source, public declarations, package
 READMEs, fixtures, smoke logic, or the release runner. Stable authorization now
 names `1.0.0-rc.4`.
+
+Subsequent Ajv fixes, dependency advisories, installed CLI failure checks, and
+release-runner updates invalidate RC4 promotion. The workspace now prepares
+`1.0.0-rc.5`, which has not been published. Stable authorization is intentionally
+empty. After RC5 publication, a separate metadata-only stable preparation must
+record its exact `candidateCommitSha`, successful hosted checks, registry and
+publication evidence before enabling `1.0.0` again.

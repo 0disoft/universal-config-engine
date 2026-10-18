@@ -11,6 +11,11 @@ CLI commands and exit codes, and the supported Node.js range remain unchanged.
 Update every Universal Config Engine package used by the consumer to the same
 release-candidate version:
 
+The commands below use the latest published candidate, RC4. This workspace
+prepares unpublished RC5; switch all five versions together to `1.0.0-rc.5` only
+after its publication. RC5 adds safe Ajv custom-keyword fallback behavior without
+changing public declarations or the migration steps below.
+
 ```powershell
 pnpm update @0disoft/universal-config-engine-core@1.0.0-rc.4 `
   @0disoft/universal-config-engine-node@1.0.0-rc.4 `
