@@ -10,6 +10,12 @@ semantic versioning and keeps package versions aligned across the workspace.
 - Return `ajv_custom_keyword` for Ajv custom keywords outside the core diagnostic
   code grammar instead of rejecting the adapter result or exposing keyword text.
 
+### Security
+
+- Raise the `fast-uri` override floor to `^3.1.7` and `source-map-js` to `^1.2.2`
+  while retaining same-major updates. The resulting locked dependency graph passes
+  the npm audit with zero reported vulnerabilities.
+
 ### Stable Release Preparation
 
 - Promote the validated `1.0.0-rc.4` runtime, public API, and package contents as
