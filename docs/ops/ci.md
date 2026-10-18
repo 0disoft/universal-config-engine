@@ -39,6 +39,25 @@ against the workflow contract.
 
 ## Local Check Contract
 
+Maintainers run `pnpm run check:governance -- --commit <full-preparation-sha>`
+after pushing the preparation commit. Optional `--repository owner/name` selects
+the repository explicitly. This read-only check uses the existing authenticated
+`gh` session, independently of release automation. Its JSON records the exact
+default-branch commit, immutable Actions policy, effective main rules, active
+main/tag rulesets without bypasses, and zero open CodeQL, Dependabot, and secret
+scanning alerts. Inaccessible or malformed API evidence is `unknown`, returns a
+nonzero exit code, and must never be treated as zero alerts.
+
+Fine-grained token or GitHub App read permissions are: repository metadata and
+contents, administration (Actions policy and rulesets), code scanning alerts,
+Dependabot alerts, and secret scanning alerts. The authenticated maintainer also
+needs access to those security features. A classic `gh` login needs the equivalent
+repository/security access. Do not add this credential to Actions secrets or to
+`release.yml`; the release job only needs `actions: read` for workflow evidence.
+Network collection and pure governance evaluation are separate modules; offline
+fixtures run as part of `check:release-scripts`. Paste only the generated summary
+into the release ledger, never raw API responses or authentication output.
+
 The current local CI equivalent is:
 
 ```powershell

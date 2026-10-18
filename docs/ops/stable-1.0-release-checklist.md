@@ -59,6 +59,8 @@ itself inside this check. Governance and SBOM checks remain maintainer operation
 - [ ] Consumer Compatibility succeeds on Ubuntu and Windows.
 - [ ] CodeQL succeeds on the stable preparation SHA and any alert is triaged.
 - [ ] Open CodeQL, Dependabot, and secret-scanning alert counts are all zero.
+- [ ] Run `pnpm run check:governance -- --commit <full-preparation-sha>` and
+      record its successful JSON in issue #1. Unknown evidence blocks release.
 - [ ] Repository Actions policy still requires immutable action SHAs.
 - [ ] The active main ruleset still prevents deletion and non-fast-forward
       updates, and the active release-tag ruleset still prevents deletion or
