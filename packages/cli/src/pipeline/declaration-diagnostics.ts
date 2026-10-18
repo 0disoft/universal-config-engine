@@ -60,7 +60,7 @@ export function appendDeclarationIssues(
   const bounded = combined.map((issue) =>
     isDeclarationDiagnosticsOverflowMarker(issue) &&
     !destination.includes(issue) &&
-    !nextIssues.includes(issue)
+    !nextIssues.slice(0, MAX_PIPELINE_DECLARATION_DIAGNOSTICS).includes(issue)
       ? {
           ...issue,
           message: `Pipeline declaration diagnostics exceeded the bootstrap maximum of ${MAX_PIPELINE_DECLARATION_DIAGNOSTICS}.`

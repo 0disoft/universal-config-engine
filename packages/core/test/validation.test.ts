@@ -1,0 +1,457 @@
+import { describe, expect, it } from "vitest";
+import { getConfigValueAtPath, runValidators, resolveConfig } from "../src/index.js";
+import type { ValidatorResult } from "../src/index.js";
+import { source } from "./helpers/source.js";
+
+describe("runValidators", () => {
+  it("normalizes validator failures into config issues", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "throws",
+          validate() {
+            throw new Error("validator exploded with example-secret-value");
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "validator_threw",
+      severity: "error",
+      sourceId: "throws",
+      message: "Validator throws threw an exception. Exception details were omitted from diagnostics."
+    });
+    expect(JSON.stringify(validation)).not.toContain("example-secret-value");
+    expect(validation.provenance).toContainEqual({
+      path: [],
+      action: "validated",
+      sourceId: "throws",
+      message: "Validator throws failed."
+    });
+  });
+
+  it("ignores untrusted validator message, details, and source identity", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { database: { password: "example-secret-value" } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "root-check",
+          validate() {
+            return {
+              ok: false,
+              issues: [
+                {
+                  category: "validation",
+                  code: "root_invalid",
+                  severity: "error",
+                  path: ["database", "password"],
+                  sourceId: "spoofed-validator",
+                  message: "Rejected example-secret-value.",
+                  details: {
+                    received: "example-secret-value"
+                  }
+                }
+              ]
+            };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toEqual([
+      {
+        category: "validation",
+        code: "root_invalid",
+        severity: "error",
+        path: ["database", "password"],
+        sourceId: "root-check",
+        message: "Validator root-check reported validation issue root_invalid."
+      }
+    ]);
+    expect(JSON.stringify(validation)).not.toContain("example-secret-value");
+  });
+
+  it("rejects validator issue codes that can carry free-form diagnostic text", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "malicious-code",
+          validate() {
+            return {
+              ok: false,
+              issues: [
+                {
+                  code: "token=validator-secret-value",
+                  severity: "error",
+                  path: ["server", "port"]
+                }
+              ]
+            };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toEqual([
+      {
+        category: "validation",
+        code: "validator_issue_invalid",
+        severity: "error",
+        sourceId: "malicious-code",
+        message: "Validator malicious-code returned invalid issue at index 0."
+      }
+    ]);
+    expect(JSON.stringify(validation)).not.toContain("validator-secret-value");
+  });
+
+  it("does not apply validator returned values to the pipeline config", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const observedPorts: unknown[] = [];
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "typed-output",
+          validate() {
+            return {
+              ok: true,
+              value: {
+                server: {
+                  port: 9000
+                }
+              },
+              issues: []
+            };
+          }
+        },
+        {
+          id: "observer",
+          validate(input) {
+            observedPorts.push(getConfigValueAtPath(input.config, ["server", "port"]));
+            return {
+              ok: true,
+              value: input.config,
+              issues: []
+            };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toEqual([]);
+    expect(observedPorts).toEqual([3000]);
+    expect(getConfigValueAtPath(result.config, ["server", "port"])).toBe(3000);
+    expect(validation.provenance).toContainEqual({
+      path: [],
+      action: "validated",
+      sourceId: "typed-output",
+      message: "Validator typed-output completed with status ok."
+    });
+  });
+
+  it("blocks validators from mutating the pipeline config object", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "mutating-validator",
+          validate(input) {
+            (getConfigValueAtPath(input.config, ["server"]) as { port: number }).port = 9000;
+            return {
+              ok: true,
+              value: input.config,
+              issues: []
+            };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toContainEqual(
+      expect.objectContaining({
+        category: "validation",
+        code: "validator_threw",
+        sourceId: "mutating-validator"
+      })
+    );
+    expect(getConfigValueAtPath(result.config, ["server", "port"])).toBe(3000);
+  });
+
+  it("blocks validators from mutating pipeline provenance", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { public: true })]
+    });
+    const originalProvenance = structuredClone(result.provenance);
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "mutating-provenance",
+          validate(input) {
+            (input.provenance[0] as { message: string }).message = "validator-provenance-secret";
+            return { ok: true, issues: [] };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toContainEqual(
+      expect.objectContaining({
+        category: "validation",
+        code: "validator_threw",
+        sourceId: "mutating-provenance"
+      })
+    );
+    expect(result.provenance).toEqual(originalProvenance);
+    expect(JSON.stringify({ result, validation })).not.toContain("validator-provenance-secret");
+  });
+
+  it("normalizes malformed validator results and issues", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "malformed-issues",
+          validate() {
+            return {
+              ok: false,
+              issues: [
+                {
+                  category: "validation",
+                  code: "custom_failure",
+                  severity: "error",
+                  path: ["server", "port"],
+                  message: "Port failed custom validation."
+                },
+                {
+                  category: "merge",
+                  code: "wrong_category",
+                  severity: "error",
+                  message: "Wrong category."
+                },
+                "not-an-issue"
+              ]
+            } as unknown as ValidatorResult;
+          }
+        },
+        {
+          id: "malformed-result",
+          validate() {
+            return {
+              ok: false
+            } as unknown as ValidatorResult;
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "custom_failure",
+      severity: "error",
+      path: ["server", "port"],
+      sourceId: "malformed-issues",
+      message: "Validator malformed-issues reported validation issue custom_failure."
+    });
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "validator_issue_invalid",
+      severity: "error",
+      sourceId: "malformed-issues",
+      message: "Validator malformed-issues returned invalid issue at index 1."
+    });
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "validator_issue_invalid",
+      severity: "error",
+      sourceId: "malformed-issues",
+      message: "Validator malformed-issues returned invalid issue at index 2."
+    });
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "validator_result_invalid",
+      severity: "error",
+      sourceId: "malformed-result",
+      message: "Validator malformed-result returned an invalid result."
+    });
+    expect(validation.provenance).toContainEqual({
+      path: [],
+      action: "validated",
+      sourceId: "malformed-result",
+      message: "Validator malformed-result returned an invalid result."
+    });
+  });
+
+  it("normalizes inconsistent validator status and issue results", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      validators: [
+        {
+          id: "false-without-error",
+          validate() {
+            return {
+              ok: false,
+              issues: []
+            };
+          }
+        },
+        {
+          id: "true-with-error",
+          validate() {
+            return {
+              ok: true,
+              issues: [
+                {
+                  category: "validation",
+                  code: "custom_error",
+                  severity: "error",
+                  message: "Validator reported an error issue."
+                }
+              ]
+            };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "validator_failed_without_issues",
+      severity: "error",
+      sourceId: "false-without-error",
+      message: "Validator false-without-error returned ok false without any error issues."
+    });
+    expect(validation.issues).toContainEqual({
+      category: "validation",
+      code: "custom_error",
+      severity: "error",
+      sourceId: "true-with-error",
+      message: "Validator true-with-error reported validation issue custom_error."
+    });
+    expect(validation.provenance).toContainEqual({
+      path: [],
+      action: "validated",
+      sourceId: "false-without-error",
+      message: "Validator false-without-error completed with status error."
+    });
+    expect(validation.provenance).toContainEqual({
+      path: [],
+      action: "validated",
+      sourceId: "true-with-error",
+      message: "Validator true-with-error completed with status error."
+    });
+  });
+
+  it("bounds validator diagnostics with an overflow marker", async () => {
+    const result = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } })]
+    });
+    const validation = await runValidators({
+      config: result.config,
+      provenance: result.provenance,
+      limits: {
+        maxDiagnostics: 2
+      },
+      validators: [
+        {
+          id: "many-issues",
+          validate() {
+            return {
+              ok: false,
+              issues: [
+                {
+                  category: "validation",
+                  code: "first_failure",
+                  severity: "error",
+                  message: "First failure."
+                },
+                {
+                  category: "validation",
+                  code: "second_failure",
+                  severity: "error",
+                  message: "Second failure."
+                },
+                {
+                  category: "validation",
+                  code: "third_failure",
+                  severity: "error",
+                  message: "Third failure."
+                }
+              ]
+            };
+          }
+        }
+      ]
+    });
+
+    expect(validation.issues).toEqual([
+      {
+        category: "validation",
+        code: "first_failure",
+        severity: "error",
+        sourceId: "many-issues",
+        message: "Validator many-issues reported validation issue first_failure."
+      },
+      {
+        category: "resource-limit",
+        code: "max_diagnostics_exceeded",
+        severity: "error",
+        message: "Diagnostics exceeded the maximum of 2."
+      }
+    ]);
+  });
+
+  it("rejects oversized validator provenance before invoking validators", async () => {
+    let invoked = false;
+    const validation = await runValidators({
+      config: {},
+      provenance: [
+        { path: ["one"], action: "defined", sourceId: "one", message: "one" },
+        { path: ["two"], action: "defined", sourceId: "two", message: "two" }
+      ],
+      limits: { maxProvenanceEvents: 1 },
+      validators: [{
+        id: "must-not-run",
+        validate() {
+          invoked = true;
+          return { ok: true, issues: [] };
+        }
+      }]
+    });
+
+    expect(invoked).toBe(false);
+    expect(validation.issues).toContainEqual(expect.objectContaining({ code: "max_provenance_events_exceeded" }));
+  });
+});

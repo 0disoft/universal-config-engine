@@ -1,0 +1,281 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildDiagnosticReport,
+  getConfigValueAtPath,
+  loadConfigSources,
+  resolveConfig
+} from "../src/index.js";
+import type { ConfigLoader, ConfigLoaderResult } from "../src/index.js";
+
+describe("loadConfigSources", () => {
+  it("rejects excess loaders before invoking them", async () => {
+    let invoked = false;
+    const loader = (id: string): ConfigLoader => ({
+      descriptor: { id, kind: "adapter", priority: 0, displayName: id },
+      load() {
+        invoked = true;
+        return { value: {} };
+      }
+    });
+    const loaded = await loadConfigSources({
+      loaders: [loader("one"), loader("two")],
+      context: undefined,
+      limits: { maxSources: 1 }
+    });
+
+    expect(invoked).toBe(false);
+    expect(loaded.sources).toEqual([]);
+    expect(loaded.issues).toContainEqual(expect.objectContaining({ code: "max_sources_exceeded" }));
+  });
+
+  it("loads source adapters into merge-ready sources", async () => {
+    const loaders: readonly ConfigLoader<{ readonly port: number }>[] = [
+      {
+        descriptor: {
+          id: "defaults",
+          kind: "adapter",
+          priority: 0,
+          displayName: "defaults"
+        },
+        load(context) {
+          return {
+            value: {
+              server: {
+                port: context.port
+              }
+            }
+          };
+        }
+      }
+    ];
+    const loaded = await loadConfigSources({
+      loaders,
+      context: {
+        port: 3000
+      }
+    });
+    const result = resolveConfig({
+      sources: loaded.sources
+    });
+
+    expect(loaded.issues).toEqual([]);
+    expect(result.ok).toBe(true);
+    expect(getConfigValueAtPath(result.config, ["server", "port"])).toBe(3000);
+  });
+
+  it("normalizes loader exceptions into source-load issues", async () => {
+    const loaders: readonly ConfigLoader[] = [
+      {
+        descriptor: {
+          id: "broken-loader",
+          kind: "adapter",
+          priority: 0,
+          displayName: "broken-loader"
+        },
+        load() {
+          throw new Error("adapter exploded with loader-secret-value");
+        }
+      }
+    ];
+    const loaded = await loadConfigSources({
+      loaders,
+      context: undefined
+    });
+    const result = resolveConfig({
+      sources: loaded.sources
+    });
+    const report = buildDiagnosticReport(result);
+
+    expect(loaded.issues).toContainEqual({
+      category: "source-load",
+      code: "loader_threw",
+      severity: "error",
+      sourceId: "broken-loader",
+      message: "Loader broken-loader threw an exception. Exception details were omitted from diagnostics."
+    });
+    expect(result.ok).toBe(false);
+    expect(JSON.stringify({ loaded, report })).not.toContain("loader-secret-value");
+    expect(report.sources).toContainEqual({
+      id: "broken-loader",
+      kind: "adapter",
+      displayName: "broken-loader",
+      priority: 0,
+      status: "failed"
+    });
+  });
+
+  it.each([
+    {
+      name: "non-array issues",
+      result: { value: {}, issues: {} }
+    },
+    {
+      name: "malformed issue entries",
+      result: { value: {}, issues: [null] }
+    },
+    {
+      name: "malformed locations",
+      result: {
+        value: {},
+        locations: [
+          {
+            path: ["service"],
+            location: { sourceId: "adapter", line: 0 }
+          }
+        ]
+      }
+    }
+  ])("rejects $name in loader results", async ({ result }) => {
+    const loaded = await loadConfigSources({
+      loaders: [
+        {
+          descriptor: {
+            id: "invalid-loader",
+            kind: "adapter",
+            priority: 0,
+            displayName: "invalid-loader"
+          },
+          load() {
+            return result as unknown as ConfigLoaderResult;
+          }
+        }
+      ],
+      context: undefined
+    });
+
+    expect(loaded.sources).toEqual([
+      {
+        descriptor: expect.objectContaining({ id: "invalid-loader" }),
+        value: {},
+        issues: [
+          {
+            category: "source-load",
+            code: "invalid_loader_result",
+            severity: "error",
+            sourceId: "invalid-loader",
+            message: "Loader invalid-loader returned an invalid result."
+          }
+        ]
+      }
+    ]);
+    expect(loaded.issues).toEqual(loaded.sources[0]?.issues);
+  });
+
+  it("binds loader issue and location source identity to the descriptor", async () => {
+    const loaded = await loadConfigSources({
+      loaders: [
+        {
+          descriptor: {
+            id: "owned-source",
+            kind: "adapter",
+            priority: 0,
+            displayName: "owned-source"
+          },
+          load() {
+            return {
+              value: {},
+              issues: [
+                {
+                  category: "parse",
+                  code: "adapter_parse_failed",
+                  severity: "error",
+                  sourceId: "spoofed-source",
+                  message: "Adapter parse failed."
+                }
+              ],
+              locations: [
+                {
+                  path: ["service", "port"],
+                  location: {
+                    sourceId: "spoofed-source",
+                    sourcePath: "config.example",
+                    line: 2,
+                    column: 3
+                  }
+                }
+              ]
+            };
+          }
+        }
+      ],
+      context: undefined
+    });
+
+    expect(loaded.sources[0]?.issues?.[0]?.sourceId).toBe("owned-source");
+    expect(loaded.sources[0]?.locations?.[0]?.location.sourceId).toBe("owned-source");
+  });
+
+  it("bounds retained source and aggregate loader issues", async () => {
+    const loaderIssues = ["first", "second", "third"].map((code) => ({
+      category: "source-load" as const,
+      code,
+      severity: "warning" as const,
+      sourceId: "noisy-loader",
+      message: `${code} issue.`
+    }));
+    const loaded = await loadConfigSources({
+      loaders: [
+        {
+          descriptor: {
+            id: "noisy-loader",
+            kind: "adapter",
+            priority: 0,
+            displayName: "noisy-loader"
+          },
+          load() {
+            return { value: {}, issues: loaderIssues };
+          }
+        }
+      ],
+      context: undefined,
+      limits: { maxDiagnostics: 2 }
+    });
+
+    expect(loaded.sources[0]?.issues).toEqual([
+      expect.objectContaining({ code: "first" }),
+      {
+        category: "resource-limit",
+        code: "max_diagnostics_exceeded",
+        severity: "error",
+        message: "Diagnostics exceeded the maximum of 2."
+      }
+    ]);
+    expect(loaded.issues).toEqual(loaded.sources[0]?.issues);
+  });
+
+  it("keeps invalid loader diagnostic limits bounded by the default", async () => {
+    const loaded = await loadConfigSources({
+      loaders: [
+        {
+          descriptor: {
+            id: "noisy-loader",
+            kind: "adapter",
+            priority: 0,
+            displayName: "noisy-loader"
+          },
+          load() {
+            return {
+              value: {},
+              issues: Array.from({ length: 201 }, (_, index) => ({
+                category: "source-load" as const,
+                code: `issue_${index}`,
+                severity: "warning" as const,
+                message: "Loader issue."
+              }))
+            };
+          }
+        }
+      ],
+      context: undefined,
+      limits: { maxDiagnostics: Number.NaN }
+    });
+
+    expect(loaded.issues).toHaveLength(200);
+    expect(loaded.issues.at(-1)).toEqual(
+      expect.objectContaining({
+        category: "resource-limit",
+        code: "max_diagnostics_exceeded"
+      })
+    );
+  });
+});

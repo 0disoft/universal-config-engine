@@ -31,4 +31,12 @@ describe("declaration diagnostic budget", () => {
     expect(error.issues.at(-1)?.message).toContain("bootstrap maximum of 200");
     expect(issues).toHaveLength(201);
   });
+
+  it("does not inspect the unused tail when bounding a directly constructed error", () => {
+    const excessive = [...issues];
+    Object.defineProperty(excessive, 201, {
+      get() { throw new Error("Unused diagnostics must not be inspected."); }
+    });
+    expect(new PipelineDeclarationError(excessive).issues).toHaveLength(200);
+  });
 });

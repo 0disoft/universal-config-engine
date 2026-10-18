@@ -37,6 +37,19 @@ tracked secret files, ignored build/cache artifacts, and generated-output drift.
 
 backend validation routes must stay stack-neutral unless a runner file explicitly defines a command.
 
+## Package Test Layout
+
+Core tests separate merge precedence, coercion, loader boundaries, validation, and
+redacted reports. CLI tests separate output/golden reports, declaration checks,
+canonical paths, source adapters, and validator setup. Tests remain beside their
+package under `test/`; small shared fixtures live in `test/helpers/` rather than
+being copied between suites.
+
+Use a package's `test` command for standalone verification. The workspace `check`
+builds dependencies once and runs `test:built` for all packages, plus the script
+guards. Smoke helper guards cover cleanup after both success and failure and
+preservation of unrelated release artifacts.
+
 ## Repository Shape
 
 library, cli-tool validation must stay repository-shape focused and must not imply generated application source code.
