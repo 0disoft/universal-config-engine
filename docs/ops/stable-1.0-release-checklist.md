@@ -46,6 +46,14 @@ requires another release candidate and fresh candidate validation.
 
 ## Hosted And Dry-Run Validation
 
+The readiness script machine-enforces the policy's full `candidateCommitSha`
+against the peeled candidate tag and publication manifest. It also requires the
+latest push runs of the four required workflow file paths to be completed/success
+on `--preparation-sha` (the workflow passes the checked-out commit). Missing, stale, queued,
+skipped, cancelled, or failed evidence blocks promotion. API lookup failures fail
+closed. The release dry-run is a separate orchestration step and never waits for
+itself inside this check. Governance and SBOM checks remain maintainer operations.
+
 - [ ] Main CI succeeds on the stable preparation SHA.
 - [ ] Runtime Compatibility succeeds on exact Node.js `24.0.0` and current Node.js.
 - [ ] Consumer Compatibility succeeds on Ubuntu and Windows.

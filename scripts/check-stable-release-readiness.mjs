@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 
 import { RELEASE_PACKAGE_NAMES } from "./record-publication-state.mjs";
 import { parseReleaseVersion } from "./release-version.mjs";
+import { collectReleaseCommitEvidence, evaluateReleaseCommitEvidence } from "./release-commit-evidence.mjs";
 
 const PROVENANCE_PREDICATE = "https://slsa.dev/provenance/v1";
 const policyPath = new URL("../release-policy.json", import.meta.url);
@@ -40,6 +41,10 @@ export function evaluateStableReleaseReadiness(input) {
   }
 
   const expectedTag = `v${requirement.candidateVersion}`;
+  evaluateReleaseCommitEvidence({
+    ...input.commitEvidence,
+    expectedCandidateCommitSha: requirement.candidateCommitSha
+  });
   const release = input.candidateRelease;
   if (
     release.tagName !== expectedTag ||
@@ -66,6 +71,7 @@ export function evaluateStableReleaseReadiness(input) {
   const completePublication = input.publicationStates.some((state) => (
     state.releaseVersion === requirement.candidateVersion &&
     state.tagName === expectedTag &&
+    state.commitSha === requirement.candidateCommitSha &&
     state.phase === "after" &&
     state.summary?.total === RELEASE_PACKAGE_NAMES.length &&
     state.summary?.published === RELEASE_PACKAGE_NAMES.length &&
@@ -115,7 +121,7 @@ function packageTarballName(packageName, version) {
   return `${packageName.replace(/^@/, "").replace("/", "-")}-${version}.tgz`;
 }
 
-async function collectRemoteReadinessInput(version, repository, policy) {
+async function collectRemoteReadinessInput(version, repository, policy, preparationSha) {
   const requirement = resolveStableReleaseRequirement(version, policy);
   if (requirement === undefined) {
     return {
@@ -130,6 +136,15 @@ async function collectRemoteReadinessInput(version, repository, policy) {
   }
 
   const candidateTag = `v${requirement.candidateVersion}`;
+  const githubHeaders = {
+    Authorization: `Bearer ${token}`,
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+  const commitEvidence = await collectReleaseCommitEvidence({
+    candidateTag, preparationSha,
+    fetchGitHub: (path) => fetchJson(`https://api.github.com/repos/${repository}/${path}`, githubHeaders)
+  });
   const release = await fetchJson(
     `https://api.github.com/repos/${repository}/releases/tags/${encodeURIComponent(candidateTag)}`,
     {
@@ -166,6 +181,7 @@ async function collectRemoteReadinessInput(version, repository, policy) {
   return {
     version,
     policy,
+    commitEvidence,
     candidateRelease: {
       tagName: release.tag_name,
       draft: release.draft,
@@ -204,14 +220,15 @@ function parseArguments(args) {
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
     throw new Error("Stable release readiness repository must be owner/name.");
   }
-  return { version, repository };
+  const preparationSha = values.get("preparation-sha") ?? process.env.GITHUB_SHA;
+  return { version, repository, preparationSha };
 }
 
 async function main() {
   const args = parseArguments(process.argv.slice(2));
   const policy = JSON.parse(readFileSync(policyPath, "utf8"));
   const readiness = evaluateStableReleaseReadiness(
-    await collectRemoteReadinessInput(args.version, args.repository, policy)
+    await collectRemoteReadinessInput(args.version, args.repository, policy, args.preparationSha)
   );
 
   const output = process.env.GITHUB_OUTPUT;

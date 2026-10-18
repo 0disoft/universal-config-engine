@@ -97,6 +97,12 @@ downloaded GitHub Release asset to match that digest after publication.
 names `1.0.0-rc.4` as the validated candidate. The release workflow fails closed
 while the candidate is missing or incomplete, but does not impose a time delay.
 
+The candidate policy includes its exact `candidateCommitSha`. Stable readiness
+peels annotated tags and requires that identity in the publication evidence. It
+also verifies successful latest push runs by workflow file path for the exact
+stable preparation SHA. Release dry-run and governance/SBOM validation remain
+separate orchestration steps; the release workflow never waits for itself.
+
 A `1.0` release candidate may be prepared only when:
 
 - every public declaration has an explicit stability classification;

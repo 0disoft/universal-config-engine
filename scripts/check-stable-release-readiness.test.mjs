@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { REQUIRED_RELEASE_WORKFLOWS } from "./release-commit-evidence.mjs";
 
 import { RELEASE_PACKAGE_NAMES } from "./record-publication-state.mjs";
 import {
@@ -12,6 +13,7 @@ const policy = {
   stableReleases: {
     "1.0.0": {
       candidateVersion: "1.0.0-rc.2",
+      candidateCommitSha: "a".repeat(40),
       previousStableVersion: "0.6.0"
     }
   }
@@ -59,6 +61,13 @@ function validReadinessInput() {
   return {
     version: "1.0.0",
     policy: structuredClone(policy),
+    commitEvidence: {
+      candidateCommitSha: "a".repeat(40), preparationSha: "b".repeat(40),
+      workflowRuns: REQUIRED_RELEASE_WORKFLOWS.map((path, id) => ({
+        path, id, run_attempt: 1, event: "push", head_sha: "b".repeat(40),
+        status: "completed", conclusion: "success"
+      }))
+    },
     candidateRelease: {
       tagName: `v${candidateVersion}`,
       draft: false,
@@ -75,6 +84,7 @@ function validReadinessInput() {
       {
         releaseVersion: candidateVersion,
         tagName: `v${candidateVersion}`,
+        commitSha: "a".repeat(40),
         phase: "after",
         summary: {
           total: RELEASE_PACKAGE_NAMES.length,

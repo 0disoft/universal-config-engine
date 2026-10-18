@@ -17,6 +17,7 @@ on:
         type: boolean
 
 permissions:
+  actions: read
   contents: write
   id-token: write
 
@@ -136,6 +137,7 @@ jobs:
           node scripts/check-stable-release-readiness.mjs
           --version "$RELEASE_VERSION"
           --repository "$GITHUB_REPOSITORY"
+          --preparation-sha "$(git rev-parse HEAD)"
 
       - name: Assert release notes
         id: release_notes
@@ -218,7 +220,7 @@ jobs:
           node scripts/record-publication-state.mjs \
             --version "$RELEASE_VERSION" \
             --tag "$RELEASE_TAG" \
-            --commit "$GITHUB_SHA" \
+            --commit "$(git rev-parse HEAD)" \
             --run-id "$GITHUB_RUN_ID" \
             --run-attempt "$GITHUB_RUN_ATTEMPT" \
             --phase before \
@@ -363,7 +365,7 @@ jobs:
           node scripts/record-publication-state.mjs \
             --version "$RELEASE_VERSION" \
             --tag "$RELEASE_TAG" \
-            --commit "$GITHUB_SHA" \
+            --commit "$(git rev-parse HEAD)" \
             --run-id "$GITHUB_RUN_ID" \
             --run-attempt "$GITHUB_RUN_ATTEMPT" \
             --phase after \
