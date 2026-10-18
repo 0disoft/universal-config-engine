@@ -1,12 +1,18 @@
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { checkPackedCliFailures } from "./check-packed-cli-failures.mjs";
 
+import {
+  packageTarballPath,
+  runPnpm,
+  runNpm,
+  runInstalledCli,
+  withWorkspaceSmoke
+} from "./lib/package-tools.mjs";
+
 const root = process.cwd();
-const pnpmExecPath = process.env.npm_execpath;
 const packages = [
   {
     name: "@0disoft/universal-config-engine-core",
@@ -105,41 +111,32 @@ const packages = [
     }
   }
 ];
-const packDir = join(root, ".tmp", "pack");
-const consumerDir = mkdtempSync(join(tmpdir(), "uce-consumer-"));
-const packedTarballs = [];
+await withWorkspaceSmoke(root, async ({ packDir, consumerDir }) => {
+  const packedTarballs = [];
 
-runPnpm(["-r", "build"]);
+  runPnpm(["-r", "build"]);
 
-for (const packageInfo of packages) {
-  if (!existsSync(packageInfo.distIndex)) {
-    throw new Error(`${packageInfo.name} build did not produce dist/index.js.`);
+  for (const packageInfo of packages) {
+    if (!existsSync(packageInfo.distIndex)) {
+      throw new Error(`${packageInfo.name} build did not produce dist/index.js.`);
+    }
+
+    const module = await import(pathToFileURL(packageInfo.distIndex).href);
+    await packageInfo.smoke(module);
+    runPnpm(["--filter", packageInfo.name, "pack", "--pack-destination", packDir]);
+    packedTarballs.push({
+      name: packageInfo.name,
+      path: packageTarballPath(root, packDir, packageInfo.name)
+    });
   }
 
-  const module = await import(pathToFileURL(packageInfo.distIndex).href);
-  await packageInfo.smoke(module);
-  runPnpm(["--filter", packageInfo.name, "pack", "--pack-destination", packDir]);
-  packedTarballs.push({
-    name: packageInfo.name,
-    path: packageTarballPath(packageInfo.name)
-  });
-}
+  smokeConsumerInstall(packedTarballs, consumerDir);
+});
 
-smokeConsumerInstall(packedTarballs);
-
-rmSync(join(root, "packages", "core", "dist"), { force: true, recursive: true });
-rmSync(join(root, "packages", "node", "dist"), { force: true, recursive: true });
-rmSync(join(root, "packages", "cli", "dist"), { force: true, recursive: true });
-rmSync(join(root, "packages", "validator-zod", "dist"), { force: true, recursive: true });
-rmSync(join(root, "packages", "validator-ajv", "dist"), { force: true, recursive: true });
-rmSync(join(root, ".tmp"), { force: true, recursive: true });
-rmSync(consumerDir, { force: true, recursive: true });
-
-function smokeConsumerInstall(tarballs) {
+function smokeConsumerInstall(tarballs, consumerDir) {
   const tarballDependencies = Object.fromEntries(
     tarballs.map((tarball) => [tarball.name, `file:${tarball.path}`])
   );
-  mkdirSync(consumerDir, { recursive: true });
   writeFileSync(
     join(consumerDir, "package.json"),
     `${JSON.stringify(
@@ -192,7 +189,7 @@ function smokeConsumerInstall(tarballs) {
 
   runNpm(["install", "--ignore-scripts"], consumerDir);
   checkPackedCliFailures(consumerDir);
-  assertInstalledPackageReadmes(tarballs);
+  assertInstalledPackageReadmes(tarballs, consumerDir);
   const basicLibraryOutput = execFileSync(process.execPath, [join(consumerDir, "basic-library.mjs")], {
     cwd: consumerDir,
     encoding: "utf8"
@@ -222,24 +219,14 @@ function smokeConsumerInstall(tarballs) {
     stdio: "inherit"
   });
 
-  const uceBin = join(consumerDir, "node_modules", ".bin", process.platform === "win32" ? "uce.cmd" : "uce");
-  const output =
-    process.platform === "win32"
-      ? execFileSync("cmd.exe", ["/d", "/c", ".\\node_modules\\.bin\\uce.cmd validate --config uce.json --json"], {
-          cwd: consumerDir,
-          encoding: "utf8"
-        })
-      : execFileSync(uceBin, ["validate", "--config", "uce.json", "--json"], {
-          cwd: consumerDir,
-          encoding: "utf8"
-        });
+  const output = runInstalledCli(consumerDir);
   const report = JSON.parse(output);
   if (report.command !== "validate" || report.status !== "ok") {
     throw new Error("Installed CLI binary smoke failed.");
   }
 }
 
-function assertInstalledPackageReadmes(tarballs) {
+function assertInstalledPackageReadmes(tarballs, consumerDir) {
   for (const tarball of tarballs) {
     const packagePath = join(consumerDir, "node_modules", ...tarball.name.split("/"));
     const readmePath = join(packagePath, "README.md");
@@ -252,57 +239,4 @@ function assertInstalledPackageReadmes(tarballs) {
       throw new Error(`${tarball.name} README.md does not identify the package and repository.`);
     }
   }
-}
-
-function packageTarballPath(packageName) {
-  const packageJsonPath = join(root, "packages", packageName.split("/").at(-1).replace("universal-config-engine-", ""), "package.json");
-  const manifest = JSON.parse(readFileSync(packageJsonPath, "utf8"));
-  const tarballBaseName = packageName.replace(/^@/, "").replace("/", "-");
-  return join(packDir, `${tarballBaseName}-${manifest.version}.tgz`);
-}
-
-function runPnpm(args, cwd = root) {
-  if (pnpmExecPath !== undefined && pnpmExecPath.length > 0) {
-    const isJavaScriptCli = /\.(?:cjs|mjs|js)$/i.test(pnpmExecPath);
-    const command = isJavaScriptCli ? process.execPath : pnpmExecPath;
-    const commandArgs = isJavaScriptCli ? [pnpmExecPath, ...args] : args;
-    execFileSync(command, commandArgs, {
-      cwd,
-      stdio: "inherit",
-      shell: process.platform === "win32" && /\.(?:bat|cmd)$/i.test(command)
-    });
-    return;
-  }
-
-  execFileSync("pnpm", args, {
-    cwd,
-    stdio: "inherit"
-  });
-}
-
-function runNpm(args, cwd) {
-  const env = npmCompatibleEnvironment();
-  const npmCliPath = join(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
-  if (existsSync(npmCliPath)) {
-    execFileSync(process.execPath, [npmCliPath, ...args], {
-      cwd,
-      env,
-      stdio: "inherit"
-    });
-    return;
-  }
-
-  execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", args, {
-    cwd,
-    env,
-    stdio: "inherit",
-    shell: process.platform === "win32"
-  });
-}
-
-function npmCompatibleEnvironment() {
-  const env = { ...process.env };
-  delete env.npm_config_manage_package_manager_versions;
-  delete env.NPM_CONFIG_MANAGE_PACKAGE_MANAGER_VERSIONS;
-  return env;
 }

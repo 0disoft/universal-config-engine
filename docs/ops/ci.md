@@ -73,6 +73,7 @@ pnpm run smoke:packages
 - adapter compatibility fixture guard
 - packed declaration API snapshot guard
 - immutable GitHub Actions reference guard
+- smoke helper cleanup and environment guards (`check:smoke-tools`)
 - build output cleanup
 
 The smoke commands verify package buildability and package contents for the core, node, CLI, and
@@ -80,6 +81,13 @@ validator packages.
 
 `smoke:core-package` remains a compatibility alias for `smoke:packages`; it
 executes the same full package smoke and must not be run alongside it in CI.
+
+Package smoke scripts share npm/pnpm execution and installed CLI shim handling in
+`scripts/lib/package-tools.mjs`. Workspace package smoke and the consumer matrix
+allocate a unique system temporary directory for tarballs and consumers. A
+`finally` block removes that directory and the five known package `dist/` outputs
+on success or failure. `clean:build` removes only those build outputs; it preserves
+`.tmp/`, including release artifacts or unrelated work.
 
 Workspace `check` builds the dependency graph once, then uses the `:built` tasks
 for typechecking, tests, and complexity checks. Those internal tasks require built
