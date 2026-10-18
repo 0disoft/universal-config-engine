@@ -164,6 +164,8 @@ migration review before running `pnpm run update:api-snapshot`.
 - Accept validator issue codes only as bounded ASCII machine identifiers;
   reject prose-like or assignment-like codes as malformed adapter output.
 - Resolve Ajv JSON Pointer numeric segments against the validated config shape.
+- Preserve standard Ajv keyword codes; use `ajv_custom_keyword` for keywords outside
+  the bounded core code grammar, without retaining their names or error prose.
   `instancePathToConfigPath` preserves ambiguous numeric-looking segments as strings
   when no root value is provided.
 - Normalize inconsistent validator status. A validator that returns `ok: false`

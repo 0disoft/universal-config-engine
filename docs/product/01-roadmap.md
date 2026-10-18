@@ -152,7 +152,7 @@ Owner: UNASSIGNED
 
 ## Post-1.0 Hardening Candidates
 
-- Add an Ajv adapter regression case and a stable safe fallback code for custom
+- Implemented an Ajv adapter regression case and a stable safe fallback code for custom
   keyword names that Ajv accepts but the core diagnostic-code grammar rejects,
   including names beginning with `$` or `_` and names containing `$`. Preserve
   existing codes for standard keywords and do not copy arbitrary keyword text into

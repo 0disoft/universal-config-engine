@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { Ajv } from "ajv/dist/ajv.js";
 import {
   resolveConfig,
   runValidators
@@ -9,6 +10,25 @@ import {
 } from "../src/index.js";
 
 describe("createAjvValidator", () => {
+  it.each(["$privateSentinel", "_privateSentinel", "private$Sentinel", "a".repeat(129)])(
+    "bounds custom keyword diagnostics without retaining the keyword (%s)",
+    async (keyword) => {
+      const ajv = new Ajv();
+      ajv.addKeyword({ keyword, validate: () => false });
+      const validator = createAjvValidator({ ajv, schema: { [keyword]: true } });
+      const adapterResult = await validator.validate({ config: {}, provenance: [] });
+      expect(adapterResult.ok).toBe(false);
+      expect(adapterResult.issues).toEqual([
+        { code: "ajv_custom_keyword", severity: "error", path: [] }
+      ]);
+      const result = await runValidators({ config: {}, provenance: [], validators: [validator] });
+      expect(result.issues).toContainEqual(expect.objectContaining({
+        category: "validation", code: "ajv_custom_keyword"
+      }));
+      expect(JSON.stringify(result)).not.toContain(keyword);
+    }
+  );
+
   it("returns ok for JSON Schema-valid config", async () => {
     const result = resolveConfig({
       sources: [

@@ -45,6 +45,10 @@ console.log(validation.ok);
 Ajv instance paths are normalized into Universal Config Engine paths. Numeric-looking
 object keys remain strings unless traversal proves that the parent is an array.
 
+Standard Ajv keyword diagnostic codes are preserved. Custom keywords that do not
+match the core's bounded ASCII code grammar use `ajv_custom_keyword` instead.
+Their raw keyword names and Ajv error prose are omitted from diagnostics.
+
 See the [validator adapter contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/adapters/README.md).
 
 ## License

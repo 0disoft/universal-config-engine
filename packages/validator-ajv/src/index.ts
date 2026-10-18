@@ -48,7 +48,9 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
 
 function toValidatorIssue(error: ErrorObject, config: unknown): ValidatorIssue {
   return {
-    code: error.keyword,
+    code: /^[A-Za-z][A-Za-z0-9_.:-]{0,127}$/.test(error.keyword)
+      ? error.keyword
+      : "ajv_custom_keyword",
     severity: "error",
     path: instancePathToConfigPath(error.instancePath, config)
   };

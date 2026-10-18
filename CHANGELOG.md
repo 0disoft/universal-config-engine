@@ -5,6 +5,11 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+### Fixed
+
+- Return `ajv_custom_keyword` for Ajv custom keywords outside the core diagnostic
+  code grammar instead of rejecting the adapter result or exposing keyword text.
+
 ### Stable Release Preparation
 
 - Promote the validated `1.0.0-rc.4` runtime, public API, and package contents as
