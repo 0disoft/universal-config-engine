@@ -34,8 +34,7 @@ state, or database persistence.
 
 ## Package Boundary Direction
 
-Package layout is not yet implemented, but the architecture expects a layered
-boundary:
+The implemented package layout follows a layered boundary:
 
 - core owns pure config value, path, source, merge, provenance, validation-adapter,
   redaction, diagnostics, and result contracts.
@@ -45,3 +44,19 @@ boundary:
 - fixtures own repeatable behavior examples and no-secret snapshot evidence.
 
 Core must not import file-system, process, CLI, parser, or validator libraries.
+
+## CLI Declaration Processing
+
+`packages/cli/src/pipeline.ts` keeps the existing declaration-loading entry points
+and re-exports source loading and declaration errors. Internal responsibilities
+live under `packages/cli/src/pipeline/`:
+
+- `declaration-validation.ts`: pure declaration checks and issue ordering.
+- `declaration-normalization.ts`: rebuilds validated input as typed declarations.
+- `declaration-fields.ts`: supported fields, limits, and shared shape guards.
+- `declaration-diagnostics.ts`: declaration errors and the bootstrap diagnostic cap.
+- `source-paths.ts`: canonical paths and declaration-directory boundaries.
+- `source-loading.ts`: dispatch to runtime adapters and attach source locations.
+
+Internal modules do not import the public facade. Declaration processing preserves
+the 200-issue bootstrap cap, source ordering, redaction, and existing CLI reports.

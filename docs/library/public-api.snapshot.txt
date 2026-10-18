@@ -456,18 +456,64 @@ export declare function formatJsonReport(command: CliCommand, report: Diagnostic
 export declare function formatHumanReport(command: CliCommand, report: DiagnosticReport): string;
 
 ### pipeline.d.ts
-import type { ConfigIssue, LoadedSource } from "@0disoft/universal-config-engine-core";
 import type { PipelineDeclaration } from "./types.js";
-export declare class PipelineDeclarationError extends Error {
-    readonly issues: readonly ConfigIssue[];
-    constructor(issues: readonly ConfigIssue[]);
-}
 export interface LoadedPipelineDeclaration {
     readonly declaration: PipelineDeclaration;
     readonly canonicalConfigPath: string;
 }
 export declare function loadPipelineDeclaration(configPath: string, cwd?: string): Promise<PipelineDeclaration>;
 export declare function loadPipelineDeclarationContext(configPath: string, cwd?: string): Promise<LoadedPipelineDeclaration>;
+export { loadDeclaredSources } from "./pipeline/source-loading.js";
+export { PipelineDeclarationError, sourceLoadFailedIssue, sourceLoadFailedIssues } from "./pipeline/declaration-diagnostics.js";
+
+### pipeline/declaration-diagnostics.d.ts
+import type { ConfigPath, ConfigIssue } from "@0disoft/universal-config-engine-core";
+export declare class PipelineDeclarationError extends Error {
+    readonly issues: readonly ConfigIssue[];
+    constructor(issues: readonly ConfigIssue[]);
+}
+export declare function sourceLoadFailedIssue(error: unknown): ConfigIssue;
+export declare function sourceLoadFailedIssues(error: unknown): readonly ConfigIssue[];
+export declare function pipelineDeclarationIssue(input: {
+    readonly code: string;
+    readonly message: string;
+    readonly path?: ConfigPath | undefined;
+    readonly sourceId?: string | undefined;
+}): ConfigIssue;
+export declare function appendDeclarationIssues(destination: ConfigIssue[], nextIssues: readonly ConfigIssue[]): boolean;
+
+### pipeline/declaration-fields.d.ts
+import type { ConfigPath } from "@0disoft/universal-config-engine-core";
+export declare const SUPPORTED_SOURCE_KINDS: Set<string>;
+export declare const SUPPORTED_MAPPING_PARSE_AS: Set<string>;
+export declare const SUPPORTED_COERCION_TARGETS: Set<string>;
+export declare const SUPPORTED_VALIDATOR_KINDS: Set<string>;
+export declare const RESOURCE_LIMIT_FIELDS: readonly ["maxDepth", "maxKeyCount", "maxPathLength", "maxDiagnostics", "maxSources", "maxProvenanceEvents", "maxResolvedPaths", "maxReportBytes"];
+export declare const PIPELINE_DECLARATION_FIELDS: Set<string>;
+export declare const BASE_SOURCE_FIELDS: Set<string>;
+export declare const SOURCE_KIND_FIELDS: Readonly<Record<string, ReadonlySet<string>>>;
+export declare const OVERRIDE_MAPPING_FIELDS: Set<string>;
+export declare const COERCION_RULE_FIELDS: Set<string>;
+export declare const VALIDATOR_DECLARATION_FIELDS: Set<string>;
+export declare const REDACTION_POLICY_FIELDS: Set<string>;
+export declare const MAX_PIPELINE_DECLARATION_DIAGNOSTICS = 200;
+export declare function formatConfigPath(path: ConfigPath): string;
+export declare function isRecord(value: unknown): value is Readonly<Record<string, unknown>>;
+export declare function isPositiveInteger(value: unknown): value is number;
+export declare function isConfigPath(value: unknown): value is ConfigPath;
+export declare function isStringOnlyConfigPath(value: unknown): value is ConfigPath;
+
+### pipeline/declaration-normalization.d.ts
+import type { PipelineDeclaration } from "../types.js";
+export declare function normalizePipelineDeclaration(value: unknown): PipelineDeclaration;
+
+### pipeline/declaration-validation.d.ts
+import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
+export declare function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[];
+
+### pipeline/source-loading.d.ts
+import type { LoadedSource } from "@0disoft/universal-config-engine-core";
+import type { PipelineDeclaration } from "../types.js";
 export declare function loadDeclaredSources(input: {
     readonly declaration: PipelineDeclaration;
     readonly configPath: string;
@@ -475,8 +521,24 @@ export declare function loadDeclaredSources(input: {
     readonly env: NodeJS.ProcessEnv;
     readonly argv: readonly string[];
 }): Promise<readonly LoadedSource[]>;
-export declare function sourceLoadFailedIssue(error: unknown): ConfigIssue;
-export declare function sourceLoadFailedIssues(error: unknown): readonly ConfigIssue[];
+
+### pipeline/source-paths.d.ts
+import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
+export declare function resolveConfigRelativePath(input: {
+    readonly configPath: string;
+    readonly cwd: string;
+    readonly sourceIndex: number;
+    readonly sourceId: string;
+    readonly targetPath: string;
+}): Promise<{
+    readonly ok: true;
+    readonly path: string;
+    readonly allowedRootPath: string;
+} | {
+    readonly ok: false;
+    readonly issue: ConfigIssue;
+}>;
+export declare function resolveInputPath(inputPath: string, cwd: string): string;
 
 ### run.d.ts
 import type { CliResult, CliRuntime } from "./types.js";
