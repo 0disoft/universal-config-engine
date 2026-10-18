@@ -119,6 +119,17 @@ a `sha256` digest. Run `actionlint` separately when workflow structure changes.
 
 ## Dependency Automation
 
+Dependabot is the sole npm and GitHub Actions update owner. Root `renovate.json`
+sets repository-wide `enabled: false`; it deliberately remains present even if the
+Renovate app remains installed. Removing the file would allow app defaults to
+reactivate updates. Renovate's [documented disable behavior](https://docs.renovatebot.com/configuration-options/#enabled)
+stops updates and cleans up its dashboard, PRs, and branches on its next run.
+After pushing policy changes, verify the default-branch config through GitHub and
+check for open Renovate PRs, branches, and an active dashboard. Reappearance is a
+policy failure; inspect the app's effective repository settings rather than
+deleting the opt-out file. App-installation administration is separate from this
+repository policy and is not required to honor this explicit opt-out.
+
 `.github/dependabot.yml` checks npm dependencies every Friday at 09:00 Asia/Seoul
 and GitHub Actions every Friday at 09:30. The schedule intentionally starts after
 the stable `1.0.0` review gate rather than creating dependency churn during the RC2
