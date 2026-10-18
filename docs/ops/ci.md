@@ -62,7 +62,6 @@ The current local CI equivalent is:
 
 ```powershell
 pnpm run check
-pnpm run smoke:core-package
 pnpm run smoke:packages
 ```
 
@@ -78,6 +77,9 @@ pnpm run smoke:packages
 
 The smoke commands verify package buildability and package contents for the core, node, CLI, and
 validator packages.
+
+`smoke:core-package` remains a compatibility alias for `smoke:packages`; it
+executes the same full package smoke and must not be run alongside it in CI.
 
 Workspace `check` builds the dependency graph once, then uses the `:built` tasks
 for typechecking, tests, and complexity checks. Those internal tasks require built
@@ -106,7 +108,6 @@ The existing `check` job remains the Ubuntu compatibility gate and:
 - enables pnpm 11.7.0 through Corepack
 - installs the locked dependency graph
 - runs `pnpm run check`
-- runs `pnpm run smoke:core-package`
 - runs `pnpm run smoke:packages`
 - runs `git diff --check`
 

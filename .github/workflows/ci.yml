@@ -40,9 +40,6 @@ jobs:
       - name: Run repository check
         run: pnpm run check
 
-      - name: Smoke core package
-        run: pnpm run smoke:core-package
-
       - name: Smoke workspace packages
         run: pnpm run smoke:packages
 

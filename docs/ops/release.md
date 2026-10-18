@@ -31,7 +31,6 @@ Run these checks from the repository root:
 
 ```powershell
 pnpm run check
-pnpm run smoke:core-package
 pnpm run smoke:packages
 actionlint
 pnpm audit --audit-level=high

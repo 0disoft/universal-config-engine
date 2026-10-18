@@ -156,7 +156,7 @@ jobs:
         run: pnpm run check
 
       - name: Smoke core package
-        run: pnpm run smoke:core-package
+        run: pnpm run smoke:packages
 
       - name: Smoke workspace packages
         run: pnpm run smoke:packages
