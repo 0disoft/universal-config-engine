@@ -3,6 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync,
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { checkPackedCliFailures } from "./check-packed-cli-failures.mjs";
 
 const root = process.cwd();
 const pnpmExecPath = process.env.npm_execpath;
@@ -190,6 +191,7 @@ function smokeConsumerInstall(tarballs) {
   );
 
   runNpm(["install", "--ignore-scripts"], consumerDir);
+  checkPackedCliFailures(consumerDir);
   assertInstalledPackageReadmes(tarballs);
   const basicLibraryOutput = execFileSync(process.execPath, [join(consumerDir, "basic-library.mjs")], {
     cwd: consumerDir,

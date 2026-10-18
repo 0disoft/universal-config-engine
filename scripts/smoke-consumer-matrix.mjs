@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { checkPackedCliFailures } from "./check-packed-cli-failures.mjs";
 
 const root = process.cwd();
 const pnpmExecPath = process.env.npm_execpath;
@@ -88,6 +89,7 @@ function runCliScenario() {
     "@0disoft/universal-config-engine-cli"
   ], { ajv: "^8.20.0" });
   runNpm(["install", "--ignore-scripts"], directory);
+  checkPackedCliFailures(directory);
   const output = process.platform === "win32"
     ? execFileSync(
         "cmd.exe",

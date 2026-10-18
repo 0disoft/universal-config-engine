@@ -157,7 +157,7 @@ Owner: UNASSIGNED
   including names beginning with `$` or `_` and names containing `$`. Preserve
   existing codes for standard keywords and do not copy arbitrary keyword text into
   diagnostic prose.
-- Add installed CLI failure-path coverage that executes the packed `uce` entry
+- Implemented installed CLI failure-path coverage that executes the packed `uce` entry
   point and verifies stdout, stderr, and exit codes for missing declarations and
   bounded-input failures on Windows and Linux. This complements the current packed
   success-path smoke and direct `runCli` tests.

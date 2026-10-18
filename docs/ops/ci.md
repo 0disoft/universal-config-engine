@@ -101,6 +101,11 @@ TypeScript, adapter, and installed binary checks across Ubuntu and Windows on ex
 Node.js `24.0.0` and the latest stable Node.js release. Workspace links are not used
 inside those consumers.
 
+Both packed smoke scripts execute the installed CLI entry point as a subprocess
+for missing `--config`, missing declarations, and oversized declaration failures.
+They separately assert exit codes, stdout, stderr, bounded diagnostics, and absence
+of a private input sentinel on every hosted Ubuntu and Windows consumer.
+
 `.github/workflows/codeql.yml` runs CodeQL advanced setup for
 `javascript-typescript` on `main` pushes, pull requests targeting `main`, a weekly
 schedule, and manual dispatch. It uses the `security-extended` query suite and
