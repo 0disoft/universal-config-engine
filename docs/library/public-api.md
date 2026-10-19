@@ -105,6 +105,12 @@ budget is exhausted; skipped input is signaled by `max_diagnostics_exceeded` wit
 that budget. Source validation errors reject the source before merge even when
 loader warnings have already filled the retained issue budget.
 
+`isConfigValue` checks JSON-compatible scalars, dense arrays and plain objects.
+It returns false for cycles and array holes, accepts shared acyclic references,
+and uses iterative traversal so deeply nested valid input does not overflow the
+call stack. This type guard does not apply resource-limit or unsafe-key policy;
+use the resolution/flattening stage for those checks.
+
 After successful coercion, `resolvedPaths` is projected onto the final flattened
 config. JSON strings expanded into objects report their new leaf paths instead of
 the obsolete string path. Each new path inherits its originating source, priority,

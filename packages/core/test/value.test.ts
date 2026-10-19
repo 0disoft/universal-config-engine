@@ -2,9 +2,54 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_RESOURCE_LIMITS,
   flattenConfigObject,
+  isConfigValue,
   resolveConfig
 } from "../src/index.js";
 import { source } from "./helpers/source.js";
+
+describe("isConfigValue", () => {
+  it("rejects sparse arrays rather than narrowing holes to ConfigValue", () => {
+    expect(isConfigValue(new Array(1))).toBe(false);
+    expect(isConfigValue({ nested: [1, , 3] })).toBe(false);
+  });
+
+  it("rejects cycles in arrays, objects and mixed containers without throwing", () => {
+    const array: unknown[] = [];
+    array.push(array);
+    const object: Record<string, unknown> = {};
+    object.self = object;
+    const mixed: unknown[] = [];
+    mixed.push({ back: mixed });
+
+    for (const value of [array, object, mixed]) {
+      expect(isConfigValue(value)).toBe(false);
+    }
+  });
+
+  it("checks array elements even when a metadata property shadows values", () => {
+    const valid = Object.defineProperty([true], "values", { value: undefined });
+    const invalid = Object.defineProperty([undefined], "values", { value: () => [true].values() });
+    expect(isConfigValue(valid)).toBe(true);
+    expect(isConfigValue(invalid)).toBe(false);
+  });
+
+  it("accepts shared acyclic references and deeply nested JSON-compatible values", () => {
+    const shared = { enabled: true, values: [1, null, "value"] };
+    expect(isConfigValue({ left: shared, right: shared })).toBe(true);
+    let value: unknown = true;
+    for (let depth = 0; depth < 20_000; depth += 1) {
+      value = depth % 2 === 0 ? [value] : { nested: value };
+    }
+    expect(isConfigValue(value)).toBe(true);
+  });
+
+  it.each([undefined, Number.NaN, Infinity, () => 1, Symbol("value"), 1n, new Date(0)])(
+    "rejects non-JSON input %s", (value) => {
+      expect(isConfigValue(value)).toBe(false);
+      expect(isConfigValue({ nested: [value] })).toBe(false);
+    }
+  );
+});
 
 describe("config leaf resource limits", () => {
   const cases = [

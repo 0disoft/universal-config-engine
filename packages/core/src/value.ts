@@ -23,24 +23,46 @@ export function isPlainConfigObject(value: unknown): value is { readonly [key: s
 }
 
 export function isConfigValue(value: unknown): value is ConfigValue {
-  if (value === null) {
-    return true;
-  }
+  if (value === null || typeof value !== "object") return isConfigScalar(value);
 
-  const valueType = typeof value;
-  if (valueType === "string" || valueType === "number" || valueType === "boolean") {
-    return Number.isFinite(value as number) || valueType !== "number";
-  }
+  const ancestors = new WeakSet<object>();
+  const validated = new WeakSet<object>();
+  const stack: { readonly container?: object; readonly values: Iterator<unknown> }[] = [
+    { values: [value].values() }
+  ];
 
-  if (Array.isArray(value)) {
-    return value.every((item) => isConfigValue(item));
-  }
+  while (stack.length > 0) {
+    const frame = stack[stack.length - 1]!;
+    const next = frame.values.next();
+    if (next.done) {
+      stack.pop();
+      if (frame.container !== undefined) {
+        ancestors.delete(frame.container);
+        validated.add(frame.container);
+      }
+      continue;
+    }
 
-  if (isPlainConfigObject(value)) {
-    return Object.values(value).every((child) => isConfigValue(child));
-  }
+    const child = next.value;
+    if (child === null || typeof child !== "object") {
+      if (!isConfigScalar(child)) return false;
+      continue;
+    }
+    if (!Array.isArray(child) && !isPlainConfigObject(child)) return false;
+    if (ancestors.has(child)) return false;
+    if (validated.has(child)) continue;
 
-  return false;
+    ancestors.add(child);
+    // Array iterators visit holes as undefined; Array.every would skip them.
+    const children = Array.isArray(child) ? child : Object.values(child);
+    stack.push({ container: child, values: Array.prototype.values.call(children) });
+  }
+  return true;
+}
+
+function isConfigScalar(value: unknown): boolean {
+  return value === null || typeof value === "string" || typeof value === "boolean" ||
+    (typeof value === "number" && Number.isFinite(value));
 }
 
 export function flattenConfigObject(

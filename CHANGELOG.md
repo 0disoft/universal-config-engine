@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Make the public `isConfigValue` guard reject cycles and sparse arrays without
+  stack overflow, while retaining shared references and deeply nested valid values.
 - Apply depth and path-length limits to object scalar/null leaves, including
   leaves introduced by JSON coercion, through the shared value traversal.
 
