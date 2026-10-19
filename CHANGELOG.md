@@ -11,6 +11,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   candidate-readiness and consumer-smoke tools to prevent package-list drift.
 - Wait for npm versions and dist-tags under one bounded propagation deadline,
   avoiding full release retries for normal registry delays.
+- Reuse original GitHub tarballs on release retries, including pending npm
+  publications, instead of overwriting public assets with a fresh repack.
 
 ## 1.0.0 - 2026-10-19
 

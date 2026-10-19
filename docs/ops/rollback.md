@@ -36,7 +36,10 @@ If only some workspace packages are published:
 2. Confirm that every published package has the expected version and tagged commit
    provenance; do not attempt to overwrite it.
 3. Rerun the same tagged workflow. Its preflight manifest skips confirmed published
-   packages and resumes missing packages in dependency order.
+   packages and resumes missing packages in dependency order. Existing GitHub
+   tarballs are downloaded and reused as publication inputs, so a repack cannot
+   replace already announced bytes. If a published package's original asset is
+   missing, restore its verified npm tarball before retrying.
 4. Stop and investigate instead when npm state cannot be read reliably or a
    published package does not match the release version.
 

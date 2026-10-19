@@ -103,18 +103,12 @@ jobs:
           node --input-type=module <<'NODE'
           import { readFileSync } from "node:fs";
           import { parseReleaseVersion } from "./scripts/release-version.mjs";
+          import { WORKSPACE_PACKAGE_NAMES, packageDirectory } from "./scripts/lib/workspace-packages.mjs";
 
           const releaseVersion = process.env.RELEASE_VERSION;
           parseReleaseVersion(releaseVersion);
-          const packagePaths = [
-            "packages/core/package.json",
-            "packages/node/package.json",
-            "packages/validator-ajv/package.json",
-            "packages/validator-zod/package.json",
-            "packages/cli/package.json"
-          ];
-
-          const mismatches = packagePaths.flatMap((path) => {
+          const mismatches = WORKSPACE_PACKAGE_NAMES.flatMap((name) => {
+            const path = `packages/${packageDirectory(name)}/package.json`;
             const manifest = JSON.parse(readFileSync(path, "utf8"));
             return manifest.version === releaseVersion
               ? []
@@ -175,33 +169,17 @@ jobs:
           set -euo pipefail
           pnpm -r build
           mkdir -p .tmp/release
+          node --input-type=module <<'NODE'
+          import { statSync } from "node:fs";
+          import { WORKSPACE_PACKAGE_NAMES, packageTarballName } from "./scripts/lib/workspace-packages.mjs";
+          import { runPnpm } from "./scripts/lib/package-tools.mjs";
 
-          packages=(
-            "@0disoft/universal-config-engine-core"
-            "@0disoft/universal-config-engine-node"
-            "@0disoft/universal-config-engine-cli"
-            "@0disoft/universal-config-engine-validator-ajv"
-            "@0disoft/universal-config-engine-validator-zod"
-          )
-
-          for package_name in "${packages[@]}"; do
-            pnpm --filter "$package_name" pack --pack-destination .tmp/release
-          done
-
-          expected_tarballs=(
-            ".tmp/release/0disoft-universal-config-engine-core-${RELEASE_VERSION}.tgz"
-            ".tmp/release/0disoft-universal-config-engine-node-${RELEASE_VERSION}.tgz"
-            ".tmp/release/0disoft-universal-config-engine-cli-${RELEASE_VERSION}.tgz"
-            ".tmp/release/0disoft-universal-config-engine-validator-ajv-${RELEASE_VERSION}.tgz"
-            ".tmp/release/0disoft-universal-config-engine-validator-zod-${RELEASE_VERSION}.tgz"
-          )
-
-          for tarball in "${expected_tarballs[@]}"; do
-            if [[ ! -s "$tarball" ]]; then
-              echo "Missing release tarball: $tarball" >&2
-              exit 1
-            fi
-          done
+          for (const name of WORKSPACE_PACKAGE_NAMES) {
+            runPnpm(["--filter", name, "pack", "--pack-destination", ".tmp/release"]);
+            const tarball = `.tmp/release/${packageTarballName(name, process.env.RELEASE_VERSION)}`;
+            if (statSync(tarball).size === 0) throw new Error(`Empty release tarball: ${tarball}`);
+          }
+          NODE
 
       - name: Record publication state before publish
         id: publication_before
@@ -227,30 +205,10 @@ jobs:
         if: steps.release.outputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
-          RELEASE_PRERELEASE: ${{ steps.release.outputs.prerelease }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
           RELEASE_NOTES_FILE: ${{ steps.release_notes.outputs.path }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" .tmp/release/*.tgz --repo "$GITHUB_REPOSITORY" --clobber
-            edit_args=(edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$RELEASE_NOTES_FILE")
-            if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
-              edit_args+=(--prerelease)
-            fi
-            gh release "${edit_args[@]}"
-          else
-            release_args=(create "$RELEASE_TAG" .tmp/release/*.tgz \
-              --repo "$GITHUB_REPOSITORY" \
-              --verify-tag \
-              --title "$RELEASE_TAG" \
-              --notes-file "$RELEASE_NOTES_FILE")
-            if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
-              release_args+=(--prerelease)
-            fi
-            gh release "${release_args[@]}"
-          fi
+          PUBLICATION_STATE_FILE: ${{ steps.publication_before.outputs.state_file }}
+        run: node scripts/prepare-release-assets.mjs
 
       - name: Publish npm packages
         env:
@@ -263,13 +221,13 @@ jobs:
           set -euo pipefail
           npm ping --registry=https://registry.npmjs.org/
 
-          packages=(
-            "@0disoft/universal-config-engine-core|.tmp/release/0disoft-universal-config-engine-core-${RELEASE_VERSION}.tgz"
-            "@0disoft/universal-config-engine-node|.tmp/release/0disoft-universal-config-engine-node-${RELEASE_VERSION}.tgz"
-            "@0disoft/universal-config-engine-validator-ajv|.tmp/release/0disoft-universal-config-engine-validator-ajv-${RELEASE_VERSION}.tgz"
-            "@0disoft/universal-config-engine-validator-zod|.tmp/release/0disoft-universal-config-engine-validator-zod-${RELEASE_VERSION}.tgz"
-            "@0disoft/universal-config-engine-cli|.tmp/release/0disoft-universal-config-engine-cli-${RELEASE_VERSION}.tgz"
-          )
+          package_entries="$(node --input-type=module -e '
+            import { WORKSPACE_PACKAGE_NAMES, packageTarballName } from "./scripts/lib/workspace-packages.mjs";
+            for (const name of WORKSPACE_PACKAGE_NAMES) {
+              console.log(`${name}|.tmp/release/${packageTarballName(name, process.env.RELEASE_VERSION)}`);
+            }
+          ')"
+          mapfile -t packages <<< "$package_entries"
 
           for entry in "${packages[@]}"; do
             package_name="${entry%%|*}"

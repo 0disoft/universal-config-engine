@@ -76,6 +76,17 @@ Every non-dry-run attempt attaches `publication-state-...-before.json` and
 an npm `404` from registry lookup failure and resumes only packages recorded as
 missing. Preserve these manifests when investigating a partial release.
 
+On a retry, `scripts/prepare-release-assets.mjs` downloads the existing tarballs
+back into `.tmp/release` before npm publication. Those original bytes replace the
+local repack, including for packages not yet published to npm. Only missing
+GitHub assets are uploaded, without overwriting existing assets or release notes;
+unrelated assets such as SBOMs and publication manifests remain untouched. A
+missing original asset for an already-published npm package blocks the retry:
+restore the verified immutable npm tarball before continuing. Unknown GitHub
+lookup state, draft/status mismatches and empty artifacts also block publication.
+Package assertions, packing and publication use the shared dependency-ordered
+catalog in `scripts/lib/workspace-packages.mjs`, as do release evidence and smokes.
+
 The post-publication smoke can also be reproduced with
 `$env:RELEASE_VERSION = "1.0.0-rc.4"; pnpm run smoke:registry-packages`.
 
@@ -112,19 +123,14 @@ Every npm package in this repository must use the same Trusted Publisher setting
 ## GitHub Release Asset Flow
 
 GitHub release assets are inspection artifacts, not a substitute for npm package
-publication. The release workflow generates them from the tag with:
+publication. The release workflow builds from the validated tag, packs the shared
+package catalog and prepares uploads through `scripts/prepare-release-assets.mjs`.
+Use that workflow for publication and retries; do not upload fresh repacks with
+`--clobber` over existing release tarballs. Inspect a published release with:
 
 ```powershell
-pnpm -r build
-New-Item -ItemType Directory -Force -Path .tmp/release | Out-Null
-pnpm --filter @0disoft/universal-config-engine-core pack --pack-destination .tmp/release
-pnpm --filter @0disoft/universal-config-engine-node pack --pack-destination .tmp/release
-pnpm --filter @0disoft/universal-config-engine-cli pack --pack-destination .tmp/release
-pnpm --filter @0disoft/universal-config-engine-validator-ajv pack --pack-destination .tmp/release
-pnpm --filter @0disoft/universal-config-engine-validator-zod pack --pack-destination .tmp/release
-gh release upload <tag> .tmp/release/*.tgz --repo 0disoft/universal-config-engine --clobber
 gh release view <tag> --repo 0disoft/universal-config-engine --json assets,tagName,url
-pnpm run clean:build
+gh release download <tag> --repo 0disoft/universal-config-engine --pattern '*.tgz' --dir .tmp/release-inspection
 ```
 
 ## SBOM Evidence
