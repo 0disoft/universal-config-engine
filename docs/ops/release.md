@@ -61,6 +61,13 @@ publish in dry-run mode. Non-dry-run execution continues to require the named ta
 The same commit must contain a non-empty `docs/releases/<tag>.md`; the workflow uses
 that reviewed file as the GitHub Release body and rejects generic generated notes.
 
+Dry-run also reads npm publication state and saves its preflight manifest locally.
+Versions not yet published use `npm publish --dry-run`; already-published versions
+use `npm pack --dry-run --ignore-scripts` to inspect their locally built tarballs.
+npm rejects duplicate versions even during publish dry-runs, so this distinction
+allows workflow revalidation after a release without changing package versions.
+Neither route uploads release assets, moves dist-tags or publishes npm packages.
+
 ## Publish Flow
 
 1. Confirm the version in each publishable package.

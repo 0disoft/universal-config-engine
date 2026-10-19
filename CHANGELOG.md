@@ -13,6 +13,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   avoiding full release retries for normal registry delays.
 - Reuse original GitHub tarballs on release retries, including pending npm
   publications, instead of overwriting public assets with a fresh repack.
+- Allow release dry-runs after publication by inspecting immutable-version tarballs
+  instead of asking npm to publish an existing version again.
 
 ## 1.0.0 - 2026-10-19
 

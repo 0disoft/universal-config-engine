@@ -6,6 +6,12 @@ import { pathToFileURL } from "node:url";
 import { parseReleaseVersion } from "./release-version.mjs";
 import { WORKSPACE_PACKAGE_NAMES } from "./lib/workspace-packages.mjs";
 
+export function getPublicationAction(status, dryRun) {
+  if (status === "missing") return "publish";
+  if (status === "published") return dryRun ? "inspect" : "skip";
+  throw new Error("Cannot plan publication without a known npm package state.");
+}
+
 export function collectPublicationState(input) {
   const packages = WORKSPACE_PACKAGE_NAMES.map((name) => ({
     name,

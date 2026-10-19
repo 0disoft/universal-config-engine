@@ -2,10 +2,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   classifyNpmViewResult,
-  collectPublicationState
+  collectPublicationState,
+  getPublicationAction
 } from "./record-publication-state.mjs";
 import { WORKSPACE_PACKAGE_NAMES } from "./lib/workspace-packages.mjs";
 import { parseReleaseVersion } from "./release-version.mjs";
+
+test("dry runs inspect immutable published versions while real retries skip them", () => {
+  assert.equal(getPublicationAction("published", true), "inspect");
+  assert.equal(getPublicationAction("published", false), "skip");
+  assert.equal(getPublicationAction("missing", true), "publish");
+  assert.equal(getPublicationAction("missing", false), "publish");
+  assert.throws(() => getPublicationAction("unknown", true), /known npm package state/);
+  assert.throws(() => getPublicationAction(undefined, false), /known npm package state/);
+});
 
 test("collects a bounded package publication summary", () => {
   const manifest = collectPublicationState({
