@@ -1,7 +1,7 @@
 import { appendBoundedIssues } from "./diagnostics.js";
 import { applyCoercionRules } from "./coercion.js";
 import { getConfigValueAtPath, pathToKey, setConfigValueAtPath } from "./path.js";
-import { flattenConfigObject } from "./value.js";
+import { flattenConfigObject, type FlattenedConfigEntry } from "./value.js";
 import { normalizeResourceLimits } from "./limits.js";
 import type {
   ConfigIssue,
@@ -128,12 +128,14 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     }
   }
 
+  let didCoerce = false;
   if (input.coercionRules !== undefined && input.coercionRules.length > 0) {
     const coercionResult = applyCoercionRules({
       config,
       rules: input.coercionRules
     });
     config = coercionResult.config as Record<string, ConfigValue>;
+    didCoerce = coercionResult.provenance.length > 0;
     appendBoundedIssues(issues, coercionResult.issues, limits.maxDiagnostics);
     for (const event of coercionResult.provenance) {
       if (provenance.length < limits.maxProvenanceEvents) {
@@ -146,6 +148,9 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
 
   const finalStructure = flattenConfigObject("core:resolved-config", config, limits);
   appendBoundedIssues(issues, finalStructure.issues, limits.maxDiagnostics);
+  if (didCoerce) {
+    synchronizeCoercedResolvedPaths(resolvedIndex, finalStructure.entries);
+  }
   const resolvedPaths = Array.from(resolvedIndex.byPath.values());
   if (resolvedPaths.length > limits.maxResolvedPaths) {
     pushResourceLimitIssueOnce(issues, "max_resolved_paths_exceeded", limits.maxResolvedPaths, limits);
@@ -170,6 +175,39 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     })),
     limits
   };
+}
+
+function synchronizeCoercedResolvedPaths(
+  index: MutableResolvedPathIndex,
+  entries: readonly FlattenedConfigEntry[]
+): void {
+  const projectedByOwner = new Map<string, ConfigPath[]>();
+  for (const entry of entries) {
+    let node = index.root;
+    let ownerKey = node.entryKey;
+    for (const segment of entry.path) {
+      const child = node.children.get(trieSegmentKey(segment));
+      if (child === undefined) break;
+      node = child;
+      if (node.entryKey !== undefined) ownerKey = node.entryKey;
+    }
+    if (ownerKey === undefined) continue;
+    const paths = projectedByOwner.get(ownerKey) ?? [];
+    paths.push(entry.path);
+    projectedByOwner.set(ownerKey, paths);
+  }
+
+  // Coercion changes value shape, not source ownership. Rebuild in original
+  // owner order, retaining the source history and location of the encoded value.
+  const owners = [...index.byPath.entries()];
+  index.byPath.clear();
+  index.root.children.clear();
+  delete index.root.entryKey;
+  for (const [key, owner] of owners) {
+    for (const path of projectedByOwner.get(key) ?? []) {
+      setResolvedPath(index, { ...owner, path });
+    }
+  }
 }
 
 function duplicateSourceIdIssues(

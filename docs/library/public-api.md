@@ -95,6 +95,15 @@ and coercion. A final aggregate or coercion-expanded structure that exceeds dept
 key-count, or path-length limits returns a `resource-limit` issue with source id
 `core:resolved-config` and cannot produce `ok: true`.
 
+After successful coercion, `resolvedPaths` is projected onto the final flattened
+config. JSON strings expanded into objects report their new leaf paths instead of
+the obsolete string path. Each new path inherits its originating source, priority,
+override history, and source locations; locations identify the original encoded
+value, not fabricated positions inside that string. Empty objects and arrays keep
+their existing atomic path representation. Coercion provenance remains a separate
+event, and the resolved-path cap applies after expansion even when the retained
+provenance budget is already full.
+
 `createMappedOverrideSource` rejects active mappings whose target paths are equal or
 have an ancestor/descendant relationship. Exact duplicates use
 `duplicate_mapping_target_path`; prefix collisions use

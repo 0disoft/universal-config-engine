@@ -1,8 +1,60 @@
 import { describe, expect, it } from "vitest";
-import { applyCoercionRules, getConfigValueAtPath, resolveConfig, setConfigValueAtPath } from "../src/index.js";
+import { applyCoercionRules, buildDiagnosticReport, getConfigValueAtPath, resolveConfig, setConfigValueAtPath } from "../src/index.js";
 import { source } from "./helpers/source.js";
 
 describe("applyCoercionRules", () => {
+  it("projects JSON-expanded paths with inherited source history and locations", () => {
+    const lower = source("vault", 0, { auth: "lower input" });
+    const higher = source("file", 10, { auth: '{"password":"redaction marker","nested":{"port":"41"}}', stable: true });
+    const lowerLocation = { sourceId: "vault", line: 2, column: 1 };
+    const higherLocation = { sourceId: "file", line: 4, column: 3 };
+    const result = resolveConfig({ sources: [
+      { ...lower, locations: [{ path: ["auth"], location: lowerLocation }] },
+      { ...higher, locations: [{ path: ["auth"], location: higherLocation }] }
+    ], coercionRules: [
+      { path: ["auth"], from: "string", to: "json", onFailure: "issue" },
+      { path: ["auth", "nested", "port"], from: "string", to: "number", onFailure: "issue" }
+    ] });
+    expect(result.ok).toBe(true);
+    expect(result.resolvedPaths.map((entry) => entry.path)).toEqual([["auth", "password"], ["auth", "nested", "port"], ["stable"]]);
+    for (const entry of result.resolvedPaths.filter((entry) => entry.path[0] === "auth")) {
+      expect(entry).toMatchObject({ winningSourceId: "file", winningPriority: 10,
+        overriddenSourceIds: ["vault"], winningLocation: higherLocation, overriddenLocations: [lowerLocation] });
+      expect(getConfigValueAtPath(result.config, entry.path)).not.toBeUndefined();
+    }
+    expect(buildDiagnosticReport(result).resolvedPaths).toContainEqual(expect.objectContaining({
+      path: ["auth", "password"], redacted: true, redactionReason: "secret-name"
+    }));
+    expect(JSON.stringify(buildDiagnosticReport(result))).not.toContain("redaction marker");
+  });
+
+  it("synchronizes chained JSON expansion even when retained provenance is full", () => {
+    const result = resolveConfig({ sources: [source("env", 0, {
+      payload: JSON.stringify({ nested: '{"value":7}', empty: {} }), list: ["41"]
+    })], coercionRules: [
+      { path: ["payload"], from: "string", to: "json", onFailure: "issue" },
+      { path: ["payload", "nested"], from: "string", to: "json", onFailure: "issue" },
+      { path: ["list", 0], from: "string", to: "number", onFailure: "issue" }
+    ], limits: { maxProvenanceEvents: 1 } });
+    expect(result.resolvedPaths.map((entry) => entry.path)).toEqual([
+      ["payload", "nested", "value"], ["payload", "empty"], ["list"]
+    ]);
+    expect(result.config).toEqual({ payload: { nested: { value: 7 }, empty: {} }, list: [41] });
+    expect(result.provenance).toHaveLength(1);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "max_provenance_events_exceeded" }));
+  });
+
+  it("applies the resolved-path budget after JSON expands a single leaf", () => {
+    const result = resolveConfig({ sources: [source("env", 0, { payload: '{"first":1,"second":2}' })],
+      coercionRules: [{ path: ["payload"], from: "string", to: "json", onFailure: "issue" }],
+      limits: { maxResolvedPaths: 1 }
+    });
+    expect(result.ok).toBe(false);
+    expect(result.resolvedPaths).toHaveLength(1);
+    expect(result.resolvedPaths[0]?.path).toEqual(["payload", "first"]);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "max_resolved_paths_exceeded" }));
+  });
+
   it("coerces existing nested array elements without changing caller input", () => {
     const config = { items: ["41", { enabled: "true" }, ["{\"count\":2}"]] };
     const result = applyCoercionRules({ config, rules: [
