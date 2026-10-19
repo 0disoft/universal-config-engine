@@ -17,8 +17,7 @@ const argvResults = [128, 4096].flatMap((mappingCount) =>
 );
 
 for (const result of argvResults) {
-  const expectedAccesses = result.mode === "default" ? result.argvEntries : result.argvEntries * 2;
-  assertEqual(result.elementAccesses, expectedAccesses, `${result.mode} argv element accesses`);
+  assertEqual(result.elementAccesses, result.argvEntries, `${result.mode} argv element accesses`);
 }
 
 process.stdout.write(`${JSON.stringify({

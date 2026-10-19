@@ -58,6 +58,10 @@ conversion between JSON and dotenv adapters. Each adapter keeps its parser,
 source-location extraction and existing format-specific failure codes. The
 open-handle identity/root checks and byte limits remain in `file.ts`.
 
+Node's argv adapter builds one mapping-name index per call. Its single scan owns
+both value consumption and unmapped-token classification, keeping strict mode's
+diagnostics consistent with the tokens that actually supplied mapped values.
+
 Core's internal `diagnostics.ts` owns ordered, bounded issue collection and overflow
 markers for loading, merging, validation, and the pipeline facade. CLI declaration
 checks reuse the public `combineConfigIssues` facade with their fixed bootstrap

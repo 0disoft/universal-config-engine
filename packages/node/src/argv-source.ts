@@ -70,9 +70,9 @@ export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
       }]
     };
   }
-  const observations = scanArgv(input.argv, input.mappings);
+  const { observations, unmappedIndexes } = scanArgv(input.argv, input.mappings, input.unmappedBehavior !== undefined);
   if (input.unmappedBehavior !== undefined) {
-    for (const argumentIndex of unmappedArgvIndexes(input.argv, input.mappings)) {
+    for (const argumentIndex of unmappedIndexes) {
       issues.push({
         category: "mapping",
         code: "unmapped_argv_entry",
@@ -133,31 +133,6 @@ export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
   };
 }
 
-function unmappedArgvIndexes(
-  argv: readonly string[],
-  mappings: readonly OverrideMapping[]
-): readonly number[] {
-  const exactNames = new Set(
-    mappings.filter((mapping) => mapping.sourceKind === "argv").map((mapping) => mapping.externalName)
-  );
-  const assignmentPrefixes = createAssignmentPrefixNode();
-  for (const name of exactNames) addAssignmentPrefix(assignmentPrefixes, name);
-  const unmapped: number[] = [];
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const argument = argv[index]!;
-    if (exactNames.has(argument)) {
-      const next = argv[index + 1];
-      if (next !== undefined && isArgValueToken(next)) index += 1;
-      continue;
-    }
-    if (matchAssignmentPrefixes(assignmentPrefixes, argument).length > 0) continue;
-
-    unmapped.push(index);
-  }
-  return unmapped;
-}
-
 function observationToArgValue(observation: ArgObservation | undefined):
   | { readonly status: "found"; readonly value: string }
   | { readonly status: "missing" }
@@ -180,8 +155,9 @@ function observationToArgValue(observation: ArgObservation | undefined):
 
 function scanArgv(
   argv: readonly string[],
-  mappings: readonly OverrideMapping[]
-): ReadonlyMap<string, ArgObservation> {
+  mappings: readonly OverrideMapping[],
+  collectUnmapped: boolean
+): { readonly observations: ReadonlyMap<string, ArgObservation>; readonly unmappedIndexes: readonly number[] } {
   const exactNames = new Set<string>();
   const assignmentPrefixes = createAssignmentPrefixNode();
   for (const mapping of mappings) {
@@ -193,6 +169,7 @@ function scanArgv(
   }
 
   const observations = new Map<string, ArgObservation>();
+  const unmappedIndexes: number[] = [];
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]!;
     if (exactNames.has(arg)) {
@@ -208,11 +185,13 @@ function scanArgv(
       continue;
     }
 
-    for (const match of matchAssignmentPrefixes(assignmentPrefixes, arg)) {
+    const matches = matchAssignmentPrefixes(assignmentPrefixes, arg);
+    if (collectUnmapped && matches.length === 0) unmappedIndexes.push(index);
+    for (const match of matches) {
       recordArgObservation(observations, match.externalName, match.value, false);
     }
   }
-  return observations;
+  return { observations, unmappedIndexes };
 }
 
 function createAssignmentPrefixNode(): AssignmentPrefixNode {

@@ -642,6 +642,29 @@ describe("node source loaders", () => {
     expect(loaded.issues?.map((issue) => issue.details?.argumentIndex)).toEqual([0, 1]);
   });
 
+  it.each([undefined, "warning", "error"] as const)("preserves mixed argv values and diagnostic order (%s)", (unmappedBehavior) => {
+    const loaded = createArgvSource({
+      descriptor: descriptor("argv", "argv", 20),
+      argv: ["--port", "9000", "--mode=prod", "--unknown", "--offset", "-1.5", "positional", "--port=8080", "--missing"],
+      mappings: [
+        { externalName: "--port", sourceKind: "argv", targetPath: ["port"], parseAs: "number" },
+        { externalName: "--mode", sourceKind: "argv", targetPath: ["mode"] },
+        { externalName: "--offset", sourceKind: "argv", targetPath: ["offset"], parseAs: "number" },
+        { externalName: "--missing", sourceKind: "argv", targetPath: ["missing"] }
+      ],
+      ...(unmappedBehavior === undefined ? {} : { unmappedBehavior })
+    });
+
+    expect(loaded.value).toEqual({ mode: "prod", offset: -1.5 });
+    expect(loaded.issues).toEqual([
+      ...(unmappedBehavior === undefined ? [] : [3, 6].map((argumentIndex) => expect.objectContaining({
+        code: "unmapped_argv_entry", severity: unmappedBehavior, details: { argumentIndex }
+      }))),
+      expect.objectContaining({ code: "argv_duplicate_argument", path: ["port"] }),
+      expect.objectContaining({ code: "argv_missing_value", path: ["missing"] })
+    ]);
+  });
+
   it("warns for unmapped argv entries without exposing their text", () => {
     const loaded = createArgvSource({
       descriptor: descriptor("argv", "argv", 20),

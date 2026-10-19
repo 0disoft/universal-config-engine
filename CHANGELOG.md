@@ -16,6 +16,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Maintenance
 
+- Collect strict argv diagnostics during the value scan, removing duplicate
+  mapping indexes and token traversal while preserving diagnostic order.
 - Share Node file-source I/O and exception conversion between JSON and dotenv
   adapters while preserving parser-specific diagnostics and canonical locations.
 - Separate core merge policy from resolved-path map/trie bookkeeping and coercion
