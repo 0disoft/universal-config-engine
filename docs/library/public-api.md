@@ -194,6 +194,8 @@ migration review before running `pnpm run update:api-snapshot`.
 - Accept validator issue codes only as bounded ASCII machine identifiers;
   reject prose-like or assignment-like codes as malformed adapter output.
 - Resolve Ajv JSON Pointer numeric segments against the validated config shape.
+  An empty pointer identifies the root; `/` identifies an empty property name
+  and is preserved as `[""]`, including in nested validation and redaction paths.
 - Append the literal `missingProperty` or `additionalProperty` name for Ajv
   `required` and `additionalProperties` issues so redaction evaluates the affected
   property. Numeric-looking property names remain strings; names containing `/`

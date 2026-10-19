@@ -63,7 +63,7 @@ function toValidatorIssue(error: ErrorObject, config: unknown): ValidatorIssue {
 }
 
 export function instancePathToConfigPath(instancePath: string, rootValue?: unknown): ConfigPath {
-  if (instancePath.length === 0 || instancePath === "/") {
+  if (instancePath.length === 0) {
     return [];
   }
 

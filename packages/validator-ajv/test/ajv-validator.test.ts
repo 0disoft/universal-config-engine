@@ -11,6 +11,31 @@ import {
 } from "../src/index.js";
 
 describe("createAjvValidator", () => {
+  it.each(["type", "required"])("preserves empty property names in %s diagnostics and redaction", async (keyword) => {
+    const path = keyword === "type" ? [""] : ["", "password"];
+    const result = resolveConfig({ sources: [{
+      descriptor: {
+        id: "defaults", kind: "object", priority: 0, displayName: "defaults",
+        redaction: { secretPaths: [path] }
+      },
+      value: { "": keyword === "type" ? "fixture-value" : {} }
+    }] });
+    const validator = createAjvValidator({ schema: {
+      type: "object",
+      properties: { "": keyword === "type" ? { type: "number" } : {
+        type: "object", required: ["password"]
+      } }
+    } });
+    const validation = await runValidators({
+      config: result.config, provenance: result.provenance, validators: [validator]
+    });
+    expect(validation.issues).toEqual([expect.objectContaining({ code: keyword, path })]);
+    const report = buildDiagnosticReport({ ...result, ok: false, issues: validation.issues });
+    expect(report.issues[0]?.message).toBe(
+      "Diagnostic message redacted because it is associated with a secret path or source."
+    );
+  });
+
   it.each([
     ["required", "password"],
     ["additionalProperties", "password"],
@@ -193,8 +218,10 @@ describe("createAjvValidator", () => {
 });
 
 describe("instancePathToConfigPath", () => {
-  it("normalizes slash-only instance paths to the root path", () => {
-    expect(instancePathToConfigPath("/")).toEqual([]);
+  it("distinguishes the root from empty property names", () => {
+    expect(instancePathToConfigPath("")).toEqual([]);
+    expect(instancePathToConfigPath("/")).toEqual([""]);
+    expect(instancePathToConfigPath("//")).toEqual(["", ""]);
   });
 
   it("decodes JSON pointer escaping and uses config shape for array indexes", () => {
