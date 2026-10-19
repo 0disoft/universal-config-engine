@@ -121,6 +121,36 @@ export interface BuildDiagnosticReportOptions {
 }
 export declare function buildDiagnosticReport(result: ConfigResult, options?: BuildDiagnosticReportOptions): DiagnosticReport;
 
+### resolved-path-index.d.ts
+import type { ConfigPath, SourceLocation } from "./types.js";
+import type { FlattenedConfigEntry } from "./value.js";
+export interface MutableResolvedPath {
+    path: ConfigPath;
+    status: "resolved";
+    winningSourceId: string;
+    winningPriority: number;
+    overriddenSourceIds: string[];
+    winningLocation?: SourceLocation;
+    overriddenLocations: SourceLocation[];
+}
+export interface MutableResolvedPathIndex {
+    readonly byPath: Map<string, MutableResolvedPath>;
+    readonly root: ResolvedPathTrieNode;
+}
+interface ResolvedPathTrieNode {
+    readonly children: Map<string, ResolvedPathTrieNode>;
+    entryKey?: string;
+}
+export declare function synchronizeCoercedResolvedPaths(index: MutableResolvedPathIndex, entries: readonly FlattenedConfigEntry[]): void;
+export declare function findRelatedResolvedPaths(resolvedIndex: MutableResolvedPathIndex, path: ConfigPath): readonly {
+    readonly key: string;
+    readonly resolved: MutableResolvedPath;
+}[];
+export declare function createResolvedPathIndex(): MutableResolvedPathIndex;
+export declare function setResolvedPath(index: MutableResolvedPathIndex, resolved: MutableResolvedPath): void;
+export declare function deleteResolvedPath(index: MutableResolvedPathIndex, key: string): void;
+export {};
+
 ### types.d.ts
 export type ConfigScalar = string | number | boolean | null;
 export type ConfigValue = ConfigScalar | readonly ConfigValue[] | {

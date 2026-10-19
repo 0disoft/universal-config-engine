@@ -48,6 +48,11 @@ Core must not import file-system, process, CLI, parser, or validator libraries.
 Core's internal `adapter-guards.ts` owns record, issue-code and config-path shape
 checks shared by loader and validator boundaries. It is not a package entry point.
 
+`merge.ts` owns source ordering, precedence, provenance and resolution budgets.
+Its internal `resolved-path-index.ts` owns the synchronized path map/trie,
+overlap lookup and ownership projection after coercion. Trie mutations stay in
+that module so merge policy changes do not need to reimplement index bookkeeping.
+
 Core's internal `diagnostics.ts` owns ordered, bounded issue collection and overflow
 markers for loading, merging, validation, and the pipeline facade. CLI declaration
 checks reuse the public `combineConfigIssues` facade with their fixed bootstrap

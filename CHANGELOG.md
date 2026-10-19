@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Maintenance
 
+- Separate core merge policy from resolved-path map/trie bookkeeping and coercion
+  ownership projection without changing resolution order or provenance.
 - Share core loader/validator boundary guards; reject negative indexes and sparse
   paths consistently in loader issues and source locations.
 - Share the publishable package catalog and tarball names across release-state,
