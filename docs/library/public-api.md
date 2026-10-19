@@ -94,6 +94,9 @@ returning partial JSON. See ADR 0013.
 and coercion. A final aggregate or coercion-expanded structure that exceeds depth,
 key-count, or path-length limits returns a `resource-limit` issue with source id
 `core:resolved-config` and cannot produce `ok: true`.
+Depth and path-length limits apply to scalar and null leaves as well as objects
+and arrays. The root has depth zero; each property or array index adds one level
+and one path segment. Values exactly at the limit remain valid.
 
 `flattenConfigObject` emits an array as one atomic entry only after all its elements
 pass validation, including nested objects and arrays. Invalid or incompletely

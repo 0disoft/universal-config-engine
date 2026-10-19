@@ -139,6 +139,8 @@ function walk(
       path,
       message: `Config value at ${formatPath(path)} is not JSON-compatible.`
     });
+  } else if (emitEntries) {
+    state.entries.push({ path, value });
   }
 }
 
@@ -199,24 +201,7 @@ function walkObject(
         continue;
       }
 
-      if (isPlainConfigObject(child)) {
-        walk(sourceId, child, childPath, depth + 1, limits, state, ancestors, emitEntries);
-      } else if (Array.isArray(child)) {
-        walk(sourceId, child, childPath, depth + 1, limits, state, ancestors, emitEntries);
-      } else if (isConfigValue(child)) {
-        if (emitEntries) {
-          state.entries.push({ path: childPath, value: child });
-        }
-      } else {
-        state.issues.push({
-          category: "parse",
-          code: "invalid_value",
-          severity: "error",
-          sourceId,
-          path: childPath,
-          message: `Config value at ${formatPath(childPath)} is not JSON-compatible.`
-        });
-      }
+      walk(sourceId, child, childPath, depth + 1, limits, state, ancestors, emitEntries);
     }
     return;
   }

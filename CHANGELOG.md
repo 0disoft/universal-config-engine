@@ -5,6 +5,11 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+### Fixed
+
+- Apply depth and path-length limits to object scalar/null leaves, including
+  leaves introduced by JSON coercion, through the shared value traversal.
+
 ### Maintenance
 
 - Share Node file-source I/O and exception conversion between JSON and dotenv

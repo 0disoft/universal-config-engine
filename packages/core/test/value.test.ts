@@ -6,6 +6,47 @@ import {
 } from "../src/index.js";
 import { source } from "./helpers/source.js";
 
+describe("config leaf resource limits", () => {
+  const cases = [
+    { limits: { maxDepth: 1 }, code: "max_depth_exceeded" },
+    { limits: { maxPathLength: 1 }, code: "max_path_length_exceeded" }
+  ];
+
+  it.each(cases)("checks object scalar leaves against $code before merging", ({ limits, code }) => {
+    for (const leaf of ["value", 42, true, null]) {
+      const policy = { ...DEFAULT_RESOURCE_LIMITS, ...limits };
+      expect(flattenConfigObject("input", { leaf }, policy)).toMatchObject({
+        entries: [{ path: ["leaf"], value: leaf }], issues: []
+      });
+
+      const value = { outer: { leaf } };
+      const flattened = flattenConfigObject("input", value, policy);
+      expect(flattened.entries).toEqual([]);
+      expect(flattened.issues).toEqual([expect.objectContaining({
+        category: "resource-limit", code, path: ["outer", "leaf"], severity: "error"
+      })]);
+
+      const resolved = resolveConfig({ sources: [source("input", 0, value)], limits });
+      expect(resolved.ok).toBe(false);
+      expect(resolved.config).toEqual({});
+      expect(resolved.provenance).toContainEqual(expect.objectContaining({ action: "rejected", sourceId: "input" }));
+    }
+  });
+
+  it.each(cases)("checks scalar leaves introduced by JSON coercion against $code", ({ limits, code }) => {
+    const result = resolveConfig({
+      sources: [source("input", 0, { payload: '{"enabled":true}' })],
+      coercionRules: [{ path: ["payload"], from: "string", to: "json", onFailure: "issue" }],
+      limits
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({
+      category: "resource-limit", code, sourceId: "core:resolved-config", path: ["payload", "enabled"]
+    }));
+  });
+});
+
 describe("flattenConfigObject array validation", () => {
   const cyclic: unknown[] = [];
   cyclic.push(cyclic);
