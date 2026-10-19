@@ -8,6 +8,28 @@ import {
 import type { ConfigLoader, ConfigLoaderResult } from "../src/index.js";
 
 describe("loadConfigSources", () => {
+  it.each([
+    { name: "negative index", path: ["items", -1] },
+    { name: "fractional index", path: ["items", 0.5] },
+    { name: "non-finite index", path: ["items", Infinity] },
+    { name: "sparse path", path: new Array<string>(1) }
+  ])("rejects $name in both loader issue and location paths", async ({ path }) => {
+    for (const result of [
+      { value: {}, issues: [{ category: "parse", code: "bad_input", severity: "error", message: "Invalid input.", path }] },
+      { value: {}, locations: [{ path, location: { sourceId: "adapter", line: 1 } }] }
+    ]) {
+      const loaded = await loadConfigSources({
+        loaders: [{
+          descriptor: { id: "adapter", kind: "adapter", priority: 0, displayName: "adapter" },
+          load: () => result as ConfigLoaderResult
+        }],
+        context: undefined
+      });
+      expect(loaded.issues).toEqual([expect.objectContaining({ code: "invalid_loader_result" })]);
+      expect(loaded.sources[0]?.value).toEqual({});
+    }
+  });
+
   it("rejects excess loaders before invoking them", async () => {
     let invoked = false;
     const loader = (id: string): ConfigLoader => ({

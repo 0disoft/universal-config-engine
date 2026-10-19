@@ -1,9 +1,9 @@
 import { appendBoundedIssues, isDiagnosticsLimitReached, markDiagnosticsOverflow } from "./diagnostics.js";
+import { isConfigPath, isIssueCode, isRecord } from "./adapter-guards.js";
 import { normalizeResourceLimits } from "./limits.js";
 import { cloneConfigValue } from "./path.js";
 import type {
   ConfigIssue,
-  ConfigPath,
   ConfigValue,
   ProvenanceEvent,
   ResourceLimitPolicy,
@@ -11,8 +11,6 @@ import type {
   ValidatorIssue,
   ValidatorResult
 } from "./types.js";
-
-const VALIDATOR_ISSUE_CODE_PATTERN = /^[A-Za-z][A-Za-z0-9_.:-]{0,127}$/;
 
 export interface RunValidatorsInput {
   readonly config: ConfigValue;
@@ -198,8 +196,7 @@ function isValidatorIssue(value: unknown): value is ValidatorIssue {
   return (
     isRecord(value) &&
     (value.category === undefined || value.category === "validation") &&
-    typeof value.code === "string" &&
-    VALIDATOR_ISSUE_CODE_PATTERN.test(value.code) &&
+    isIssueCode(value.code) &&
     (value.severity === "error" || value.severity === "warning") &&
     (value.path === undefined || isConfigPath(value.path)) &&
     (value.message === undefined || typeof value.message === "string") &&
@@ -242,19 +239,6 @@ function validatorStatus(result: ValidatorResult, issues: readonly ConfigIssue[]
   return result.ok && !issues.some((issue) => issue.severity === "error") ? "ok" : "error";
 }
 
-function isConfigPath(value: unknown): value is ConfigPath {
-  if (!Array.isArray(value)) return false;
-  for (const segment of value) {
-    if (
-      typeof segment !== "string" &&
-      !(typeof segment === "number" && Number.isSafeInteger(segment) && segment >= 0)
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
-
 function isIssueDetails(value: unknown): value is Readonly<Record<string, string | number | boolean | null>> {
   return (
     isRecord(value) &&
@@ -266,8 +250,4 @@ function isIssueDetails(value: unknown): value is Readonly<Record<string, string
         detailValue === null
     )
   );
-}
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }

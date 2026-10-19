@@ -1,9 +1,9 @@
 import { appendBoundedIssues } from "./diagnostics.js";
+import { isConfigPath, isIssueCode, isRecord } from "./adapter-guards.js";
 import type {
   ConfigIssue,
   ConfigLoader,
   ConfigLoaderResult,
-  ConfigPath,
   LoadedSource,
   ResourceLimitPolicy,
   ValueLocation
@@ -21,7 +21,6 @@ const ISSUE_CATEGORIES = new Set([
   "redaction",
   "resource-limit"
 ]);
-const ISSUE_CODE_PATTERN = /^[A-Za-z][A-Za-z0-9_.:-]{0,127}$/;
 
 export interface LoadConfigSourcesInput<TContext = undefined> {
   readonly loaders: readonly ConfigLoader<TContext>[];
@@ -174,8 +173,7 @@ function isConfigIssue(value: unknown): value is ConfigIssue {
   return (
     typeof value.category === "string" &&
     ISSUE_CATEGORIES.has(value.category) &&
-    typeof value.code === "string" &&
-    ISSUE_CODE_PATTERN.test(value.code) &&
+    isIssueCode(value.code) &&
     (value.severity === "error" || value.severity === "warning") &&
     typeof value.message === "string" &&
     (value.path === undefined || isConfigPath(value.path)) &&
@@ -197,15 +195,6 @@ function isValueLocation(value: unknown): value is ValueLocation {
   );
 }
 
-function isConfigPath(value: unknown): value is ConfigPath {
-  return (
-    Array.isArray(value) &&
-    value.every(
-      (segment) => typeof segment === "string" || (typeof segment === "number" && Number.isSafeInteger(segment))
-    )
-  );
-}
-
 function isIssueDetails(value: unknown): value is Readonly<Record<string, string | number | boolean | null>> {
   return (
     isRecord(value) &&
@@ -217,10 +206,6 @@ function isIssueDetails(value: unknown): value is Readonly<Record<string, string
         (typeof detail === "number" && Number.isFinite(detail))
     )
   );
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function isPositiveSafeInteger(value: unknown): value is number {

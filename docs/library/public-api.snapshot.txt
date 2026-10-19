@@ -3,6 +3,12 @@
 
 ## @0disoft/universal-config-engine-core
 
+### adapter-guards.d.ts
+import type { ConfigPath } from "./types.js";
+export declare function isRecord(value: unknown): value is Record<string, unknown>;
+export declare function isIssueCode(value: unknown): value is string;
+export declare function isConfigPath(value: unknown): value is ConfigPath;
+
 ### coercion.d.ts
 import type { CoercionRule, ConfigIssue, ConfigValue, ProvenanceEvent } from "./types.js";
 export interface ApplyCoercionRulesInput {

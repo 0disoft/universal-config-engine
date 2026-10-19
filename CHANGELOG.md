@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Maintenance
 
+- Share core loader/validator boundary guards; reject negative indexes and sparse
+  paths consistently in loader issues and source locations.
 - Share the publishable package catalog and tarball names across release-state,
   candidate-readiness and consumer-smoke tools to prevent package-list drift.
 - Wait for npm versions and dist-tags under one bounded propagation deadline,

@@ -186,8 +186,9 @@ migration review before running `pnpm run update:api-snapshot`.
 - Normalize malformed validator adapter results and malformed validator issues into
   `validation` issues instead of allowing broken adapter output to corrupt
   diagnostic reports.
-- Accept only strings and non-negative safe integers as validator issue path
-  segments; reject sparse paths and invalid numeric indexes as malformed issues.
+- Accept only strings and non-negative safe integers as loader issue, source
+  location and validator issue path segments; reject sparse paths and invalid
+  numeric indexes as malformed adapter output.
 - Do not copy thrown validator exception text or validator-provided message,
   details, category, or source identity into diagnostics. Core reconstructs public
   validation issues from `code`, `severity`, and optional `path`; see ADR 0011.
