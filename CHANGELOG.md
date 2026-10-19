@@ -9,6 +9,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 - Share the publishable package catalog and tarball names across release-state,
   candidate-readiness and consumer-smoke tools to prevent package-list drift.
+- Wait for npm versions and dist-tags under one bounded propagation deadline,
+  avoiding full release retries for normal registry delays.
 
 ## 1.0.0 - 2026-10-19
 

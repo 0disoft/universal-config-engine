@@ -301,47 +301,7 @@ jobs:
         if: steps.release.outputs.dry_run != 'true'
         env:
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
-          NPM_TAG: ${{ steps.release.outputs.npm_tag }}
-          RELEASE_PRERELEASE: ${{ steps.release.outputs.prerelease }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          packages=(
-            "@0disoft/universal-config-engine-core"
-            "@0disoft/universal-config-engine-node"
-            "@0disoft/universal-config-engine-validator-ajv"
-            "@0disoft/universal-config-engine-validator-zod"
-            "@0disoft/universal-config-engine-cli"
-          )
-
-          for package_name in "${packages[@]}"; do
-            package_ref="${package_name}@${RELEASE_VERSION}"
-            for attempt in {1..12}; do
-              if npm view "$package_ref" name version dist.tarball --json --registry=https://registry.npmjs.org/; then
-                published_tag="$(npm view "$package_name" "dist-tags.${NPM_TAG}" --json --registry=https://registry.npmjs.org/ || true)"
-                published_tag="${published_tag//\"/}"
-                if [[ "$published_tag" == "$RELEASE_VERSION" ]]; then
-                  if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
-                    latest_tag="$(npm view "$package_name" dist-tags.latest --json --registry=https://registry.npmjs.org/ || true)"
-                    latest_tag="${latest_tag//\"/}"
-                    if [[ "$latest_tag" == "$RELEASE_VERSION" ]]; then
-                      echo "Prerelease unexpectedly replaced npm latest for $package_name" >&2
-                      exit 1
-                    fi
-                  fi
-                  break
-                fi
-              fi
-
-              if [[ "$attempt" == "12" ]]; then
-                echo "Published package or npm ${NPM_TAG} tag did not become visible after ${attempt} attempts: $package_ref" >&2
-                exit 1
-              fi
-
-              echo "Waiting for npm registry propagation for $package_ref (attempt ${attempt}/12)"
-              sleep 5
-            done
-          done
+        run: pnpm run verify:registry-packages
 
       - name: Smoke published registry packages
         if: steps.release.outputs.dry_run != 'true'

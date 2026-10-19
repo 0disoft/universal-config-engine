@@ -79,6 +79,16 @@ missing. Preserve these manifests when investigating a partial release.
 The post-publication smoke can also be reproduced with
 `$env:RELEASE_VERSION = "1.0.0-rc.4"; pnpm run smoke:registry-packages`.
 
+Before that smoke, `pnpm run verify:registry-packages` uses `RELEASE_VERSION` to
+wait for all five exact version endpoints, installable root packuments and npm
+dist-tags. All packages share a ten-minute deadline and are queried in parallel
+every fifteen seconds, with each request bounded to ten seconds or the remaining
+budget. Successful publication returns immediately. Missing versions, network
+errors, HTTP 408/429 and server errors retry within that budget; authorization
+failures, malformed metadata and prereleases replacing `latest` stop immediately.
+This avoids rerunning the full release solely because registry propagation took
+longer than the former one-minute per-package visibility window.
+
 Stable tags publish with the npm `latest` dist-tag. Semantic-version prerelease
 tags publish with `next`; the workflow verifies both that `next` points to the
 released version and that a prerelease did not replace `latest`. Consumers must use
