@@ -114,8 +114,7 @@ function buildResolvedPathReport(
   sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
   redactionContext: RedactionContext
 ): DiagnosticReportResolvedPath {
-  const winningSource = sourceById.get(resolvedPath.winningSourceId);
-  const redaction = getRedaction(resolvedPath.path, winningSource, redactionContext);
+  const redaction = getRedactionForAnySource(resolvedPath.path, sourceById, redactionContext);
 
   if (redaction.redacted) {
     return {
@@ -226,18 +225,6 @@ function getRedactionForAnySource(
   return fallback;
 }
 
-function getRedaction(
-  path: ConfigPath,
-  source: ConfigSourceDescriptor | undefined,
-  redactionContext: RedactionContext
-): RedactionDecision {
-  if (source !== undefined && redactionContext.secretSourceIds.has(source.id)) {
-    return { redacted: true, reason: "secret-source" };
-  }
-
-  return getPathRedaction(path, source, redactionContext);
-}
-
 function getPathRedaction(
   path: ConfigPath,
   source: ConfigSourceDescriptor | undefined,
@@ -247,7 +234,10 @@ function getPathRedaction(
     return { redacted: true, reason: "secret-path" };
   }
 
-  if (matchesNamePattern(path, source?.redaction?.secretNamePatterns ?? redactionContext.options.secretNamePatterns, redactionContext)) {
+  if (
+    matchesNamePattern(path, source?.redaction?.secretNamePatterns, redactionContext) ||
+    matchesNamePattern(path, redactionContext.options.secretNamePatterns, redactionContext)
+  ) {
     return { redacted: true, reason: "secret-name" };
   }
 

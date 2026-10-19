@@ -5,6 +5,59 @@ import { source } from "./helpers/source.js";
 
 describe("buildDiagnosticReport", () => {
   it.each([
+    { policy: { secretPaths: [["service"]] }, reason: "secret-path" },
+    { policy: { secretNamePatterns: ["INTERNAL_VALUE"] }, reason: "secret-name" },
+    { policy: { secretSource: true }, reason: "secret-source" },
+    { policy: {}, reason: "secret-source" }
+  ])("retains overridden source redaction in resolved paths ($policy, $reason)", ({ policy, reason }) => {
+    const lower = source("vault", 0, { service: { internal_value: "lower input" } });
+    const resolved = resolveConfig({
+      sources: [
+        { ...lower, descriptor: { ...lower.descriptor, redaction: policy } },
+        source("file", 10, { service: { internal_value: "file input" } }),
+        source("cli", 20, { service: { internal_value: "cli input" } })
+      ]
+    });
+    const report = buildDiagnosticReport(resolved, Object.keys(policy).length === 0 ? { secretSourceIds: ["vault"] } : {});
+
+    expect(report.resolvedPaths).toContainEqual(expect.objectContaining({
+      path: ["service", "internal_value"],
+      winningSourceId: "cli",
+      overriddenSourceIds: ["vault", "file"],
+      redacted: true,
+      redactionReason: reason
+    }));
+    expect(report.provenance.filter((event) => event.path.join(".") === "service.internal_value")
+      .every((event) => event.message.startsWith("Provenance message redacted"))).toBe(true);
+  });
+
+  it.each([{ patterns: [] }, { patterns: ["LOCAL_CODE"] }])("combines option name patterns with source patterns $patterns", ({ patterns }) => {
+    const input = source("defaults", 0, { local_code: "local input", global_code: "global input", visible: "public input" });
+    const resolved = resolveConfig({ sources: [{
+      ...input,
+      descriptor: { ...input.descriptor, redaction: { secretNamePatterns: patterns } }
+    }] });
+    const issues: readonly ConfigIssue[] = ["local_code", "global_code", "visible"].map((name) => ({
+      category: "validation",
+      code: "field_warning",
+      severity: "warning",
+      sourceId: "defaults",
+      path: [name],
+      message: `Diagnostic for ${name}.`
+    }));
+    const report = buildDiagnosticReport({ ...resolved, issues }, { secretNamePatterns: ["GLOBAL_CODE"] });
+    const masked = ["global_code", ...(patterns.length === 0 ? [] : ["local_code"])];
+
+    for (const name of ["local_code", "global_code", "visible"]) {
+      expect(report.resolvedPaths.find((path) => path.path[0] === name)?.redacted).toBe(masked.includes(name));
+      expect(report.issues.find((issue) => issue.path?.[0] === name)?.message)
+        .toBe(masked.includes(name) ? "Diagnostic message redacted because it is associated with a secret path or source." : `Diagnostic for ${name}.`);
+      expect(report.provenance.find((event) => event.path[0] === name)?.message.startsWith("Provenance message redacted"))
+        .toBe(masked.includes(name));
+    }
+  });
+
+  it.each([
     { policy: "descriptor", value: {} },
     { policy: "descriptor", value: { internal: { value: "unrelated private input" } } },
     { policy: "options", value: {} },
@@ -83,6 +136,10 @@ describe("buildDiagnosticReport", () => {
       provenance: [{ action: "validated", sourceId: "validator", path: ["service", "private_value"], message: "private input" }]
     }, options);
     expect(JSON.stringify(report)).not.toContain("private input");
+    expect(report.resolvedPaths).toContainEqual(expect.objectContaining({
+      path: ["service", "private_value"],
+      redacted: true
+    }));
   });
 
   it("replaces oversized reports with a bounded error report", () => {

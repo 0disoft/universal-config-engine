@@ -199,8 +199,12 @@ migration review before running `pnpm run update:api-snapshot`.
   whose source or previous source is secret, or whose exact resolved path records
   a secret winning or overridden source. An empty or unrelated secret source does
   not mask public-path diagnostics. Explicit path/name policies still apply across
-  sources. Resolved-path redaction metadata continues to describe the winning
-  source's value; diagnostic messages also protect overridden source history.
+  sources. Resolved-path metadata and diagnostic messages use the same path
+  redaction decision, retaining policies from overridden sources as well as the
+  winning source. Source-wide policies remain limited to participating paths;
+  explicit path/name policies from all sources apply even without a winning value.
+- Combine source-level and report-option `secretNamePatterns` as a union. A source
+  pattern array, including an empty one, never disables report-option patterns.
 - Treat user-provided secret-name patterns as case-insensitive literal substrings.
   Core never compiles caller-provided patterns as regular expressions. Default API
   key detection uses explicit `api_key`, `api-key`, and `apikey` variants.
