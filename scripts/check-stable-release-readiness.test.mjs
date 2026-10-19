@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { REQUIRED_RELEASE_WORKFLOWS } from "./release-commit-evidence.mjs";
 
-import { RELEASE_PACKAGE_NAMES } from "./record-publication-state.mjs";
+import { WORKSPACE_PACKAGE_NAMES } from "./lib/workspace-packages.mjs";
 import {
   evaluateStableReleaseReadiness,
   resolveStableReleaseRequirement
@@ -73,7 +73,7 @@ function validReadinessInput() {
       draft: false,
       prerelease: true,
       assets: [
-        ...RELEASE_PACKAGE_NAMES.map((name) => ({
+        ...WORKSPACE_PACKAGE_NAMES.map((name) => ({
           name: `${name.replace(/^@/, "").replace("/", "-")}-${candidateVersion}.tgz`
         })),
         { name: "publication-state-run-1-attempt-1-before.json" },
@@ -87,14 +87,14 @@ function validReadinessInput() {
         commitSha: "a".repeat(40),
         phase: "after",
         summary: {
-          total: RELEASE_PACKAGE_NAMES.length,
-          published: RELEASE_PACKAGE_NAMES.length,
+          total: WORKSPACE_PACKAGE_NAMES.length,
+          published: WORKSPACE_PACKAGE_NAMES.length,
           missing: 0,
           complete: true
         }
       }
     ],
-    packageStates: RELEASE_PACKAGE_NAMES.map((name) => ({
+    packageStates: WORKSPACE_PACKAGE_NAMES.map((name) => ({
       name,
       version: candidateVersion,
       integrity: "sha512-test",

@@ -1,9 +1,27 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { npmCompatibleEnvironment, withWorkspaceSmoke } from "./package-tools.mjs";
+import { WORKSPACE_PACKAGE_NAMES, packageDirectory } from "./workspace-packages.mjs";
+
+test("the shared package catalog covers publishable manifests in dependency order", () => {
+  const packageRoot = new URL("../../packages/", import.meta.url);
+  const manifests = readdirSync(packageRoot).map((directory) =>
+    JSON.parse(readFileSync(new URL(`${directory}/package.json`, packageRoot), "utf8"))
+  ).filter((manifest) => !manifest.private);
+  assert.deepEqual(new Set(WORKSPACE_PACKAGE_NAMES), new Set(manifests.map((manifest) => manifest.name)));
+  const seen = new Set();
+  for (const name of WORKSPACE_PACKAGE_NAMES) {
+    const manifest = manifests.find((entry) => entry.name === name);
+    assert.deepEqual(manifest, JSON.parse(readFileSync(new URL(`${packageDirectory(name)}/package.json`, packageRoot), "utf8")));
+    for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+      if (WORKSPACE_PACKAGE_NAMES.includes(dependency)) assert(seen.has(dependency), `${dependency} must precede ${name}`);
+    }
+    seen.add(name);
+  }
+});
 
 for (const fails of [false, true]) {
   test(`smoke cleanup preserves unrelated files after ${fails ? "failure" : "success"}`, async () => {

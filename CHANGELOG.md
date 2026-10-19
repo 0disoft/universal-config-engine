@@ -5,7 +5,10 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
-Changes after `1.0.0` will be recorded here.
+### Maintenance
+
+- Share the publishable package catalog and tarball names across release-state,
+  candidate-readiness and consumer-smoke tools to prevent package-list drift.
 
 ## 1.0.0 - 2026-10-19
 

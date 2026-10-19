@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   classifyNpmViewResult,
-  collectPublicationState,
-  RELEASE_PACKAGE_NAMES
+  collectPublicationState
 } from "./record-publication-state.mjs";
+import { WORKSPACE_PACKAGE_NAMES } from "./lib/workspace-packages.mjs";
 import { parseReleaseVersion } from "./release-version.mjs";
 
 test("collects a bounded package publication summary", () => {
@@ -17,7 +17,7 @@ test("collects a bounded package publication summary", () => {
     phase: "before",
     observedAt: "2026-07-13T00:00:00.000Z",
     lookup(name) {
-      return name === RELEASE_PACKAGE_NAMES[0] ? "published" : "missing";
+      return name === WORKSPACE_PACKAGE_NAMES[0] ? "published" : "missing";
     }
   });
 
@@ -27,7 +27,7 @@ test("collects a bounded package publication summary", () => {
     missing: 4,
     complete: false
   });
-  assert.equal(manifest.packages.length, RELEASE_PACKAGE_NAMES.length);
+  assert.equal(manifest.packages.length, WORKSPACE_PACKAGE_NAMES.length);
   assert.equal(manifest.packages[0].status, "published");
 });
 

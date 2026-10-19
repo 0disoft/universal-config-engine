@@ -4,17 +4,10 @@ import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 import { parseReleaseVersion } from "./release-version.mjs";
-
-export const RELEASE_PACKAGE_NAMES = [
-  "@0disoft/universal-config-engine-core",
-  "@0disoft/universal-config-engine-node",
-  "@0disoft/universal-config-engine-validator-ajv",
-  "@0disoft/universal-config-engine-validator-zod",
-  "@0disoft/universal-config-engine-cli"
-];
+import { WORKSPACE_PACKAGE_NAMES } from "./lib/workspace-packages.mjs";
 
 export function collectPublicationState(input) {
-  const packages = RELEASE_PACKAGE_NAMES.map((name) => ({
+  const packages = WORKSPACE_PACKAGE_NAMES.map((name) => ({
     name,
     version: input.version,
     status: input.lookup(name, input.version)

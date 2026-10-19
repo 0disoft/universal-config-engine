@@ -2,26 +2,13 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { WORKSPACE_PACKAGE_NAMES, packageDirectory, packageTarballName } from "./workspace-packages.mjs";
 
-export const WORKSPACE_PACKAGE_NAMES = Object.freeze([
-  "@0disoft/universal-config-engine-core",
-  "@0disoft/universal-config-engine-node",
-  "@0disoft/universal-config-engine-validator-ajv",
-  "@0disoft/universal-config-engine-validator-zod",
-  "@0disoft/universal-config-engine-cli"
-]);
-
-export function packageDirectory(packageName) {
-  if (!WORKSPACE_PACKAGE_NAMES.includes(packageName)) {
-    throw new Error(`Unknown workspace package: ${packageName}`);
-  }
-  return packageName.split("/").at(-1).replace("universal-config-engine-", "");
-}
+export { WORKSPACE_PACKAGE_NAMES, packageDirectory };
 
 export function packageTarballPath(root, packDir, packageName) {
   const manifest = JSON.parse(readFileSync(join(root, "packages", packageDirectory(packageName), "package.json"), "utf8"));
-  const baseName = packageName.replace(/^@/, "").replace("/", "-");
-  return join(packDir, `${baseName}-${manifest.version}.tgz`);
+  return join(packDir, packageTarballName(packageName, manifest.version));
 }
 
 export function cleanWorkspaceBuild(root) {

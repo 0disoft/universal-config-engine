@@ -2,7 +2,7 @@ import { appendFileSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { RELEASE_PACKAGE_NAMES } from "./record-publication-state.mjs";
+import { WORKSPACE_PACKAGE_NAMES, packageTarballName } from "./lib/workspace-packages.mjs";
 import { parseReleaseVersion } from "./release-version.mjs";
 import { collectReleaseCommitEvidence, evaluateReleaseCommitEvidence } from "./release-commit-evidence.mjs";
 
@@ -55,7 +55,7 @@ export function evaluateStableReleaseReadiness(input) {
   }
 
   const assetNames = new Set(release.assets.map((asset) => asset.name));
-  for (const packageName of RELEASE_PACKAGE_NAMES) {
+  for (const packageName of WORKSPACE_PACKAGE_NAMES) {
     const tarballName = packageTarballName(packageName, requirement.candidateVersion);
     if (!assetNames.has(tarballName)) {
       throw new Error(`Reviewed candidate release is missing tarball ${tarballName}.`);
@@ -73,8 +73,8 @@ export function evaluateStableReleaseReadiness(input) {
     state.tagName === expectedTag &&
     state.commitSha === requirement.candidateCommitSha &&
     state.phase === "after" &&
-    state.summary?.total === RELEASE_PACKAGE_NAMES.length &&
-    state.summary?.published === RELEASE_PACKAGE_NAMES.length &&
+    state.summary?.total === WORKSPACE_PACKAGE_NAMES.length &&
+    state.summary?.published === WORKSPACE_PACKAGE_NAMES.length &&
     state.summary?.missing === 0 &&
     state.summary?.complete === true
   ));
@@ -83,7 +83,7 @@ export function evaluateStableReleaseReadiness(input) {
   }
 
   const packageStates = new Map(input.packageStates.map((state) => [state.name, state]));
-  for (const packageName of RELEASE_PACKAGE_NAMES) {
+  for (const packageName of WORKSPACE_PACKAGE_NAMES) {
     const state = packageStates.get(packageName);
     if (
       state === undefined ||
@@ -115,10 +115,6 @@ function validatePolicy(policy) {
   ) {
     throw new Error("release-policy.json must match stable release policy schema 0.2.");
   }
-}
-
-function packageTarballName(packageName, version) {
-  return `${packageName.replace(/^@/, "").replace("/", "-")}-${version}.tgz`;
 }
 
 async function collectRemoteReadinessInput(version, repository, policy, preparationSha) {
@@ -162,7 +158,7 @@ async function collectRemoteReadinessInput(version, repository, policy, preparat
     }))
   );
 
-  const packageStates = await Promise.all(RELEASE_PACKAGE_NAMES.map(async (name) => {
+  const packageStates = await Promise.all(WORKSPACE_PACKAGE_NAMES.map(async (name) => {
     const encodedName = encodeURIComponent(name);
     const [metadata, packument] = await Promise.all([
       fetchJson(`https://registry.npmjs.org/${encodedName}/${requirement.candidateVersion}`),
