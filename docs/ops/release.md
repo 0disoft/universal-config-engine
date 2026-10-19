@@ -160,7 +160,7 @@ The stable `1.0.0` preparation and publication sequence is tracked in
 `docs/ops/stable-1.0-release-checklist.md`. Its allowed-diff rule prevents stable
 package contents from drifting beyond the next published, explicitly authorized
 candidate. RC4 promotion is withdrawn; published and verified RC5 is the baseline
-for the separate, still-unpublished stable preparation.
+for the separate stable 1.0.0 release.
 
 ## Stop Conditions
 

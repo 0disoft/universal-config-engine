@@ -1,18 +1,17 @@
 # Migration To 1.0
 
-Status: Stable preparation; unpublished
+Status: Stable
 
-The `1.0` release candidate removes four ignored compatibility fields from the
+The `1.0` release removes four ignored compatibility fields from the
 public `ValidatorIssue` type. Runtime validation, diagnostic report schema `0.2`,
 CLI commands and exit codes, and the supported Node.js range remain unchanged.
 
 ## Package Update
 
 Update every Universal Config Engine package used by the consumer to the same
-version. The commands below apply after stable 1.0.0 publication. Until then,
-use published `1.0.0-rc.5` or npm `next` for every package.
+version. Use `1.0.0` for every package when adopting the stable release.
 
-The verified RC5 is the stable preparation baseline. Stable preparation changes
+The verified RC5 is the stable release baseline. Stable preparation changes
 package versions and release metadata only, preserving its public declarations
 and runtime fixes.
 
@@ -24,9 +23,8 @@ pnpm update @0disoft/universal-config-engine-core@1.0.0 `
   @0disoft/universal-config-engine-validator-zod@1.0.0
 ```
 
-Release candidates are published under the npm `next` tag. Installing a package
-without an explicit version continues to select the latest stable `0.x` release
-until stable `1.0.0` is published.
+Release candidates are published under the npm `next` tag. Stable `1.0.0` uses npm
+`latest`; publishing stable does not replace the reviewed RC5 under `next`.
 
 ## Validator Issue Type
 

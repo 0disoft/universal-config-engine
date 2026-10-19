@@ -5,9 +5,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
-Stable `1.0.0` is prepared from the published and verified RC5; publication is pending.
+Changes after `1.0.0` will be recorded here.
 
-## 1.0.0 - Unreleased
+## 1.0.0 - 2026-10-19
 
 ### Stable Contract
 

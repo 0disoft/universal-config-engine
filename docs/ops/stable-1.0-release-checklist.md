@@ -1,9 +1,13 @@
 # Stable 1.0 Release Checklist
 
-Status: stable preparation; stable publication pending
+Status: release procedure
 Candidate: `1.0.0-rc.5` (published and independently verified)
 Candidate Commit: `45f2b7d476da880ed183f23ba59203c253dc4f5e`
 Stable Version: `1.0.0`
+
+This document defines the release procedure. Issue #1 records completed execution
+and evidence for each exact preparation/publication SHA; unchecked items below
+are procedural gates, not a live publication status.
 
 ## Purpose
 

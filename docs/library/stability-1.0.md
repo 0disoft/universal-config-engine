@@ -1,6 +1,6 @@
 # 1.0 Stability Plan
 
-Status: Stable preparation; unpublished
+Status: Stable contract
 Repository Type: library
 
 ## Baseline
@@ -131,7 +131,7 @@ authorization moved to `1.0.0-rc.3`. New high-severity advisories later affected
 the locked `fast-uri@3.1.4` runtime path and
 `postcss@8.5.16` development path. RC4 resolves them to `fast-uri@3.1.5` and
 `postcss@8.5.26` without changing runtime source, public declarations, package
-READMEs, fixtures, smoke logic, or the release runner. Stable authorization now
+READMEs, fixtures, smoke logic, or the release runner. Stable authorization
 named `1.0.0-rc.4` at that point in the release history.
 
 Subsequent Ajv fixes, dependency advisories, installed CLI failure checks, and
