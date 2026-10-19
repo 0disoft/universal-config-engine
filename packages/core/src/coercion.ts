@@ -1,6 +1,6 @@
-import { cloneConfigValue, getConfigValueAtPath, setConfigValueAtPath } from "./path.js";
+import { cloneConfigValue, getConfigValueAtPath, isUnsafePathSegment } from "./path.js";
 import { isConfigValue } from "./value.js";
-import type { CoercionRule, ConfigIssue, ConfigValue, ProvenanceEvent } from "./types.js";
+import type { CoercionRule, ConfigIssue, ConfigPath, ConfigValue, ProvenanceEvent } from "./types.js";
 
 export interface ApplyCoercionRulesInput {
   readonly config: ConfigValue;
@@ -52,7 +52,7 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
     if (!coerced.ok) {
       issues.push({
         category: "coercion",
-        code: "coercion_failed",
+        code: coerced.code ?? "coercion_failed",
         severity: "error",
         path: rule.path,
         message: coerced.message
@@ -61,7 +61,7 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
     }
 
     try {
-      setConfigValueAtPath(config as Record<string, ConfigValue>, rule.path, coerced.value);
+      setExistingCoercionValue(config, rule.path, coerced.value);
       provenance.push({
         path: rule.path,
         action: "coerced",
@@ -82,10 +82,27 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
   return { config, issues, provenance };
 }
 
+function setExistingCoercionValue(config: ConfigValue, path: ConfigPath, value: ConfigValue): void {
+  const parent = getConfigValueAtPath(config, path.slice(0, -1));
+  const segment = path[path.length - 1];
+  if (Array.isArray(parent) && typeof segment === "number" && Number.isSafeInteger(segment) &&
+      segment >= 0 && segment < parent.length && Object.prototype.hasOwnProperty.call(parent, segment)) {
+    (parent as ConfigValue[])[segment] = cloneConfigValue(value);
+    return;
+  }
+  if (parent !== null && typeof parent === "object" && !Array.isArray(parent) &&
+      typeof segment === "string" && !isUnsafePathSegment(segment) &&
+      Object.prototype.hasOwnProperty.call(parent, segment)) {
+    (parent as Record<string, ConfigValue>)[segment] = cloneConfigValue(value);
+    return;
+  }
+  throw new Error("Coercion requires an existing object field or array element.");
+}
+
 function coerceString(
   value: string,
   rule: CoercionRule
-): { readonly ok: true; readonly value: ConfigValue } | { readonly ok: false; readonly message: string } {
+): { readonly ok: true; readonly value: ConfigValue } | { readonly ok: false; readonly message: string; readonly code?: string } {
   switch (rule.to) {
     case "number": {
       const numericValue = Number(value);
@@ -110,9 +127,16 @@ function coerceString(
 
 function coerceJson(
   value: string
-): { readonly ok: true; readonly value: ConfigValue } | { readonly ok: false; readonly message: string } {
+): { readonly ok: true; readonly value: ConfigValue } | { readonly ok: false; readonly message: string; readonly code?: string } {
   try {
-    const parsed = JSON.parse(value) as unknown;
+    let unsafeKey = false;
+    const parsed: unknown = JSON.parse(value, (key: string, child: unknown) => {
+      if (isUnsafePathSegment(key)) unsafeKey = true;
+      return child;
+    });
+    if (unsafeKey) {
+      return { ok: false, code: "unsafe_key", message: "JSON value contains an unsafe object key." };
+    }
     if (!isConfigValue(parsed)) {
       return { ok: false, message: "Expected JSON-compatible value." };
     }

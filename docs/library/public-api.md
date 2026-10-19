@@ -26,6 +26,12 @@ Repository Type: library
 - `CoercionPolicy`: opt-in type conversion rules.
 - `applyCoercionRules`: immutable coercion stage that returns a cloned `config`
   together with issues and provenance; caller input is never modified.
+  Numeric path segments address existing array elements, including nested arrays;
+  coercion never creates sparse arrays or missing indexes. This uses an internal
+  updater: the public `setConfigValueAtPath` retains its object-only, numeric-write
+  rejection contract. JSON coercion rejects `__proto__`, `constructor`, and
+  `prototype` at any depth with `coercion/unsafe_key` before assignment, leaving the
+  original string intact and omitting raw input from the diagnostic.
 - `ValidatorAdapter`: validation boundary for consumer-selected validators.
 - `ValidatorIssue`: structured validator output containing a stable code, severity,
   and optional normalized config path.
