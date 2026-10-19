@@ -195,6 +195,12 @@ migration review before running `pnpm run update:api-snapshot`.
   errors, CLI JSON, issue messages, issue details, and provenance messages.
 - Treat declared `secretPaths` as subtree roots. A path such as `["database"]`
   redacts diagnostics for `["database"]` and every descendant path below it.
+- Apply whole-source redaction (`secretSource` or `secretSourceIds`) to diagnostics
+  whose source or previous source is secret, or whose exact resolved path records
+  a secret winning or overridden source. An empty or unrelated secret source does
+  not mask public-path diagnostics. Explicit path/name policies still apply across
+  sources. Resolved-path redaction metadata continues to describe the winning
+  source's value; diagnostic messages also protect overridden source history.
 - Treat user-provided secret-name patterns as case-insensitive literal substrings.
   Core never compiles caller-provided patterns as regular expressions. Default API
   key detection uses explicit `api_key`, `api-key`, and `apikey` variants.

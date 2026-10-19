@@ -29,6 +29,8 @@ export interface BuildDiagnosticReportOptions {
 
 interface RedactionContext {
   readonly options: BuildDiagnosticReportOptions;
+  readonly secretSourceIds: ReadonlySet<string>;
+  readonly secretSourcePaths: ReadonlySet<string>;
   readonly patternCache: Map<string, PatternMatcher>;
   readonly anySourceRedactionCache: Map<string, RedactionDecision>;
 }
@@ -47,8 +49,21 @@ export function buildDiagnosticReport(
   options: BuildDiagnosticReportOptions = {}
 ): DiagnosticReport {
   const sourceById = new Map(result.sources.map((source) => [source.id, source]));
+  const secretSourceIds = new Set([
+    ...(options.secretSourceIds ?? []),
+    ...result.sources.filter((source) => source.redaction?.secretSource === true).map((source) => source.id)
+  ]);
   const redactionContext: RedactionContext = {
     options,
+    secretSourceIds,
+    secretSourcePaths: new Set(
+      result.resolvedPaths
+        .filter((path) =>
+          secretSourceIds.has(path.winningSourceId) ||
+          path.overriddenSourceIds.some((id) => secretSourceIds.has(id))
+        )
+        .map((path) => pathToKey(path.path))
+    ),
     patternCache: new Map(),
     anySourceRedactionCache: new Map()
   };
@@ -131,7 +146,7 @@ function sanitizeIssue(
   sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
   redactionContext: RedactionContext
 ): ConfigIssue {
-  if (!shouldSanitizeDiagnostic(issue.path, issue.sourceId, sourceById, redactionContext)) {
+  if (!shouldSanitizeDiagnostic(issue, sourceById, redactionContext)) {
     return issue;
   }
 
@@ -150,7 +165,7 @@ function sanitizeProvenance(
   sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
   redactionContext: RedactionContext
 ): ProvenanceEvent {
-  if (!shouldSanitizeDiagnostic(event.path, event.sourceId, sourceById, redactionContext)) {
+  if (!shouldSanitizeDiagnostic(event, sourceById, redactionContext)) {
     return event;
   }
 
@@ -164,13 +179,15 @@ function sanitizeProvenance(
 }
 
 function shouldSanitizeDiagnostic(
-  path: ConfigPath | undefined,
-  sourceId: string | undefined,
+  diagnostic: Pick<ConfigIssue, "path" | "sourceId"> & { readonly previousSourceId?: string },
   sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
   redactionContext: RedactionContext
 ): boolean {
-  const source = sourceId === undefined ? undefined : sourceById.get(sourceId);
-  if (source?.redaction?.secretSource === true || redactionContext.options.secretSourceIds?.includes(sourceId ?? "")) {
+  const { path, sourceId, previousSourceId } = diagnostic;
+  if (
+    (sourceId !== undefined && redactionContext.secretSourceIds.has(sourceId)) ||
+    (previousSourceId !== undefined && redactionContext.secretSourceIds.has(previousSourceId))
+  ) {
     return true;
   }
 
@@ -188,15 +205,23 @@ function getRedactionForAnySource(
     return cached;
   }
 
+  if (redactionContext.secretSourcePaths.has(cacheKey)) {
+    const redaction = { redacted: true, reason: "secret-source" };
+    redactionContext.anySourceRedactionCache.set(cacheKey, redaction);
+    return redaction;
+  }
+
   for (const source of sourceById.values()) {
-    const redaction = getRedaction(path, source, redactionContext);
+    // Explicit path/name policies apply across diagnostics; a whole-source policy
+    // only applies to diagnostics tied to that source or its resolved path history.
+    const redaction = getPathRedaction(path, source, redactionContext);
     if (redaction.redacted) {
       redactionContext.anySourceRedactionCache.set(cacheKey, redaction);
       return redaction;
     }
   }
 
-  const fallback = getRedaction(path, undefined, redactionContext);
+  const fallback = getPathRedaction(path, undefined, redactionContext);
   redactionContext.anySourceRedactionCache.set(cacheKey, fallback);
   return fallback;
 }
@@ -206,10 +231,18 @@ function getRedaction(
   source: ConfigSourceDescriptor | undefined,
   redactionContext: RedactionContext
 ): RedactionDecision {
-  if (source?.redaction?.secretSource === true || redactionContext.options.secretSourceIds?.includes(source?.id ?? "")) {
+  if (source !== undefined && redactionContext.secretSourceIds.has(source.id)) {
     return { redacted: true, reason: "secret-source" };
   }
 
+  return getPathRedaction(path, source, redactionContext);
+}
+
+function getPathRedaction(
+  path: ConfigPath,
+  source: ConfigSourceDescriptor | undefined,
+  redactionContext: RedactionContext
+): RedactionDecision {
   if (matchesAnyPath(path, source?.redaction) || matchesAnyPath(path, redactionContext.options)) {
     return { redacted: true, reason: "secret-path" };
   }

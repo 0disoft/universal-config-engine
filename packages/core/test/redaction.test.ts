@@ -1,7 +1,90 @@
 import { describe, expect, it } from "vitest";
 import { buildDiagnosticReport, resolveConfig } from "../src/index.js";
+import type { ConfigIssue, ProvenanceEvent } from "../src/index.js";
+import { source } from "./helpers/source.js";
 
 describe("buildDiagnosticReport", () => {
+  it.each([
+    { policy: "descriptor", value: {} },
+    { policy: "descriptor", value: { internal: { value: "unrelated private input" } } },
+    { policy: "options", value: {} },
+    { policy: "options", value: { internal: { value: "unrelated private input" } } }
+  ])("preserves public diagnostics beside an unrelated $policy secret source ($value)", ({ policy, value }) => {
+    const secret = source("private", 10, value);
+    const resolved = resolveConfig({
+      sources: [source("defaults", 0, { server: { port: 3000 } }), {
+        ...secret,
+        descriptor: { ...secret.descriptor, ...(policy === "descriptor" ? { redaction: { secretSource: true } } : {}) }
+      }]
+    });
+    const issues: readonly ConfigIssue[] = ["defaults", "json-file", "validator", "core:coercion", undefined].map((sourceId, index) => ({
+      category: "validation",
+      code: `public_issue_${index}`,
+      severity: "warning",
+      path: ["server", "port"],
+      ...(sourceId === undefined ? {} : { sourceId }),
+      message: `Public diagnostic ${index}.`,
+      details: { expected: "valid public port" }
+    }));
+    const provenance: readonly ProvenanceEvent[] = ["defaults", "json-file", "validator", "core:coercion"].map((sourceId) => ({
+      path: ["server", "port"],
+      action: "validated",
+      sourceId,
+      message: `Public provenance from ${sourceId}.`
+    }));
+    const report = buildDiagnosticReport({ ...resolved, issues, provenance }, policy === "options" ? { secretSourceIds: ["private"] } : {});
+
+    expect(report.issues).toEqual(issues);
+    expect(report.provenance).toEqual(provenance);
+    expect(report.resolvedPaths).toContainEqual(expect.objectContaining({ path: ["server", "port"], redacted: false }));
+  });
+
+  it.each(["descriptor", "options"])("protects direct, winning, and overridden secret-source diagnostics via %s", (policy) => {
+    const secret = source("private", 10, { service: { value: "private input" } });
+    const sources = [source("defaults", 0, { server: { port: 3000 } }), {
+      ...secret,
+      descriptor: { ...secret.descriptor, ...(policy === "descriptor" ? { redaction: { secretSource: true } } : {}) }
+    }];
+    const options = policy === "options" ? { secretSourceIds: ["private"] } : {};
+    for (const publicOverride of [false, true]) {
+      const resolved = resolveConfig({ sources: publicOverride ? [...sources, source("override", 20, { service: { value: "public replacement" } })] : sources });
+      const issues: readonly ConfigIssue[] = [
+        { category: "validation", code: "dependent_failure", severity: "error", sourceId: "validator", path: ["service", "value"], message: "private input", details: { raw: "private input" } },
+        { category: "source-load", code: "direct_failure", severity: "error", sourceId: "private", path: ["unresolved"], message: "private input" }
+      ];
+      const provenance: readonly ProvenanceEvent[] = [
+        { path: ["service", "value"], action: "coerced", sourceId: "core:coercion", message: "private input" },
+        { path: ["unresolved"], action: "overridden", sourceId: "override", previousSourceId: "private", message: "private input" },
+        { path: ["unresolved"], action: "rejected", sourceId: "private", message: "private input" }
+      ];
+      const report = buildDiagnosticReport({ ...resolved, issues, provenance }, options);
+
+      expect(report.issues.every((issue) => issue.message.startsWith("Diagnostic message redacted"))).toBe(true);
+      expect(report.issues.every((issue) => issue.details === undefined)).toBe(true);
+      expect(report.provenance.every((event) => event.message.startsWith("Provenance message redacted"))).toBe(true);
+      expect(report.provenance[1]?.previousSourceId).toBe("private");
+      expect(JSON.stringify(report)).not.toContain("private input");
+    }
+  });
+
+  it.each([
+    { redaction: { secretPaths: [["service"]] }, options: {} },
+    { redaction: { secretNamePatterns: ["private_value"] }, options: {} },
+    { redaction: {}, options: { secretPaths: [["service"]] } },
+    { redaction: {}, options: { secretNamePatterns: ["private_value"] } }
+  ])("preserves explicit path and name policies independently of source participation ($redaction, $options)", ({ redaction, options }) => {
+    const empty = source("policy", 10, {});
+    const resolved = resolveConfig({ sources: [source("defaults", 0, { service: { private_value: "private input" } }), {
+      ...empty,
+      descriptor: { ...empty.descriptor, redaction }
+    }] });
+    const report = buildDiagnosticReport({ ...resolved,
+      issues: [{ category: "validation", code: "private_failure", severity: "error", sourceId: "validator", path: ["service", "private_value"], message: "private input" }],
+      provenance: [{ action: "validated", sourceId: "validator", path: ["service", "private_value"], message: "private input" }]
+    }, options);
+    expect(JSON.stringify(report)).not.toContain("private input");
+  });
+
   it("replaces oversized reports with a bounded error report", () => {
     const result = resolveConfig({
       sources: [{
