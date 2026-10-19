@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Recognize non-BMP Unicode argv mapping names in assignment form as well as split
+  form, avoiding silent value loss or incorrect unmapped-argument errors.
 - Make the public `isConfigValue` guard reject cycles and sparse arrays without
   stack overflow, while retaining shared references and deeply nested valid values.
 - Apply depth and path-length limits to object scalar/null leaves, including

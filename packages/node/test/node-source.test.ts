@@ -591,6 +591,23 @@ describe("node source loaders", () => {
     });
   });
 
+  it.each([undefined, "warning", "error"] as const)("maps non-BMP argv names in both syntaxes (%s)", (unmappedBehavior) => {
+    for (const externalName of ["--🚀설정", "--mode🚀"]) {
+      for (const argv of [[externalName, "9000"], [`${externalName}=9000`]]) {
+        const loaded = createArgvSource({
+          descriptor: descriptor("argv", "argv", 20),
+          argv,
+          mappings: [{ externalName, sourceKind: "argv", targetPath: ["port"], parseAs: "number" }],
+          ...(unmappedBehavior === undefined ? {} : { unmappedBehavior })
+        });
+        const result = resolveConfig({ sources: [loaded] });
+        expect(loaded.issues).toEqual([]);
+        expect(result.ok).toBe(true);
+        expect(result.config).toEqual({ port: 9000 });
+      }
+    }
+  });
+
   it.each(["\"", "'", "\"\"", "''"])("preserves lone dotenv quotes and unwraps quote pairs (%s)", (value) => {
     const loaded = parseSimpleDotenv(descriptor("dotenv", "dotenv-file", 1), `KEY=${value}`);
     expect(loaded.value).toEqual({ KEY: value.length === 1 ? value : "" });

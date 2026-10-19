@@ -221,7 +221,10 @@ function createAssignmentPrefixNode(): AssignmentPrefixNode {
 
 function addAssignmentPrefix(root: AssignmentPrefixNode, externalName: string): void {
   let node = root;
-  for (const character of `${externalName}=`) {
+  const prefix = `${externalName}=`;
+  // Match the UTF-16 code units consumed by matchAssignmentPrefixes.
+  for (let index = 0; index < prefix.length; index += 1) {
+    const character = prefix[index]!;
     let child = node.children.get(character);
     if (child === undefined) {
       child = createAssignmentPrefixNode();

@@ -160,6 +160,8 @@ policy preserves silent ignore behavior. See ADR 0015.
 Recognized split argv mappings consume their value exactly once; consumed values
 are never reinterpreted as another mapping or assignment. Unmapped tokens are
 reported individually because unknown options have no declared value arity.
+Declared argv names match literally in both split and `name=value` forms, including
+non-BMP Unicode characters such as emoji.
 Simple dotenv parsing strips matching quotes only when both opening and closing
 characters are present; a lone quote remains a literal one-character value.
 
