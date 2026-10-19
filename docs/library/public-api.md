@@ -95,6 +95,13 @@ and coercion. A final aggregate or coercion-expanded structure that exceeds dept
 key-count, or path-length limits returns a `resource-limit` issue with source id
 `core:resolved-config` and cannot produce `ok: true`.
 
+`flattenConfigObject` emits an array as one atomic entry only after all its elements
+pass validation, including nested objects and arrays. Invalid or incompletely
+validated arrays are omitted from `entries`. Validation stops when the diagnostic
+budget is exhausted; skipped input is signaled by `max_diagnostics_exceeded` within
+that budget. Source validation errors reject the source before merge even when
+loader warnings have already filled the retained issue budget.
+
 After successful coercion, `resolvedPaths` is projected onto the final flattened
 config. JSON strings expanded into objects report their new leaf paths instead of
 the obsolete string path. Each new path inherits its originating source, priority,

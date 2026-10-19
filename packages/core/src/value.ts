@@ -1,3 +1,4 @@
+import { markDiagnosticsOverflow } from "./diagnostics.js";
 import { formatPath, isUnsafePathSegment } from "./path.js";
 import type { ConfigIssue, ConfigPath, ConfigValue, ResourceLimitPolicy } from "./types.js";
 
@@ -80,6 +81,7 @@ function walk(
   emitEntries: boolean
 ): void {
   if (state.issues.length >= limits.maxDiagnostics) {
+    markDiagnosticsOverflow(state.issues, limits.maxDiagnostics);
     return;
   }
 
@@ -151,8 +153,8 @@ function walkObject(
   emitEntries: boolean
 ): void {
   if (Array.isArray(value)) {
-    validateArray(sourceId, value, path, depth, limits, state, ancestors);
-    if (emitEntries) {
+    const valid = validateArray(sourceId, value, path, depth, limits, state, ancestors);
+    if (valid && emitEntries) {
       state.entries.push({ path, value });
     }
     return;
@@ -166,6 +168,10 @@ function walkObject(
     }
 
     for (const [key, child] of entries) {
+      if (state.issues.length >= limits.maxDiagnostics) {
+        markDiagnosticsOverflow(state.issues, limits.maxDiagnostics);
+        return;
+      }
       state.keyCount += 1;
       const childPath = [...path, key];
 
@@ -233,8 +239,14 @@ function validateArray(
   limits: ResourceLimitPolicy,
   state: ValidationState,
   ancestors: WeakSet<object>
-): void {
+): boolean {
+  const initialIssueCount = state.issues.length;
   for (const [index, child] of value.entries()) {
+    if (state.issues.length >= limits.maxDiagnostics) {
+      markDiagnosticsOverflow(state.issues, limits.maxDiagnostics);
+      return false;
+    }
     walk(sourceId, child, [...path, index], depth + 1, limits, state, ancestors, false);
   }
+  return state.issues.length === initialIssueCount;
 }
