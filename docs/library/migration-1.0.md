@@ -1,6 +1,6 @@
 # Migration To 1.0
 
-Status: Release Candidate
+Status: Stable preparation; unpublished
 
 The `1.0` release candidate removes four ignored compatibility fields from the
 public `ValidatorIssue` type. Runtime validation, diagnostic report schema `0.2`,
@@ -9,19 +9,19 @@ CLI commands and exit codes, and the supported Node.js range remain unchanged.
 ## Package Update
 
 Update every Universal Config Engine package used by the consumer to the same
-release-candidate version:
+version. The commands below apply after stable 1.0.0 publication. Until then,
+use published `1.0.0-rc.5` or npm `next` for every package.
 
-The commands below use the latest published candidate, RC4. This workspace
-prepares unpublished RC5; switch all five versions together to `1.0.0-rc.5` only
-after its publication. RC5 adds safe Ajv custom-keyword fallback behavior without
-changing public declarations or the migration steps below.
+The verified RC5 is the stable preparation baseline. Stable preparation changes
+package versions and release metadata only, preserving its public declarations
+and runtime fixes.
 
 ```powershell
-pnpm update @0disoft/universal-config-engine-core@1.0.0-rc.4 `
-  @0disoft/universal-config-engine-node@1.0.0-rc.4 `
-  @0disoft/universal-config-engine-cli@1.0.0-rc.4 `
-  @0disoft/universal-config-engine-validator-ajv@1.0.0-rc.4 `
-  @0disoft/universal-config-engine-validator-zod@1.0.0-rc.4
+pnpm update @0disoft/universal-config-engine-core@1.0.0 `
+  @0disoft/universal-config-engine-node@1.0.0 `
+  @0disoft/universal-config-engine-cli@1.0.0 `
+  @0disoft/universal-config-engine-validator-ajv@1.0.0 `
+  @0disoft/universal-config-engine-validator-zod@1.0.0
 ```
 
 Release candidates are published under the npm `next` tag. Installing a package

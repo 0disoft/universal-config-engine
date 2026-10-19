@@ -5,9 +5,20 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
-Stable `1.0.0` remains unpublished and unauthorized pending RC5 validation.
+Stable `1.0.0` is prepared from the published and verified RC5; publication is pending.
 
-## 1.0.0-rc.5 - Unpublished
+## 1.0.0 - Unreleased
+
+### Stable Contract
+
+- Promote verified RC5 contents without further runtime, dependency, public
+  declaration, package README, or release-runner changes.
+- Establish the local config, provenance, redaction, validator, CLI and Node.js
+  compatibility guarantees described in ADR 0016 and the 1.0 migration guide.
+- Remove the four previously deprecated and ignored `ValidatorIssue` compatibility
+  fields from the public type; diagnostic report schema `0.2` is unchanged.
+
+## 1.0.0-rc.5 - 2026-10-19
 
 ### Fixed
 

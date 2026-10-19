@@ -1,6 +1,6 @@
 # 1.0 Stability Plan
 
-Status: Release Candidate
+Status: Stable preparation; unpublished
 Repository Type: library
 
 ## Baseline
@@ -94,7 +94,7 @@ Export the GitHub Dependency Graph SPDX SBOM while `main` still points to that
 validated commit, record its SHA-256 digest before tagging, and require the
 downloaded GitHub Release asset to match that digest after publication.
 `release-policy.json` is the machine-readable stable-release gate. For `1.0.0` it
-currently authorizes no stable version while `1.0.0-rc.5` is prepared. The release workflow fails closed
+authorizes `1.0.0` only from the published, verified `1.0.0-rc.5` commit. The release workflow fails closed
 while the candidate is missing or incomplete, but does not impose a time delay.
 
 The candidate policy includes its exact `candidateCommitSha`. Stable readiness
@@ -132,17 +132,19 @@ the locked `fast-uri@3.1.4` runtime path and
 `postcss@8.5.16` development path. RC4 resolves them to `fast-uri@3.1.5` and
 `postcss@8.5.26` without changing runtime source, public declarations, package
 READMEs, fixtures, smoke logic, or the release runner. Stable authorization now
-names `1.0.0-rc.4`.
+named `1.0.0-rc.4` at that point in the release history.
 
 Subsequent Ajv fixes, dependency advisories, installed CLI failure checks, and
-release-runner updates invalidate RC4 promotion. The workspace now prepares
-`1.0.0-rc.5`, which has not been published. Stable authorization is intentionally
-empty. After RC5 publication, a separate metadata-only stable preparation must
-record its exact `candidateCommitSha`, successful hosted checks, registry and
-publication evidence before enabling `1.0.0` again.
+release-runner updates invalidated RC4 promotion. RC5 was published on 2026-10-19
+from `45f2b7d476da880ed183f23ba59203c253dc4f5e`. Its successful tagged workflow,
+complete 5/5 publication manifest, independently matched GitHub/npm tarballs,
+integrity, source provenance, verified signatures and registry installation are
+recorded in issue #1 and its GitHub prerelease assets. The separate metadata-only
+stable preparation now records that exact `candidateCommitSha` in policy.
 
 The RC5 baseline also includes scoped redaction, overridden-source policy merging,
 coercion path projection and array updates, complete array validation, and adapter
 argument/path boundary corrections. Earlier RC5 preparation evidence predates these
-fixes and is superseded: all release checks and the dry-run must refer to the final
-preparation commit, whose identity is recorded in issue #1 and the annotated tag.
+fixes and is superseded. RC5 checks and the dry-run bind the final preparation
+commit in issue #1 and the annotated tag; stable checks must independently bind
+the stable preparation commit. No stable tag is created by preparation alone.

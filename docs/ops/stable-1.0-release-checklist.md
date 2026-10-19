@@ -1,7 +1,8 @@
 # Stable 1.0 Release Checklist
 
-Status: blocked on RC5 publication and validation
-Candidate: `1.0.0-rc.5` (prepared, unpublished)
+Status: stable preparation; stable publication pending
+Candidate: `1.0.0-rc.5` (published and independently verified)
+Candidate Commit: `45f2b7d476da880ed183f23ba59203c253dc4f5e`
 Stable Version: `1.0.0`
 
 ## Purpose
@@ -27,12 +28,11 @@ requires another release candidate and fresh candidate validation.
 
 ## Candidate Verification Gate
 
-- [ ] RC5 is published, independently verified, and authorized in
-      `release-policy.json` with its full candidate commit SHA. The current empty
-      authorization list deliberately blocks RC4 promotion.
-- [ ] No open issue confirms a breaking API, runtime, packaging, or security blocker.
-- [ ] npm `next` points all five packages to `1.0.0-rc.5`.
-- [ ] npm `latest` still points all five packages to `0.6.0` before stable publish.
+- [x] RC5 is published, independently verified, and authorized in
+      `release-policy.json` with its full candidate commit SHA; RC4 promotion stays blocked.
+- [x] No open issue confirms a breaking API, runtime, packaging, or security blocker.
+- [x] npm `next` points all five packages to `1.0.0-rc.5`.
+- [x] npm `latest` still points all five packages to `0.6.0` before stable publish.
 - [ ] The stable release readiness script passes against current GitHub and npm state.
 
 ## Preparation And Local Validation
