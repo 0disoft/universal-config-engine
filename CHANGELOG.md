@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Ignore inherited mapping values and getters so absent inputs cannot become
+  overrides, parse errors or exceptions through `Object.prototype` names.
 - Recognize non-BMP Unicode argv mapping names in assignment form as well as split
   form, avoiding silent value loss or incorrect unmapped-argument errors.
 - Make the public `isConfigValue` guard reject cycles and sparse arrays without

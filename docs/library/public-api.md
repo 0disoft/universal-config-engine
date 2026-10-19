@@ -125,6 +125,10 @@ have an ancestor/descendant relationship. Exact duplicates use
 `duplicate_mapping_target_path`; prefix collisions use
 `overlapping_mapping_target_path`. The source is rejected during resolution instead
 of applying an order-dependent partial value.
+Only own properties of the supplied value dictionary activate mappings. Inherited
+properties and getters are ignored, including names present on `Object.prototype`.
+Explicitly supplied external names such as `constructor` and `__proto__` can map to
+safe target paths; the existing unsafe-target-path policy still applies.
 
 Source descriptor ids are resolution identities and must be unique. A duplicate id
 returns `source-load/duplicate_source_id` before any source value or source issue is

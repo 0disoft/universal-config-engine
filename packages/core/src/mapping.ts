@@ -33,6 +33,9 @@ export function createMappedOverrideSource(input: CreateMappedOverrideSourceInpu
       continue;
     }
 
+    if (!Object.prototype.hasOwnProperty.call(input.values, mapping.externalName)) {
+      continue;
+    }
     const rawValue = input.values[mapping.externalName];
     if (rawValue === undefined) {
       continue;
