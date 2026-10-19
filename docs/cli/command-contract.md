@@ -71,6 +71,9 @@ Candidate responsibilities:
 - Runtime compatibility floor: Node.js `>=24`.
 - JSON report schema version: `0.2`.
 - CLI argv source values must appear after `--`.
+- Split options that require a value reject a following long or short option as a
+  missing value. Config paths beginning with `-` can use explicit assignment
+  (`--config=-file.json`) or a relative path (`--config ./-file.json`).
 - Unmapped env and argv diagnostics are opt-in; strict environment checks require
   an explicit prefix namespace.
 - Validator declarations support first-party Ajv JSON Schema via

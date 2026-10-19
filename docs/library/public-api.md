@@ -186,12 +186,18 @@ migration review before running `pnpm run update:api-snapshot`.
 - Normalize malformed validator adapter results and malformed validator issues into
   `validation` issues instead of allowing broken adapter output to corrupt
   diagnostic reports.
+- Accept only strings and non-negative safe integers as validator issue path
+  segments; reject sparse paths and invalid numeric indexes as malformed issues.
 - Do not copy thrown validator exception text or validator-provided message,
   details, category, or source identity into diagnostics. Core reconstructs public
   validation issues from `code`, `severity`, and optional `path`; see ADR 0011.
 - Accept validator issue codes only as bounded ASCII machine identifiers;
   reject prose-like or assignment-like codes as malformed adapter output.
 - Resolve Ajv JSON Pointer numeric segments against the validated config shape.
+- Append the literal `missingProperty` or `additionalProperty` name for Ajv
+  `required` and `additionalProperties` issues so redaction evaluates the affected
+  property. Numeric-looking property names remain strings; names containing `/`
+  or `~` are not decoded a second time.
 - Preserve standard Ajv keyword codes; use `ajv_custom_keyword` for keywords outside
   the bounded core code grammar, without retaining their names or error prose.
   `instancePathToConfigPath` preserves ambiguous numeric-looking segments as strings

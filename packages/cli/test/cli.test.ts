@@ -2,10 +2,27 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { runCli } from "../src/index.js";
+import { parseCliArgs, runCli } from "../src/index.js";
 import { withTempDir } from "./helpers/temp-directory.js";
 
 describe("runCli", () => {
+  it.each(["--config", "-c", "--output"])(
+    "does not consume a short option as the value of %s", async (option) => {
+      let stdout = "";
+      const result = await runCli(["validate", "--json", option, "-c"], {
+        cwd: process.cwd(), env: {}, stdout: (text) => { stdout += text; }, stderr: () => {}
+      });
+      expect(result.exitCode).toBe(4);
+      expect(JSON.parse(stdout).issues).toEqual([
+        expect.objectContaining({ category: "usage", message: `Option ${option} requires a value.` })
+      ]);
+    }
+  );
+
+  it("accepts a config path beginning with a dash through explicit assignment", () => {
+    expect(parseCliArgs(["validate", "--config=-c"]).configPath).toBe("-c");
+  });
+
   it("escapes line breaks and terminal control characters in human output", async () => {
     await withTempDir(async (dir) => {
       const maliciousId = "source\nstatus: forged\u001b]52;c;YW5hbHlzaXM=\u0007";

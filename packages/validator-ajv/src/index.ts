@@ -47,12 +47,18 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
 }
 
 function toValidatorIssue(error: ErrorObject, config: unknown): ValidatorIssue {
+  const path = instancePathToConfigPath(error.instancePath, config);
+  const property = error.keyword === "required"
+    ? error.params.missingProperty
+    : error.keyword === "additionalProperties"
+      ? error.params.additionalProperty
+      : undefined;
   return {
     code: /^[A-Za-z][A-Za-z0-9_.:-]{0,127}$/.test(error.keyword)
       ? error.keyword
       : "ajv_custom_keyword",
     severity: "error",
-    path: instancePathToConfigPath(error.instancePath, config)
+    path: typeof property === "string" ? [...path, property] : path
   };
 }
 

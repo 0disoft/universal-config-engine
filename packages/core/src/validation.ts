@@ -243,10 +243,16 @@ function validatorStatus(result: ValidatorResult, issues: readonly ConfigIssue[]
 }
 
 function isConfigPath(value: unknown): value is ConfigPath {
-  return (
-    Array.isArray(value) &&
-    value.every((segment) => typeof segment === "string" || typeof segment === "number")
-  );
+  if (!Array.isArray(value)) return false;
+  for (const segment of value) {
+    if (
+      typeof segment !== "string" &&
+      !(typeof segment === "number" && Number.isSafeInteger(segment) && segment >= 0)
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function isIssueDetails(value: unknown): value is Readonly<Record<string, string | number | boolean | null>> {

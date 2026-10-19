@@ -4,6 +4,45 @@ import type { ValidatorResult } from "../src/index.js";
 import { source } from "./helpers/source.js";
 
 describe("runValidators", () => {
+  it.each([NaN, Infinity, -Infinity, -1, 0.5, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects invalid numeric validator path segments (%s)", async (segment) => {
+      const result = await runValidators({
+        config: {}, provenance: [], validators: [{
+          id: "path-check", validate: () => ({
+            ok: false, issues: [{ code: "invalid", severity: "error", path: ["items", segment] }]
+          })
+        }]
+      });
+      expect(result.issues).toEqual([expect.objectContaining({ code: "validator_issue_invalid" })]);
+    }
+  );
+
+  it("rejects sparse validator paths instead of letting holes bypass segment validation", async () => {
+    const result = await runValidators({
+      config: {}, provenance: [], validators: [{
+        id: "path-check", validate: () => ({
+          ok: false, issues: [{ code: "invalid", severity: "error", path: new Array<string>(1) }]
+        })
+      }]
+    });
+    expect(result.issues).toEqual([expect.objectContaining({ code: "validator_issue_invalid" })]);
+  });
+
+  it.each([0, 1, Number.MAX_SAFE_INTEGER, "0", "-1"])(
+    "preserves valid validator path segments (%s)", async (segment) => {
+      const result = await runValidators({
+        config: {}, provenance: [], validators: [{
+          id: "path-check", validate: () => ({
+            ok: false, issues: [{ code: "invalid", severity: "error", path: ["items", segment] }]
+          })
+        }]
+      });
+      expect(result.issues).toEqual([
+        expect.objectContaining({ code: "invalid", path: ["items", segment] })
+      ]);
+    }
+  );
+
   it("normalizes validator failures into config issues", async () => {
     const result = resolveConfig({
       sources: [source("defaults", 0, { server: { port: 3000 } })]

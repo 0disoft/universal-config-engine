@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Ajv } from "ajv/dist/ajv.js";
 import {
+  buildDiagnosticReport,
   resolveConfig,
   runValidators
 } from "@0disoft/universal-config-engine-core";
@@ -10,6 +11,46 @@ import {
 } from "../src/index.js";
 
 describe("createAjvValidator", () => {
+  it.each([
+    ["required", "password"],
+    ["additionalProperties", "password"],
+    ["required", "0"],
+    ["additionalProperties", "0"],
+    ["required", "a/b~c"],
+    ["additionalProperties", "a/b~c"],
+    ["required", ""],
+    ["additionalProperties", ""]
+  ])("reports and redacts the exact property path for %s (%s)", async (keyword, property) => {
+    const path = ["items", 0, "auth", property];
+    const result = resolveConfig({ sources: [{
+      descriptor: {
+        id: "defaults", kind: "object", priority: 0, displayName: "defaults",
+        redaction: { secretPaths: [path] }
+      },
+      value: { items: [{ auth: keyword === "required" ? {} : { [property]: "fixture-value" } }] }
+    }] });
+    const validator = createAjvValidator({ schema: {
+      type: "object",
+      properties: { items: { type: "array", items: {
+        type: "object",
+        properties: { auth: {
+          type: "object", properties: {}, required: [property], additionalProperties: false
+        } }
+      } } }
+    } });
+    const validation = await runValidators({
+      config: result.config, provenance: result.provenance, validators: [validator]
+    });
+    expect(validation.issues).toEqual([
+      expect.objectContaining({ code: keyword, path })
+    ]);
+    const report = buildDiagnosticReport({ ...result, ok: false, issues: validation.issues });
+    expect(report.issues[0]?.message).toBe(
+      "Diagnostic message redacted because it is associated with a secret path or source."
+    );
+    expect(JSON.stringify(report)).not.toContain("fixture-value");
+  });
+
   it.each(["$privateSentinel", "_privateSentinel", "private$Sentinel", "a".repeat(129)])(
     "bounds custom keyword diagnostics without retaining the keyword (%s)",
     async (keyword) => {

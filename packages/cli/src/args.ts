@@ -104,7 +104,7 @@ export function getCliUsageContext(args: readonly string[]): CliUsageContext {
 
 function readValue(args: readonly string[], index: number, option: string): string {
   const value = args[index + 1];
-  if (value === undefined || value.startsWith("--")) {
+  if (value === undefined || value.startsWith("-")) {
     throw new Error(`Option ${option} requires a value.`);
   }
   return value;
