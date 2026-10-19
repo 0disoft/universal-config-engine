@@ -140,3 +140,9 @@ release-runner updates invalidate RC4 promotion. The workspace now prepares
 empty. After RC5 publication, a separate metadata-only stable preparation must
 record its exact `candidateCommitSha`, successful hosted checks, registry and
 publication evidence before enabling `1.0.0` again.
+
+The RC5 baseline also includes scoped redaction, overridden-source policy merging,
+coercion path projection and array updates, complete array validation, and adapter
+argument/path boundary corrections. Earlier RC5 preparation evidence predates these
+fixes and is superseded: all release checks and the dry-run must refer to the final
+preparation commit, whose identity is recorded in issue #1 and the annotated tag.

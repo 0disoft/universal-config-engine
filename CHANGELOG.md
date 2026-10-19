@@ -13,6 +13,21 @@ Stable `1.0.0` remains unpublished and unauthorized pending RC5 validation.
 
 - Return `ajv_custom_keyword` for Ajv custom keywords outside the core diagnostic
   code grammar instead of rejecting the adapter result or exposing keyword text.
+- Scope whole-source redaction to sources that actually contributed to the path;
+  preserve overridden-source path policies and combine source/report name patterns.
+- Synchronize resolved paths after JSON coercion, reject unsafe JSON keys before
+  assignment, and coerce existing array elements without changing public setter rules.
+- Emit flattened arrays only after complete validation and bound diagnostics when
+  invalid nested values exhaust the validation budget.
+- Consume argv mapping values once, diagnose every undeclared token, and preserve
+  lone dotenv quote characters. Unknown options no longer consume following tokens.
+- Preserve Ajv missing/additional property paths and empty property names, reject
+  invalid validator path indexes, and reject short options used as CLI option values.
+
+### Maintenance
+
+- Split CLI declaration/loading responsibilities and package tests, share bounded
+  diagnostics and smoke helpers, and build the package graph once per workspace check.
 
 ### Security
 
