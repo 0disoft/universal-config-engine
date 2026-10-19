@@ -154,8 +154,6 @@ function unmappedArgvIndexes(
     if (matchAssignmentPrefixes(assignmentPrefixes, argument).length > 0) continue;
 
     unmapped.push(index);
-    const next = argv[index + 1];
-    if (argument.startsWith("-") && next !== undefined && isArgValueToken(next)) index += 1;
   }
   return unmapped;
 }
@@ -199,12 +197,15 @@ function scanArgv(
     const arg = argv[index]!;
     if (exactNames.has(arg)) {
       const next = argv[index + 1];
+      const hasValue = next !== undefined && isArgValueToken(next);
       recordArgObservation(
         observations,
         arg,
-        next !== undefined && isArgValueToken(next) ? next : undefined,
-        next === undefined || !isArgValueToken(next)
+        hasValue ? next : undefined,
+        !hasValue
       );
+      if (hasValue) index += 1;
+      continue;
     }
 
     for (const match of matchAssignmentPrefixes(assignmentPrefixes, arg)) {

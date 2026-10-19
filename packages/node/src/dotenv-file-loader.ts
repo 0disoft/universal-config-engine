@@ -97,8 +97,10 @@ export function parseSimpleDotenv(
 
 function stripSimpleQuotes(value: string): string {
   if (
-    (value.startsWith("\"") && value.endsWith("\"")) ||
-    (value.startsWith("'") && value.endsWith("'"))
+    value.length >= 2 && (
+      (value.startsWith("\"") && value.endsWith("\"")) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    )
   ) {
     return value.slice(1, -1);
   }

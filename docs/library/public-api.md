@@ -148,6 +148,12 @@ The Node override helpers accept optional `unmappedBehavior` values `warning` an
 argv diagnostics expose indexes rather than raw unknown argument text. Missing
 policy preserves silent ignore behavior. See ADR 0015.
 
+Recognized split argv mappings consume their value exactly once; consumed values
+are never reinterpreted as another mapping or assignment. Unmapped tokens are
+reported individually because unknown options have no declared value arity.
+Simple dotenv parsing strips matching quotes only when both opening and closing
+characters are present; a lone quote remains a literal one-character value.
+
 The committed `docs/library/public-api.snapshot.txt` records normalized declaration
 files for every publishable package. `pnpm run check:api-snapshot` fails when the
 built declaration surface drifts. Intentional API changes require semver and

@@ -22,9 +22,10 @@ behavior without a valid prefix, is an error in both direct Node calls and CLI
 declarations.
 
 Argv strict mode checks every argument after the CLI `--` boundary. A recognized
-split flag consumes its following value. An unknown option followed by a value
-produces one issue for the option, not a second issue for its value. Positional
-entries are independently unmapped.
+split flag consumes its following value exactly once, even if that value resembles
+another declared name or assignment. Unknown options and positional entries are
+independently unmapped: an undeclared option has no known arity and never consumes
+the following token. Each diagnostic identifies one unconsumed token by index.
 
 Warnings preserve mapped values and allow a successful result. Errors reject the
 source before merge. `unmapped_env_entry` includes only the environment variable

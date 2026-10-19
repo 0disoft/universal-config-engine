@@ -567,6 +567,40 @@ describe("node source loaders", () => {
     });
   });
 
+  it.each(["\"", "'", "\"\"", "''"])("preserves lone dotenv quotes and unwraps quote pairs (%s)", (value) => {
+    const loaded = parseSimpleDotenv(descriptor("dotenv", "dotenv-file", 1), `KEY=${value}`);
+    expect(loaded.value).toEqual({ KEY: value.length === 1 ? value : "" });
+    expect(loaded.issues).toEqual([]);
+  });
+
+  it.each(["mode", "mode=prod"])("does not parse consumed argv values again (%s)", (value) => {
+    const loaded = createArgvSource({
+      descriptor: descriptor("argv", "argv", 20),
+      argv: ["--value", value],
+      mappings: [
+        { externalName: "--value", sourceKind: "argv", targetPath: ["value"] },
+        { externalName: "mode", sourceKind: "argv", targetPath: ["mode"] }
+      ],
+      unmappedBehavior: "warning"
+    });
+    expect(loaded.value).toEqual({ value });
+    expect(loaded.issues).toEqual([]);
+  });
+
+  it.each([
+    ["--verbose", "positional"],
+    ["-v", "-2"],
+    ["--unknown=value", "positional"]
+  ])("reports every undeclared argv token (%s %s)", (...argv) => {
+    const loaded = createArgvSource({
+      descriptor: descriptor("argv", "argv", 20),
+      argv,
+      mappings: [],
+      unmappedBehavior: "warning"
+    });
+    expect(loaded.issues?.map((issue) => issue.details?.argumentIndex)).toEqual([0, 1]);
+  });
+
   it("warns for unmapped argv entries without exposing their text", () => {
     const loaded = createArgvSource({
       descriptor: descriptor("argv", "argv", 20),
@@ -585,6 +619,7 @@ describe("node source loaders", () => {
     expect(result.config).toEqual({ server: { port: 9000 } });
     expect(result.issues).toEqual([
       expect.objectContaining({ code: "unmapped_argv_entry", severity: "warning", details: { argumentIndex: 2 } }),
+      expect.objectContaining({ code: "unmapped_argv_entry", severity: "warning", details: { argumentIndex: 3 } }),
       expect.objectContaining({ code: "unmapped_argv_entry", severity: "warning", details: { argumentIndex: 4 } })
     ]);
     expect(JSON.stringify(result)).not.toContain("argv-secret-value");
