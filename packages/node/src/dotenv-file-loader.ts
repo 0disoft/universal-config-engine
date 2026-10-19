@@ -49,7 +49,12 @@ export function parseSimpleDotenv(
       continue;
     }
 
-    value[name] = stripSimpleQuotes(rawValue.trim());
+    Object.defineProperty(value, name, {
+      value: stripSimpleQuotes(rawValue.trim()),
+      enumerable: true,
+      writable: true,
+      configurable: true
+    });
     locationByName.set(name, {
       path: [name],
       location: {

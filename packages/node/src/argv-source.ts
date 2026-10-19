@@ -51,7 +51,7 @@ export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
     };
   }
 
-  const values: Record<string, string> = {};
+  const values = Object.create(null) as Record<string, string>;
   const issues: ConfigIssue[] = [];
   if (
     input.unmappedBehavior !== undefined &&

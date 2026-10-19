@@ -42,7 +42,7 @@ export function createProcessEnvSource(input: CreateProcessEnvSourceInput): Load
     };
   }
 
-  const values: Record<string, string> = {};
+  const values = Object.create(null) as Record<string, string>;
   const issues: ConfigIssue[] = [];
   if (
     input.unmappedBehavior !== undefined &&
@@ -91,6 +91,9 @@ export function createProcessEnvSource(input: CreateProcessEnvSourceInput): Load
       continue;
     }
 
+    if (!Object.prototype.hasOwnProperty.call(input.env, mapping.externalName)) {
+      continue;
+    }
     const rawValue = input.env[mapping.externalName];
     if (rawValue === undefined) {
       continue;

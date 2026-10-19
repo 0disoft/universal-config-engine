@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Preserve literal prototype-like input names through argv, env and dotenv
+  mappings, and ignore inherited environment values before staging overrides.
 - Ignore inherited mapping values and getters so absent inputs cannot become
   overrides, parse errors or exceptions through `Object.prototype` names.
 - Recognize non-BMP Unicode argv mapping names in assignment form as well as split

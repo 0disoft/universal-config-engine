@@ -166,6 +166,9 @@ are never reinterpreted as another mapping or assignment. Unmapped tokens are
 reported individually because unknown options have no declared value arity.
 Declared argv names match literally in both split and `name=value` forms, including
 non-BMP Unicode characters such as emoji.
+Node env mappings likewise read only own input properties. The env/argv staging
+dictionaries and dotenv parser preserve literal external names such as `__proto__`
+without invoking prototype setters, allowing explicit mapping to safe config paths.
 Simple dotenv parsing strips matching quotes only when both opening and closing
 characters are present; a lone quote remains a literal one-character value.
 
