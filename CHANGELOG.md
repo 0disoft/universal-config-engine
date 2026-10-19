@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Maintenance
 
+- Share Node file-source I/O and exception conversion between JSON and dotenv
+  adapters while preserving parser-specific diagnostics and canonical locations.
 - Separate core merge policy from resolved-path map/trie bookkeeping and coercion
   ownership projection without changing resolution order or provenance.
 - Share core loader/validator boundary guards; reject negative indexes and sparse

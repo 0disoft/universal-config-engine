@@ -1,5 +1,6 @@
 import type { ConfigIssue, ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
-import { DEFAULT_MAX_FILE_BYTES, readTextFileWithinLimit, type FileReadPolicy } from "./file.js";
+import type { FileReadPolicy } from "./file.js";
+import { loadTextFileSource } from "./file-source.js";
 
 const DOTENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -9,41 +10,14 @@ export interface LoadDotenvFileSourceInput extends FileReadPolicy {
 }
 
 export async function loadDotenvFileSource(input: LoadDotenvFileSourceInput): Promise<LoadedSource> {
-  const maxFileBytes = input.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
-  const encoding = input.encoding ?? "utf8";
-
-  try {
-    const readResult = await readTextFileWithinLimit({
-      filePath: input.filePath,
-      sourceId: input.descriptor.id,
-      maxFileBytes,
-      encoding,
-      ...(input.allowedRootPath === undefined ? {} : { allowedRootPath: input.allowedRootPath })
-    });
-    if (!readResult.ok) {
-      return {
-        descriptor: input.descriptor,
-        value: {},
-        issues: readResult.issues
-      };
-    }
-
-    return parseSimpleDotenv(input.descriptor, readResult.raw, readResult.canonicalPath);
-  } catch {
-    return {
-      descriptor: input.descriptor,
-      value: {},
-      issues: [
-        {
-          category: "source-load",
-          code: "dotenv_read_failed",
-          severity: "error",
-          sourceId: input.descriptor.id,
-          message: "Failed to read dotenv source. Exception details were omitted from diagnostics."
-        }
-      ]
-    };
-  }
+  return loadTextFileSource(input, {
+    readFailure: {
+      category: "source-load",
+      code: "dotenv_read_failed",
+      message: "Failed to read dotenv source. Exception details were omitted from diagnostics."
+    },
+    parse: (raw, canonicalPath) => parseSimpleDotenv(input.descriptor, raw, canonicalPath)
+  });
 }
 
 export function parseSimpleDotenv(

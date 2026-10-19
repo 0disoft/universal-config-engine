@@ -23,6 +23,30 @@ function descriptor(id: string, kind: ConfigSourceDescriptor["kind"], priority: 
 }
 
 describe("node source loaders", () => {
+  it.each([
+    { name: "JSON", kind: "json-file" as const, load: loadJsonFileSource, readCode: "json_read_failed" },
+    { name: "dotenv", kind: "dotenv-file" as const, load: loadDotenvFileSource, readCode: "dotenv_read_failed" }
+  ])("keeps $name read errors distinct from bounded file-policy failures", async ({ kind, load, readCode }) => {
+    const dir = await mkdtemp(join(tmpdir(), "uce-file-source-errors-"));
+    try {
+      const source = descriptor("file", kind, 1);
+      const missing = await load({ descriptor: source, filePath: join(dir, "absent") });
+      expect(missing).toEqual({ descriptor: source, value: {}, issues: [expect.objectContaining({
+        category: "source-load", code: readCode, severity: "error", sourceId: "file"
+      })] });
+      expect(JSON.stringify(missing)).not.toContain(dir);
+      const filePath = join(dir, "config");
+      await writeFile(filePath, "APP_PORT=3000", "utf8");
+      const bounded = await load({ descriptor: source, filePath, maxFileBytes: 1 });
+      expect(bounded.issues).toEqual([expect.objectContaining({ category: "resource-limit", code: "max_file_bytes_exceeded" })]);
+      const boundary = await load({ descriptor: source, filePath, allowedRootPath: join(dir, "absent-root") });
+      expect(boundary.issues).toEqual([expect.objectContaining({ category: "source-load", code: "file_boundary_verification_failed" })]);
+      expect(JSON.stringify(boundary)).not.toContain(dir);
+    } finally {
+      await rm(dir, { force: true, recursive: true });
+    }
+  });
+
   it("returns the canonical identity of the opened bounded file", async () => {
     const dir = await mkdtemp(join(tmpdir(), "uce-file-canonical-"));
     try {

@@ -53,6 +53,11 @@ Its internal `resolved-path-index.ts` owns the synchronized path map/trie,
 overlap lookup and ownership projection after coercion. Trie mutations stay in
 that module so merge policy changes do not need to reimplement index bookkeeping.
 
+Node's internal `file-source.ts` shares bounded text-file loading and exception
+conversion between JSON and dotenv adapters. Each adapter keeps its parser,
+source-location extraction and existing format-specific failure codes. The
+open-handle identity/root checks and byte limits remain in `file.ts`.
+
 Core's internal `diagnostics.ts` owns ordered, bounded issue collection and overflow
 markers for loading, merging, validation, and the pipeline facade. CLI declaration
 checks reuse the public `combineConfigIssues` facade with their fixed bootstrap

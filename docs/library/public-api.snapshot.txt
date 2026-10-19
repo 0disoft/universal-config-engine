@@ -366,13 +366,30 @@ export declare function createArgvSource(input: CreateArgvSourceInput): LoadedSo
 
 ### dotenv-file-loader.d.ts
 import type { ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
-import { type FileReadPolicy } from "./file.js";
+import type { FileReadPolicy } from "./file.js";
 export interface LoadDotenvFileSourceInput extends FileReadPolicy {
     readonly descriptor: ConfigSourceDescriptor;
     readonly filePath: string;
 }
 export declare function loadDotenvFileSource(input: LoadDotenvFileSourceInput): Promise<LoadedSource>;
 export declare function parseSimpleDotenv(descriptor: ConfigSourceDescriptor, raw: string, sourcePath?: string): LoadedSource;
+
+### file-source.d.ts
+import type { ConfigIssue, ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
+import { type FileReadPolicy } from "./file.js";
+interface FileSourceInput extends FileReadPolicy {
+    readonly descriptor: ConfigSourceDescriptor;
+    readonly filePath: string;
+}
+type FailureDiagnostic = Pick<ConfigIssue, "category" | "code" | "message">;
+interface FileSourceOptions {
+    readonly readFailure: FailureDiagnostic;
+    readonly parseFailure?: FailureDiagnostic;
+    readonly parse: (raw: string, canonicalPath: string) => LoadedSource;
+}
+/** Shared I/O boundary; format-specific parsing and diagnostic codes stay with the adapter. */
+export declare function loadTextFileSource(input: FileSourceInput, options: FileSourceOptions): Promise<LoadedSource>;
+export {};
 
 ### file.d.ts
 import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
@@ -423,7 +440,7 @@ export declare function behaviorSeverity(behavior: UnmappedInputBehavior): Confi
 
 ### json-file-loader.d.ts
 import type { ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
-import { type FileReadPolicy } from "./file.js";
+import type { FileReadPolicy } from "./file.js";
 export interface LoadJsonFileSourceInput extends FileReadPolicy {
     readonly descriptor: ConfigSourceDescriptor;
     readonly filePath: string;

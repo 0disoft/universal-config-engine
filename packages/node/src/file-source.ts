@@ -1,0 +1,53 @@
+import type { ConfigIssue, ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
+import { DEFAULT_MAX_FILE_BYTES, readTextFileWithinLimit, type FileReadPolicy } from "./file.js";
+
+interface FileSourceInput extends FileReadPolicy {
+  readonly descriptor: ConfigSourceDescriptor;
+  readonly filePath: string;
+}
+
+type FailureDiagnostic = Pick<ConfigIssue, "category" | "code" | "message">;
+
+interface FileSourceOptions {
+  readonly readFailure: FailureDiagnostic;
+  readonly parseFailure?: FailureDiagnostic;
+  readonly parse: (raw: string, canonicalPath: string) => LoadedSource;
+}
+
+/** Shared I/O boundary; format-specific parsing and diagnostic codes stay with the adapter. */
+export async function loadTextFileSource(input: FileSourceInput, options: FileSourceOptions): Promise<LoadedSource> {
+  let readResult: Awaited<ReturnType<typeof readTextFileWithinLimit>>;
+  try {
+    readResult = await readTextFileWithinLimit({
+      filePath: input.filePath,
+      sourceId: input.descriptor.id,
+      maxFileBytes: input.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES,
+      encoding: input.encoding ?? "utf8",
+      ...(input.allowedRootPath === undefined ? {} : { allowedRootPath: input.allowedRootPath })
+    });
+  } catch {
+    return failureSource(input.descriptor, options.readFailure);
+  }
+  if (!readResult.ok) {
+    return { descriptor: input.descriptor, value: {}, issues: readResult.issues };
+  }
+  try {
+    return options.parse(readResult.raw, readResult.canonicalPath);
+  } catch {
+    return failureSource(input.descriptor, options.parseFailure ?? options.readFailure);
+  }
+}
+
+function failureSource(descriptor: ConfigSourceDescriptor, diagnostic: FailureDiagnostic): LoadedSource {
+  return {
+    descriptor,
+    value: {},
+    issues: [{
+      category: diagnostic.category,
+      code: diagnostic.code,
+      severity: "error",
+      sourceId: descriptor.id,
+      message: diagnostic.message
+    }]
+  };
+}
