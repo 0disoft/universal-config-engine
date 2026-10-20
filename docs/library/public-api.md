@@ -70,6 +70,11 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 `LoadedSource.issues` array and the aggregate loader issues. When more issues exist,
 the final retained entry is `resource-limit/max_diagnostics_exceeded` rather than
 an unbounded tail. `runConfigPipeline` forwards its limits into this loading stage.
+Normalization copies at most `maxDiagnostics` issue records, paths and detail
+objects per source. All remaining raw issues and locations are still runtime
+validated: a malformed tail rejects the source even when it cannot be retained.
+Validation remains linear in adapter output size; excess diagnostics do not cause
+unbounded additional copies before the cap is applied.
 
 Loader results are runtime-checked before becoming `LoadedSource` objects. Invalid
 issue arrays, issue entries, location arrays, or location entries reject that source

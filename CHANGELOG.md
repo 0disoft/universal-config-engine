@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Apply loader diagnostic retention bounds during normalization, avoiding copies
+  of discarded issue paths/details while still validating malformed tail entries.
 - Bound JSON source location metadata to 4 MiB by default, configurable through
   `maxLocationBytes`. Excess metadata is omitted with a warning while config values
   remain usable, preventing quadratic path storage from exhausting memory first.

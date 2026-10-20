@@ -8,6 +8,34 @@ import {
 import type { ConfigLoader, ConfigLoaderResult } from "../src/index.js";
 
 describe("loadConfigSources", () => {
+  it("validates all issues but copies paths only within the retained diagnostic budget", async () => {
+    let pathPasses = 0;
+    const path = Object.defineProperty(["item"], Symbol.iterator, { value: function* () {
+      pathPasses += 1;
+      yield "item";
+    } });
+    const issue = { category: "parse" as const, code: "noisy", severity: "warning" as const,
+      message: "Loader warning.", path, details: { count: 1 } };
+    const loaded = await loadConfigSources({ context: undefined, limits: { maxDiagnostics: 3 },
+      loaders: [{ descriptor: { id: "noisy", kind: "adapter", priority: 0, displayName: "noisy" },
+        load: () => ({ value: { enabled: true }, issues: new Array(1_000).fill(issue) }) }] });
+    expect(pathPasses).toBe(1_003);
+    expect(loaded.sources[0]?.issues?.map((entry) => entry.code)).toEqual(["noisy", "noisy", "max_diagnostics_exceeded"]);
+    expect(loaded.issues).toEqual(loaded.sources[0]?.issues);
+    expect(loaded.sources[0]?.issues?.[0]?.path).not.toBe(path);
+    expect(loaded.sources[0]?.issues?.[0]?.details).not.toBe(issue.details);
+    expect(resolveConfig({ sources: loaded.sources }).config).toEqual({});
+  });
+
+  it("still rejects malformed diagnostics beyond the retained budget", async () => {
+    const issue = { category: "parse", code: "noisy", severity: "warning", message: "Loader warning." };
+    const loaded = await loadConfigSources({ context: undefined, limits: { maxDiagnostics: 1 },
+      loaders: [{ descriptor: { id: "invalid", kind: "adapter", priority: 0, displayName: "invalid" },
+        load: () => ({ value: { enabled: true }, issues: [issue, issue, null] }) as ConfigLoaderResult }] });
+    expect(loaded.issues).toEqual([expect.objectContaining({ code: "invalid_loader_result" })]);
+    expect(loaded.sources[0]?.value).toEqual({});
+  });
+
   it.each([
     { name: "negative index", path: ["items", -1] },
     { name: "fractional index", path: ["items", 0.5] },

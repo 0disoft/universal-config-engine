@@ -1,4 +1,4 @@
-import { appendBoundedIssues } from "./diagnostics.js";
+import { appendBoundedIssues, markDiagnosticsOverflow } from "./diagnostics.js";
 import { isConfigPath, isIssueCode, isRecord } from "./adapter-guards.js";
 import type {
   ConfigIssue,
@@ -82,7 +82,7 @@ function toLoadedSource<TContext>(
   result: ConfigLoaderResult,
   maxDiagnostics: number
 ): LoadedSource {
-  const normalized = normalizeLoaderResult(loader, result);
+  const normalized = normalizeLoaderResult(loader, result, maxDiagnostics);
   if (!normalized.ok) {
     return {
       descriptor: loader.descriptor,
@@ -90,18 +90,18 @@ function toLoadedSource<TContext>(
       issues: [invalidLoaderResultIssue(loader)]
     };
   }
-  const issues = boundIssues(normalized.issues, maxDiagnostics);
   return {
     descriptor: loader.descriptor,
     value: normalized.value,
     ...(normalized.locations === undefined ? {} : { locations: normalized.locations }),
-    ...(normalized.hasIssuesField ? { issues } : {})
+    ...(normalized.hasIssuesField ? { issues: normalized.issues } : {})
   };
 }
 
 function normalizeLoaderResult<TContext>(
   loader: ConfigLoader<TContext>,
-  result: ConfigLoaderResult
+  result: ConfigLoaderResult,
+  maxDiagnostics: number
 ):
   | {
       readonly ok: true;
@@ -120,9 +120,15 @@ function normalizeLoaderResult<TContext>(
     return { ok: false };
   }
   const issues: ConfigIssue[] = [];
+  let overflowed = false;
   for (const issue of rawIssues ?? []) {
     if (!isConfigIssue(issue)) {
       return { ok: false };
+    }
+    if (issues.length >= maxDiagnostics) {
+      if (!overflowed) markDiagnosticsOverflow(issues, maxDiagnostics);
+      overflowed = true;
+      continue;
     }
     issues.push({
       category: issue.category,
@@ -210,12 +216,6 @@ function isIssueDetails(value: unknown): value is Readonly<Record<string, string
 
 function isPositiveSafeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
-}
-
-function boundIssues(input: readonly ConfigIssue[], maxDiagnostics: number): readonly ConfigIssue[] {
-  const issues: ConfigIssue[] = [];
-  appendBoundedIssues(issues, input, maxDiagnostics);
-  return issues;
 }
 
 function loaderThrewIssue<TContext>(loader: ConfigLoader<TContext>): ConfigIssue {
