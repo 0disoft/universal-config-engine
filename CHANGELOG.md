@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Copy validator issue paths at normalization so adapter array reuse cannot rewrite
+  earlier diagnostics or change their secret-path redaction decisions.
 - Preserve loading preflight failures in pipeline results and reports so exceeding
   `maxSources` cannot return success or invoke validators on an empty configuration.
 - Require error severity for diagnostic overflow markers so an adapter warning

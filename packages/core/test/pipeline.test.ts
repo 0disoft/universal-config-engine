@@ -29,6 +29,35 @@ function loader(
 }
 
 describe("runConfigPipeline", () => {
+  it("keeps validator issue paths stable when later adapters reuse the original array", async () => {
+    const path = ["auth", "password"];
+    const pipeline = await runConfigPipeline({
+      loaders: [loader("defaults", 0, { auth: { password: "" }, server: { port: 3000 } })],
+      context: undefined,
+      validators: [
+        { id: "auth-check", validate: () => ({
+          ok: false, issues: [{ code: "required", severity: "error", path }]
+        }) },
+        { id: "reuses-path", async validate() {
+          path.splice(0, path.length, "server", "port");
+          return { ok: true, issues: [] };
+        } }
+      ]
+    });
+
+    expect(path).toEqual(["server", "port"]);
+    expect(Object.isFrozen(path)).toBe(false);
+    expect(pipeline.result.issues[0]?.path).toEqual(["auth", "password"]);
+    expect(pipeline.result.issues[0]?.path).not.toBe(path);
+    expect(pipeline.report.issues[0]).toEqual(expect.objectContaining({
+      path: ["auth", "password"],
+      message: "Diagnostic message redacted because it is associated with a secret path or source."
+    }));
+    path.length = 0;
+    expect(pipeline.result.issues[0]?.path).toEqual(["auth", "password"]);
+    expect(pipeline.report.issues[0]?.path).toEqual(["auth", "password"]);
+  });
+
   it.each([1, 2, 200])("retains loading preflight failures at diagnostic cap %i", async (maxDiagnostics) => {
     let loaderCalls = 0;
     let validatorCalls = 0;

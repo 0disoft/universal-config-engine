@@ -170,7 +170,7 @@ function normalizeValidatorIssues(
       code: issue.code,
       severity: issue.severity,
       message: `Validator ${validatorId} reported validation issue ${issue.code}.`,
-      ...(issue.path === undefined ? {} : { path: issue.path }),
+      ...(issue.path === undefined ? {} : { path: [...issue.path] }),
       sourceId: validatorId
     });
     if (index < issues.length - 1 && normalizedIssues.length >= maxDiagnostics) {

@@ -259,6 +259,10 @@ migration review before running `pnpm run update:api-snapshot`.
 - Normalize malformed validator adapter results and malformed validator issues into
   `validation` issues instead of allowing broken adapter output to corrupt
   diagnostic reports.
+- Copy accepted validator issue paths into core-owned arrays. Reusing or mutating
+  an adapter's path array in later validators or after pipeline completion cannot
+  change retained diagnostic paths or their redaction decisions. The adapter's
+  original path array is not frozen or modified.
 - Accept only strings and non-negative safe integers as loader issue, source
   location and validator issue path segments; reject sparse paths and invalid
   numeric indexes as malformed adapter output.
