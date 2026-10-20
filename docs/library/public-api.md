@@ -17,8 +17,8 @@ Repository Type: library
 - `ConfigPipeline`: ordered execution of load, override, merge, coerce, validate,
   and report steps.
 - `runConfigPipeline`: high-level facade that loads sources, resolves config, skips
-  validation after resolution failure, runs validators, bounds combined issues, and
-  returns both `ConfigResult` and `DiagnosticReport`.
+  validation after loading or resolution failure, runs validators, bounds combined
+  issues, and returns both `ConfigResult` and `DiagnosticReport`.
 - `combineConfigIssues`: core-owned issue combination that preserves the declared
   diagnostic cap and counts `max_diagnostics_exceeded` within that cap.
 - `OverrideMapping`: explicit env var or CLI flag mapping into config paths.
@@ -70,6 +70,10 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 `LoadedSource.issues` array and the aggregate loader issues. When more issues exist,
 the final retained entry is `resource-limit/max_diagnostics_exceeded` rather than
 an unbounded tail. `runConfigPipeline` forwards its limits into this loading stage.
+If the loader count exceeds `maxSources`, no loader or validator is invoked. The
+pipeline retains `resource-limit/max_sources_exceeded` in its failed result and
+error report even though no sources were loaded. Source-owned issues otherwise
+flow through resolution once, without duplicating the aggregate loader issues.
 Only an error-severity `resource-limit/max_diagnostics_exceeded` is an overflow
 marker. An adapter warning with the same code cannot suppress the fatal marker
 when later diagnostics exceed the budget, including when a discarded issue is an error.

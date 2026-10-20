@@ -40,12 +40,18 @@ export async function runConfigPipeline<TContext = undefined>(
     context: input.context,
     ...(input.limits === undefined ? {} : { limits: input.limits })
   });
-  const resolved = resolveConfig({
+  let resolved = resolveConfig({
     sources: loaded.sources,
     ...(input.mergePolicy === undefined ? {} : { mergePolicy: input.mergePolicy }),
     ...(input.limits === undefined ? {} : { limits: input.limits }),
     ...(input.coercionRules === undefined ? {} : { coercionRules: input.coercionRules })
   });
+  // Loading preflight failures have no source to carry their issues into resolution.
+  // Source-owned issues already flow through resolveConfig and must not be counted twice.
+  if (loaded.sources.length === 0 && loaded.issues.length > 0) {
+    const issues = combineConfigIssues(resolved.issues, loaded.issues, resolved.limits.maxDiagnostics);
+    resolved = { ...resolved, ok: resolved.ok && !issues.some((issue) => issue.severity === "error"), issues };
+  }
   const result = await applyPipelineValidators(resolved, input.validators ?? []);
 
   return {

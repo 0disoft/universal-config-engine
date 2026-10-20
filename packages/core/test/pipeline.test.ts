@@ -29,6 +29,58 @@ function loader(
 }
 
 describe("runConfigPipeline", () => {
+  it.each([1, 2, 200])("retains loading preflight failures at diagnostic cap %i", async (maxDiagnostics) => {
+    let loaderCalls = 0;
+    let validatorCalls = 0;
+    const loaders = ["first", "second"].map((id) => ({
+      ...loader(id, 0, {}),
+      load() {
+        loaderCalls += 1;
+        return { value: {} };
+      }
+    }));
+    const pipeline = await runConfigPipeline({
+      loaders,
+      context: undefined,
+      limits: { maxSources: 1, maxDiagnostics },
+      validators: [{ id: "should-not-run", validate() {
+        validatorCalls += 1;
+        return { ok: true, issues: [] };
+      } }]
+    });
+
+    expect(pipeline.result.ok).toBe(false);
+    expect(pipeline.result.issues).toEqual([{
+      category: "resource-limit",
+      code: "max_sources_exceeded",
+      severity: "error",
+      message: "Source count exceeded the maximum of 1."
+    }]);
+    expect(pipeline.result.config).toEqual({});
+    expect(pipeline.result.sources).toEqual([]);
+    expect(pipeline.result.provenance).toEqual([]);
+    expect(pipeline.report.status).toBe("error");
+    expect(pipeline.report.issues).toEqual(pipeline.result.issues);
+    expect(loaderCalls).toBe(0);
+    expect(validatorCalls).toBe(0);
+  });
+
+  it("accepts the source-count boundary without duplicating loader warnings", async () => {
+    const pipeline = await runConfigPipeline({
+      loaders: [loader("first", 0, { port: 3000 }, [{
+        category: "source-load", code: "source_warning", severity: "warning",
+        message: "Source warning."
+      }]), loader("second", 1, {})],
+      context: undefined,
+      limits: { maxSources: 2, maxDiagnostics: 1 }
+    });
+
+    expect(pipeline.result.ok).toBe(true);
+    expect(pipeline.result.config).toEqual({ port: 3000 });
+    expect(pipeline.result.issues).toEqual([expect.objectContaining({ code: "source_warning" })]);
+    expect(pipeline.report.status).toBe("ok");
+  });
+
   it.each(["array", "object"])("validates deeply nested %s config without overflowing input freezing", async (kind) => {
     let value: ConfigValue = true;
     for (let depth = 0; depth < 6_000; depth += 1) value = kind === "array" ? [value] : { child: value };

@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Preserve loading preflight failures in pipeline results and reports so exceeding
+  `maxSources` cannot return success or invoke validators on an empty configuration.
 - Require error severity for diagnostic overflow markers so an adapter warning
   cannot hide truncated errors or cause an invalid source to resolve successfully.
 - Apply loader diagnostic retention bounds during normalization, avoiding copies
