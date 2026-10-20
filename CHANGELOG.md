@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Require error severity for diagnostic overflow markers so an adapter warning
+  cannot hide truncated errors or cause an invalid source to resolve successfully.
 - Apply loader diagnostic retention bounds during normalization, avoiding copies
   of discarded issue paths/details while still validating malformed tail entries.
 - Bound JSON source location metadata to 4 MiB by default, configurable through

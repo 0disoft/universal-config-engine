@@ -33,7 +33,7 @@ export function markDiagnosticsOverflow(issues: ConfigIssue[], maxDiagnostics: n
 }
 
 export function isDiagnosticsOverflowMarker(issue: ConfigIssue): boolean {
-  return issue.category === "resource-limit" && issue.code === "max_diagnostics_exceeded";
+  return issue.category === "resource-limit" && issue.code === "max_diagnostics_exceeded" && issue.severity === "error";
 }
 
 export function isDiagnosticsLimitReached(issues: readonly ConfigIssue[], maxDiagnostics: number): boolean {

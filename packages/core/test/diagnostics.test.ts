@@ -9,6 +9,16 @@ const issues: readonly ConfigIssue[] = ["first", "second", "third"].map((code) =
 }));
 
 describe("combineConfigIssues", () => {
+  it.each([1, 2])("does not treat a warning as a fatal overflow marker at limit %i", (limit) => {
+    const warning: ConfigIssue = { category: "resource-limit", code: "max_diagnostics_exceeded",
+      severity: "warning", message: "An adapter warning." };
+    const bounded = combineConfigIssues([warning], issues, limit);
+    expect(bounded).toHaveLength(limit);
+    expect(bounded.at(-1)).toMatchObject({ category: "resource-limit", code: "max_diagnostics_exceeded", severity: "error" });
+    expect(warning.severity).toBe("warning");
+    expect(combineConfigIssues([warning], [], limit)).toEqual([warning]);
+  });
+
   it("retains an exactly full batch without an overflow marker or input mutation", () => {
     const existing = Object.freeze(issues.slice(0, 1));
     const next = Object.freeze(issues.slice(1, 2));

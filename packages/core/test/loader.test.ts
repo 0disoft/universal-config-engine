@@ -8,6 +8,22 @@ import {
 import type { ConfigLoader, ConfigLoaderResult } from "../src/index.js";
 
 describe("loadConfigSources", () => {
+  it("cannot hide a discarded error behind an adapter's warning-shaped overflow marker", async () => {
+    const loaded = await loadConfigSources({ context: undefined, limits: { maxDiagnostics: 2 },
+      loaders: [{ descriptor: { id: "noisy", kind: "adapter", priority: 0, displayName: "noisy" },
+        load: () => ({ value: { enabled: true }, issues: [
+          { category: "resource-limit", code: "max_diagnostics_exceeded", severity: "warning", message: "Adapter warning." },
+          { category: "parse", code: "notice", severity: "warning", message: "Another warning." },
+          { category: "parse", code: "invalid", severity: "error", message: "Rejected input." }
+        ] }) }] });
+    expect(loaded.issues).toContainEqual(expect.objectContaining({
+      category: "resource-limit", code: "max_diagnostics_exceeded", severity: "error"
+    }));
+    const resolved = resolveConfig({ sources: loaded.sources });
+    expect(resolved.ok).toBe(false);
+    expect(resolved.config).toEqual({});
+  });
+
   it("validates all issues but copies paths only within the retained diagnostic budget", async () => {
     let pathPasses = 0;
     const path = Object.defineProperty(["item"], Symbol.iterator, { value: function* () {

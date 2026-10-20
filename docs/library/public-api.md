@@ -70,6 +70,9 @@ file-system APIs, process env, argv parsing, or CLI presentation libraries.
 `LoadedSource.issues` array and the aggregate loader issues. When more issues exist,
 the final retained entry is `resource-limit/max_diagnostics_exceeded` rather than
 an unbounded tail. `runConfigPipeline` forwards its limits into this loading stage.
+Only an error-severity `resource-limit/max_diagnostics_exceeded` is an overflow
+marker. An adapter warning with the same code cannot suppress the fatal marker
+when later diagnostics exceed the budget, including when a discarded issue is an error.
 Normalization copies at most `maxDiagnostics` issue records, paths and detail
 objects per source. All remaining raw issues and locations are still runtime
 validated: a malformed tail rejects the source even when it cannot be retained.
