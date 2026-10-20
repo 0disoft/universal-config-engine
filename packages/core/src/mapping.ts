@@ -1,4 +1,5 @@
 import { isUnsafePathSegment, setConfigValueAtPath } from "./path.js";
+import { parseJsonConfigValue } from "./json-value.js";
 import type {
   ConfigIssue,
   ConfigSourceDescriptor,
@@ -76,7 +77,7 @@ export function createMappedOverrideSource(input: CreateMappedOverrideSourceInpu
     if (!parsed.ok) {
       issues.push({
         category: "mapping",
-        code: "mapping_parse_failed",
+        code: parsed.code ?? "mapping_parse_failed",
         severity: "error",
         sourceId: input.descriptor.id,
         path: mapping.targetPath,
@@ -149,7 +150,7 @@ function addMappingPath(
 function parseMappedValue(
   rawValue: string,
   mapping: OverrideMapping
-): { readonly ok: true; readonly value: ConfigValue } | { readonly ok: false; readonly message: string } {
+): { readonly ok: true; readonly value: ConfigValue } | { readonly ok: false; readonly message: string; readonly code?: string } {
   switch (mapping.parseAs ?? "string") {
     case "string":
       return { ok: true, value: rawValue };
@@ -177,14 +178,16 @@ function parseMappedValue(
 function parseJsonMappedValue(
   rawValue: string,
   mapping: OverrideMapping
-): { readonly ok: true; readonly value: ConfigValue } | { readonly ok: false; readonly message: string } {
-  try {
-    const parsed = JSON.parse(rawValue) as unknown;
-    if (parsed === undefined || typeof parsed === "function" || typeof parsed === "symbol") {
-      return { ok: false, message: `Mapping ${mapping.externalName} produced a non-config value.` };
-    }
-    return { ok: true, value: parsed as ConfigValue };
-  } catch {
-    return { ok: false, message: `Mapping ${mapping.externalName} expected valid JSON.` };
+): { readonly ok: true; readonly value: ConfigValue } | { readonly ok: false; readonly message: string; readonly code?: string } {
+  const parsed = parseJsonConfigValue(rawValue);
+  if (parsed.ok) return parsed;
+  if (parsed.reason === "unsafe-key") {
+    return { ok: false, code: "unsafe_key", message: `Mapping ${mapping.externalName} JSON value contains an unsafe object key.` };
   }
+  return {
+    ok: false,
+    message: parsed.reason === "invalid-json"
+      ? `Mapping ${mapping.externalName} expected valid JSON.`
+      : `Mapping ${mapping.externalName} produced a non-config value.`
+  };
 }

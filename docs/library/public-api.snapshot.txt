@@ -48,6 +48,19 @@ export type { BuildDiagnosticReportOptions } from "./redaction.js";
 export type { CreateMappedOverrideSourceInput } from "./mapping.js";
 export type { RunValidatorsInput, RunValidatorsResult } from "./validation.js";
 
+### json-value.d.ts
+import type { ConfigValue } from "./types.js";
+type JsonValueResult = {
+    readonly ok: true;
+    readonly value: ConfigValue;
+} | {
+    readonly ok: false;
+    readonly reason: "invalid-json" | "invalid-value" | "unsafe-key";
+};
+/** Shared JSON checks; callers own stage-specific issue codes and messages. */
+export declare function parseJsonConfigValue(raw: string): JsonValueResult;
+export {};
+
 ### limits.d.ts
 import type { ResourceLimitPolicy } from "./types.js";
 export declare const DEFAULT_RESOURCE_LIMITS: ResourceLimitPolicy;

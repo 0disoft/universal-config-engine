@@ -48,6 +48,10 @@ Core must not import file-system, process, CLI, parser, or validator libraries.
 Core's internal `adapter-guards.ts` owns record, issue-code and config-path shape
 checks shared by loader and validator boundaries. It is not a package entry point.
 
+Core's internal `json-value.ts` owns JSON parsing, unsafe-key detection and finite
+value checks shared by mapping and coercion. Each stage owns its diagnostic
+category, codes and messages; parsing failures never reach the mutation helpers.
+
 `merge.ts` owns source ordering, precedence, provenance and resolution budgets.
 Its internal `resolved-path-index.ts` owns the synchronized path map/trie,
 overlap lookup and ownership projection after coercion. Trie mutations stay in

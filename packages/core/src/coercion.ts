@@ -1,5 +1,5 @@
 import { cloneConfigValue, getConfigValueAtPath, isUnsafePathSegment } from "./path.js";
-import { isConfigValue } from "./value.js";
+import { parseJsonConfigValue } from "./json-value.js";
 import type { CoercionRule, ConfigIssue, ConfigPath, ConfigValue, ProvenanceEvent } from "./types.js";
 
 export interface ApplyCoercionRulesInput {
@@ -128,20 +128,13 @@ function coerceString(
 function coerceJson(
   value: string
 ): { readonly ok: true; readonly value: ConfigValue } | { readonly ok: false; readonly message: string; readonly code?: string } {
-  try {
-    let unsafeKey = false;
-    const parsed: unknown = JSON.parse(value, (key: string, child: unknown) => {
-      if (isUnsafePathSegment(key)) unsafeKey = true;
-      return child;
-    });
-    if (unsafeKey) {
-      return { ok: false, code: "unsafe_key", message: "JSON value contains an unsafe object key." };
-    }
-    if (!isConfigValue(parsed)) {
-      return { ok: false, message: "Expected JSON-compatible value." };
-    }
-    return { ok: true, value: parsed };
-  } catch {
-    return { ok: false, message: "Expected valid JSON." };
+  const parsed = parseJsonConfigValue(value);
+  if (parsed.ok) return parsed;
+  if (parsed.reason === "unsafe-key") {
+    return { ok: false, code: "unsafe_key", message: "JSON value contains an unsafe object key." };
   }
+  return {
+    ok: false,
+    message: parsed.reason === "invalid-json" ? "Expected valid JSON." : "Expected JSON-compatible value."
+  };
 }

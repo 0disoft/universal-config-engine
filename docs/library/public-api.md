@@ -130,6 +130,15 @@ properties and getters are ignored, including names present on `Object.prototype
 Explicitly supplied external names such as `constructor` and `__proto__` can map to
 safe target paths; the existing unsafe-target-path policy still applies.
 
+JSON mapping and JSON coercion share value checks: every numeric value, including
+values nested in arrays or objects, must be finite. Syntax and non-config-value
+failures use `mapping/mapping_parse_failed` or `coercion/coercion_failed` for their
+respective stage. Unsafe object keys at any depth use `unsafe_key` in that stage
+before assignment; failed mappings do not create partial target objects. Raw JSON
+and parser exception text are omitted from these issues. JSON strings containing
+numeric text remain strings; finite values at the JavaScript numeric boundary are
+accepted.
+
 Source descriptor ids are resolution identities and must be unique. A duplicate id
 returns `source-load/duplicate_source_id` before any source value or source issue is
 merged, preventing ambiguous provenance and redaction-policy lookup.

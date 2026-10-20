@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Reject non-finite JSON mapping values before assignment, including nested
+  numeric overflow. Share JSON checks with coercion and report unsafe JSON keys as
+  `mapping/unsafe_key` instead of a late `mapping_set_failed` with partial targets.
 - Preserve literal prototype-like input names through argv, env and dotenv
   mappings, and ignore inherited environment values before staging overrides.
 - Ignore inherited mapping values and getters so absent inputs cannot become

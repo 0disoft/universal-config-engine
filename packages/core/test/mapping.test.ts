@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createMappedOverrideSource, resolveConfig } from "../src/index.js";
+import { applyCoercionRules, createMappedOverrideSource, resolveConfig } from "../src/index.js";
 
 describe("mapping input ownership", () => {
   const descriptor = { id: "argv", kind: "argv" as const, priority: 1, displayName: "argv" };
@@ -29,5 +29,74 @@ describe("mapping input ownership", () => {
     });
     expect(result.value).toEqual({});
     expect(result.issues).toEqual([]);
+  });
+});
+
+describe("JSON mapping validation", () => {
+  function mapJson(raw: string) {
+    return createMappedOverrideSource({
+      descriptor: { id: "env", kind: "process-env", priority: 1, displayName: "env" },
+      values: { PAYLOAD: raw },
+      mappings: [{ externalName: "PAYLOAD", sourceKind: "process-env", targetPath: ["nested", "payload"], parseAs: "json" }]
+    });
+  }
+
+  function coerceJson(raw: string) {
+    return applyCoercionRules({
+      config: { payload: raw },
+      rules: [{ path: ["payload"], from: "string", to: "json", onFailure: "issue" }]
+    });
+  }
+
+  it.each(["1e999", "-1e999", '{"note":"JSON input marker","nested":[1e999]}'])(
+    "rejects non-finite JSON at the mapping boundary (%s)", (raw) => {
+      const mapped = mapJson(raw);
+      expect(mapped.value).toEqual({});
+      expect(mapped.issues).toEqual([expect.objectContaining({
+        category: "mapping", code: "mapping_parse_failed", severity: "error", sourceId: "env", path: ["nested", "payload"]
+      })]);
+      expect(resolveConfig({ sources: [mapped] }).ok).toBe(false);
+      const coerced = coerceJson(raw);
+      expect(coerced.config).toEqual({ payload: raw });
+      expect(coerced.issues).toEqual([expect.objectContaining({ code: "coercion_failed" })]);
+      expect(JSON.stringify([mapped.issues, coerced.issues])).not.toContain("JSON input marker");
+    }
+  );
+
+  it.each(["__proto__", "constructor", "prototype"])("classifies nested JSON key %s before assignment", (key) => {
+    for (const raw of [`{"nested":[{"${key}":"JSON input marker"}]}`, `{"${key}":1e999}`]) {
+      const mapped = mapJson(raw);
+      expect(mapped.value).toEqual({});
+      expect(mapped.issues).toEqual([expect.objectContaining({
+        category: "mapping", code: "unsafe_key", sourceId: "env", path: ["nested", "payload"]
+      })]);
+      const coerced = coerceJson(raw);
+      expect(coerced.config).toEqual({ payload: raw });
+      expect(coerced.issues).toEqual([expect.objectContaining({ category: "coercion", code: "unsafe_key" })]);
+      expect(JSON.stringify([mapped.issues, coerced.issues])).not.toContain("JSON input marker");
+    }
+  });
+
+  it.each(["null", "false", '"1e999"', "1.7976931348623157e308", '{"nested":[-1.7976931348623157e308,0]}'])(
+    "accepts valid JSON consistently (%s)", (raw) => {
+      const expected: unknown = JSON.parse(raw);
+      const mapped = mapJson(raw);
+      expect(mapped.issues).toEqual([]);
+      expect(mapped.value).toEqual({ nested: { payload: expected } });
+      const coerced = coerceJson(raw);
+      expect(coerced.issues).toEqual([]);
+      expect(coerced.config).toEqual({ payload: expected });
+    }
+  );
+
+  it("retains stage-specific syntax errors without exposing parser exceptions", () => {
+    const raw = '{"note":"JSON input marker",';
+    const mapped = mapJson(raw);
+    expect(mapped.value).toEqual({});
+    expect(mapped.issues).toEqual([expect.objectContaining({ code: "mapping_parse_failed" })]);
+    const coerced = coerceJson(raw);
+    expect(coerced.config).toEqual({ payload: raw });
+    expect(coerced.issues).toEqual([expect.objectContaining({ code: "coercion_failed" })]);
+    expect(JSON.stringify([mapped.issues, coerced.issues])).not.toContain("JSON input marker");
   });
 });
