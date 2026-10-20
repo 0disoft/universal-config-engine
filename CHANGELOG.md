@@ -10,6 +10,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 - Centralize validator provenance-budget accounting. Pipelines no longer reject
   valid history by subtracting it twice, and direct validation bounds incoming
   history plus new events before invoking further adapters.
+- Reject unsupported asynchronous Ajv schemas at adapter creation, enforcing the
+  existing synchronous schema contract for JavaScript callers before pending
+  validation Promises can be mistaken for successful results.
 
 ## 1.1.1 - 2026-10-21
 

@@ -23,6 +23,9 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
   const id = input.id ?? "ajv";
   const ajv = input.ajv ?? new Ajv({ allErrors: true, ...(input.options ?? {}) });
   const validate = ajv.compile(input.schema);
+  if ("$async" in validate && validate.$async === true) {
+    throw new Error("Asynchronous Ajv schemas are not supported by this adapter.");
+  }
 
   return {
     id,

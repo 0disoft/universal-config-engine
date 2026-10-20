@@ -294,6 +294,10 @@ migration review before running `pnpm run update:api-snapshot`.
   the bounded core code grammar, without retaining their names or error prose.
   `instancePathToConfigPath` preserves ambiguous numeric-looking segments as strings
   when no root value is provided.
+- Reject Ajv `$async` schemas during adapter creation, matching the synchronous
+  `Schema` input contract even for JavaScript callers. No validation Promise is
+  started or mistaken for a successful result. Synchronous schemas retain their
+  existing result shape and error/path normalization.
 - Normalize inconsistent validator status. A validator that returns `ok: false`
   without error issues produces a validation error issue, and any returned error
   issue makes the validator provenance status `error`.

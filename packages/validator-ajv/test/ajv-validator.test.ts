@@ -11,6 +11,21 @@ import {
 } from "../src/index.js";
 
 describe("createAjvValidator", () => {
+  it.each([false, true])("rejects unsupported asynchronous schemas before execution (custom Ajv: %s)", (customAjv) => {
+    expect(() => createAjvValidator({
+      // @ts-expect-error JavaScript callers can bypass the synchronous Schema contract.
+      schema: { $async: true, type: "object" },
+      ...(customAjv ? { ajv: new Ajv() } : {})
+    })).toThrow("Asynchronous Ajv schemas are not supported by this adapter.");
+  });
+
+  it("keeps synchronous schema results synchronous", () => {
+    const validator = createAjvValidator({ schema: { type: "object" } });
+    const result = validator.validate({ config: {}, provenance: [] });
+    expect(result).not.toBeInstanceOf(Promise);
+    expect(result).toEqual({ ok: true, value: {}, issues: [] });
+  });
+
   it.each(["type", "required"])("preserves empty property names in %s diagnostics and redaction", async (keyword) => {
     const path = keyword === "type" ? [""] : ["", "password"];
     const result = resolveConfig({ sources: [{

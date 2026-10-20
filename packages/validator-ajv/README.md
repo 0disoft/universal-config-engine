@@ -49,6 +49,10 @@ Standard Ajv keyword diagnostic codes are preserved. Custom keywords that do not
 match the core's bounded ASCII code grammar use `ajv_custom_keyword` instead.
 Their raw keyword names and Ajv error prose are omitted from diagnostics.
 
+This adapter accepts synchronous Ajv `Schema` values. `$async: true` schemas are
+rejected during adapter creation, including for JavaScript callers, before any
+validation Promise can run. Synchronous schemas keep their existing result shape.
+
 See the [validator adapter contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/adapters/README.md).
 
 ## License
