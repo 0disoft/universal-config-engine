@@ -5,6 +5,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+## 1.1.2-rc.1 - 2026-10-21
+
 ### Fixed
 
 - Centralize validator provenance-budget accounting. Pipelines no longer reject
