@@ -47,6 +47,12 @@ console.log(result.config.service.port);
 the opened file identity before reading it. The dotenv parser is intentionally
 simple and does not perform shell expansion.
 
+JSON source locations also have an independent `maxLocationBytes` budget (default
+4 MiB of compact UTF-8 location records). If exceeded, the loader preserves parsed
+config values, omits location metadata and returns a
+`max_location_bytes_exceeded` warning. This option does not replace file byte or
+structural depth/key limits and is not a total JavaScript heap limit.
+
 Process-env and argv adapters use explicit mappings and bounded entry counts.
 Strict unmapped-input diagnostics are opt-in.
 

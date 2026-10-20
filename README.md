@@ -187,14 +187,14 @@ the `@0disoft` npm scope, and a manual validation-gated release baseline. ADR 00
 supersedes routine manual publication with tag-driven Trusted Publisher
 automation. The `v0.1.0` GitHub release carries pre-publication inspection assets;
 `v0.1.1` is the
-first npm publication baseline. The workspace prepares `1.0.0-rc.5`; it is not
-published yet. The latest published candidate remains `1.0.0-rc.4`, available through its exact version or
-the npm `next` tag; stable installs still resolve to `0.6.0`. CLI
+first npm publication baseline. The stable `1.x` contract is published as `1.0.0`.
+The workspace prepares the compatible `1.1.0` maintenance release through
+`1.1.0-rc.1`; candidate packages use npm `next` before stable promotion. CLI
 golden fixtures cover local precedence, opt-in coercion, declared Ajv validation,
 validation failure, source-load failure, mapping policy failure, JSON usage errors,
 and secret-path redaction.
 
-Package consumers evaluating the `1.0` release candidate should follow
+Package consumers migrating from `0.x` to the stable `1.x` contract should follow
 [`docs/library/migration-1.0.md`](docs/library/migration-1.0.md).
 
 ADR 0009 keeps validator typed output adapter-local. ADR 0010 keeps expected config

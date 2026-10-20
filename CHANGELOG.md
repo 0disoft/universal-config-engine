@@ -5,6 +5,13 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+## 1.1.0-rc.1 - 2026-10-20
+
+### Added
+
+- Optional Node JSON-loader `maxLocationBytes`, defaulting to 4 MiB, bounds
+  source-location metadata independently of config values and file size.
+
 ### Fixed
 
 - Detach mapping and argv error paths from mapping declarations so later array
