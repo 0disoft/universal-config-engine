@@ -5,6 +5,12 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+## 1.1.0 - 2026-10-20
+
+- Promote `1.1.0-rc.1` with unchanged runtime, public declarations, dependencies
+  and package documentation. Add the optional JSON location metadata budget and
+  the reliability/maintenance corrections listed in the candidate section below.
+
 ## 1.1.0-rc.1 - 2026-10-20
 
 ### Added
