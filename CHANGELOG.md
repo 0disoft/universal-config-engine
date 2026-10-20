@@ -5,6 +5,12 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+### Fixed
+
+- Reject excessive source counts before full-list copying and sorting. Failure
+  metadata retains the bounded declaration-order prefix instead of selecting from
+  the globally sorted input; accepted source ordering and merging are unchanged.
+
 ## 1.1.0 - 2026-10-20
 
 - Promote `1.1.0-rc.1` with unchanged runtime, public declarations, dependencies

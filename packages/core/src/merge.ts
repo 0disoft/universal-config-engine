@@ -38,30 +38,30 @@ export const DEFAULT_MERGE_POLICY: MergePolicy = {
 export { DEFAULT_RESOURCE_LIMITS } from "./limits.js";
 
 export function resolveConfig(input: ResolveConfigInput): ConfigResult {
-  const policy: MergePolicy = { ...DEFAULT_MERGE_POLICY, ...input.mergePolicy };
   const limits = normalizeResourceLimits(input.limits);
-  const sources = sortSources(input.sources);
-  const descriptors = sources.slice(0, limits.maxSources).map((source) => source.descriptor);
-  let config: Record<string, ConfigValue> = {};
-  const issues: ConfigIssue[] = [];
-  const provenance: ProvenanceEvent[] = [];
-  const resolvedIndex = createResolvedPathIndex();
-  if (sources.length > limits.maxSources) {
+  if (input.sources.length > limits.maxSources) {
     return {
       ok: false,
-      config,
-      sources: descriptors,
+      config: {},
+      sources: input.sources.slice(0, limits.maxSources).map((source) => source.descriptor),
       issues: [{
         category: "resource-limit",
         code: "max_sources_exceeded",
         severity: "error",
         message: `Source count exceeded the maximum of ${limits.maxSources}.`
       }],
-      provenance,
+      provenance: [],
       resolvedPaths: [],
       limits
     };
   }
+  const policy: MergePolicy = { ...DEFAULT_MERGE_POLICY, ...input.mergePolicy };
+  const sources = sortSources(input.sources);
+  const descriptors = sources.map((source) => source.descriptor);
+  let config: Record<string, ConfigValue> = {};
+  const issues: ConfigIssue[] = [];
+  const provenance: ProvenanceEvent[] = [];
+  const resolvedIndex = createResolvedPathIndex();
   const sourceIdentityIssues = duplicateSourceIdIssues(sources, limits.maxDiagnostics);
   if (sourceIdentityIssues.length > 0) {
     return {

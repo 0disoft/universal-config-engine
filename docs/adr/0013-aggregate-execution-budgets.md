@@ -19,7 +19,10 @@ metadata than a caller intended.
 - `maxResolvedPaths`, default `10,000`;
 - `maxReportBytes`, default `4 MiB` and minimum `1 KiB`.
 
-Source count is checked before resolution. The CLI also checks it before loading
+Source count is checked before resolution or full-list sorting. Rejected direct
+resolution inputs retain at most the first `maxSources` descriptors in declaration
+order as failure metadata; priorities and values are not inspected. Accepted
+inputs retain stable priority ordering. The CLI also checks count before loading
 declared sources. Provenance is bounded while merge and validation events are
 created. The resolved-path index remains complete while merge decisions are made,
 because truncating that internal index would change conflict semantics; only the

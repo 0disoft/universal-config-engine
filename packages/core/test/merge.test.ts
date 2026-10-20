@@ -116,6 +116,46 @@ describe("resolveConfig", () => {
     expect(result.issues).toContainEqual(expect.objectContaining({ code: "max_sources_exceeded" }));
   });
 
+  it.each([1, 64, Number.NaN])("rejects excess sources before sorting at limit %s", (maxSources) => {
+    const maximum = Number.isNaN(maxSources) ? 64 : maxSources;
+    let sourceReads = 0;
+    let priorityReads = 0;
+    let valueReads = 0;
+    const values = Array.from({ length: 10_000 }, (_, index) => ({
+      descriptor: { id: `source-${index}`, kind: "object" as const, displayName: `source-${index}`,
+        get priority() { priorityReads += 1; return 10_000 - index; } },
+      get value() { valueReads += 1; return {}; }
+    }));
+    const sources = new Proxy(values, { get(target, key, receiver) {
+      if (typeof key === "string" && /^(0|[1-9]\d*)$/.test(key)) sourceReads += 1;
+      return Reflect.get(target, key, receiver);
+    } });
+    const result = resolveConfig({ sources, limits: { maxSources } });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual([expect.objectContaining({ code: "max_sources_exceeded" })]);
+    expect(sourceReads).toBe(maximum);
+    expect(priorityReads).toBe(0);
+    expect(valueReads).toBe(0);
+    expect(result.sources.map((descriptor) => descriptor.id)).toEqual(
+      Array.from({ length: maximum }, (_, index) => `source-${index}`)
+    );
+    expect(result.config).toEqual({});
+    expect(result.provenance).toEqual([]);
+    expect(result.resolvedPaths).toEqual([]);
+    expect(values[0]?.descriptor.id).toBe("source-0");
+  });
+
+  it("preserves priority and stable tie ordering at the exact source-count limit", () => {
+    const sources = [source("high", 10, { port: 8080 }), source("low", 0, { port: 3000 }),
+      source("tie", 0, { enabled: true })];
+    const result = resolveConfig({ sources, limits: { maxSources: 3 } });
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({ port: 8080, enabled: true });
+    expect(result.sources.map((descriptor) => descriptor.id)).toEqual(["low", "tie", "high"]);
+    expect(sources.map((entry) => entry.descriptor.id)).toEqual(["high", "low", "tie"]);
+  });
+
   it("bounds retained provenance and resolved paths", () => {
     const result = resolveConfig({
       sources: [source("defaults", 0, { one: 1, two: 2, three: 3 })],

@@ -105,6 +105,12 @@ created, and resolved paths are capped only after merge decisions complete. Repo
 that exceed `maxReportBytes` are replaced by a fixed error report rather than
 returning partial JSON. See ADR 0013.
 
+`resolveConfig` checks `maxSources` before copying or sorting the complete source
+list. On count rejection, it retains only the first `maxSources` descriptors in
+declaration order for failure metadata, without reading source priorities or
+values. This replaces the former globally priority-selected failure subset.
+Accepted inputs still use stable priority ordering and unchanged merge semantics.
+
 `resolveConfig` checks source values early and rechecks the final config after merge
 and coercion. A final aggregate or coercion-expanded structure that exceeds depth,
 key-count, or path-length limits returns a `resource-limit` issue with source id
