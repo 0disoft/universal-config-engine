@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Detach mapping and argv error paths from mapping declarations so later array
+  reuse cannot misattribute diagnostics or change their redaction decisions.
 - Detach coercion issue and provenance paths from rule arrays so later rule reuse
   cannot rewrite conversion history or its redaction decisions.
 - Copy validator issue paths at normalization so adapter array reuse cannot rewrite

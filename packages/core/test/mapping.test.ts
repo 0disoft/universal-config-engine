@@ -1,8 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { applyCoercionRules, createMappedOverrideSource, resolveConfig } from "../src/index.js";
+import { applyCoercionRules, buildDiagnosticReport, createMappedOverrideSource, resolveConfig, type OverrideMapping } from "../src/index.js";
 
 describe("mapping input ownership", () => {
   const descriptor = { id: "argv", kind: "argv" as const, priority: 1, displayName: "argv" };
+
+  it.each([
+    { code: "mapping_parse_failed", targetPath: ["auth", "token"], parseAs: "number" as const },
+    { code: "unsafe_mapping_path", targetPath: ["constructor"], parseAs: "string" as const },
+    { code: "mapping_set_failed", targetPath: ["items", 0], parseAs: "string" as const },
+    { code: "duplicate_mapping_target_path", targetPath: ["auth", "token"], firstPath: ["auth", "token"], parseAs: "string" as const },
+    { code: "overlapping_mapping_target_path", targetPath: ["auth", "token"], firstPath: ["auth"], parseAs: "string" as const }
+  ])("detaches $code paths from reusable mapping declarations", ({ code, targetPath, firstPath, parseAs }) => {
+    const expectedPath = [...targetPath];
+    const mappings: OverrideMapping[] = [];
+    if (firstPath !== undefined) mappings.push({ externalName: "FIRST", sourceKind: "argv", targetPath: firstPath });
+    mappings.push({ externalName: "SECOND", sourceKind: "argv", targetPath, parseAs });
+    const mapped = createMappedOverrideSource({ descriptor, values: { FIRST: "first", SECOND: "invalid" }, mappings });
+    expect(mapped.issues?.map((issue) => issue.code)).toEqual([code]);
+    targetPath.splice(0, targetPath.length, "reused");
+    expect(mapped.issues?.[0]?.path).toEqual(expectedPath);
+    expect(mapped.issues?.[0]?.path).not.toBe(targetPath);
+    expect(Object.isFrozen(targetPath)).toBe(false);
+    const report = buildDiagnosticReport(resolveConfig({ sources: [mapped] }));
+    expect(report.issues[0]?.path).toEqual(expectedPath);
+  });
 
   it.each(["toString", "constructor", "__proto__", "hasOwnProperty"])("maps only an explicitly supplied %s", (externalName) => {
     const mappings = [{ externalName, sourceKind: "argv" as const, targetPath: ["port"], parseAs: "number" as const }];

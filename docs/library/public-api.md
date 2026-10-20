@@ -147,6 +147,9 @@ Only own properties of the supplied value dictionary activate mappings. Inherite
 properties and getters are ignored, including names present on `Object.prototype`.
 Explicitly supplied external names such as `constructor` and `__proto__` can map to
 safe target paths; the existing unsafe-target-path policy still applies.
+Mapping errors, including argv missing-value and duplicate-argument errors, retain
+copies of their target paths. Reusing a mapping declaration's array after source
+creation cannot change existing issues or their later report redaction.
 
 JSON mapping and JSON coercion share value checks: every numeric value, including
 values nested in arrays or objects, must be finite. Syntax and non-config-value

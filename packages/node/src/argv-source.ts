@@ -100,7 +100,7 @@ export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
         code: "argv_missing_value",
         severity: "error",
         sourceId: input.descriptor.id,
-        path: mapping.targetPath,
+        path: [...mapping.targetPath],
         message: `Argument ${mapping.externalName} requires a value.`
       });
       continue;
@@ -112,7 +112,7 @@ export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
         code: "argv_duplicate_argument",
         severity: "error",
         sourceId: input.descriptor.id,
-        path: mapping.targetPath,
+        path: [...mapping.targetPath],
         message: `Argument ${mapping.externalName} must not be provided more than once.`
       });
       continue;

@@ -52,7 +52,7 @@ export function createMappedOverrideSource(input: CreateMappedOverrideSourceInpu
         code: exact ? "duplicate_mapping_target_path" : "overlapping_mapping_target_path",
         severity: "error",
         sourceId: input.descriptor.id,
-        path: mapping.targetPath,
+        path: [...mapping.targetPath],
         message: exact
           ? `Mapping ${mapping.externalName} targets the same path as ${pathConflict.owner.externalName}.`
           : `Mapping ${mapping.externalName} overlaps the target path of ${pathConflict.owner.externalName}.`
@@ -67,7 +67,7 @@ export function createMappedOverrideSource(input: CreateMappedOverrideSourceInpu
         code: "unsafe_mapping_path",
         severity: "error",
         sourceId: input.descriptor.id,
-        path: mapping.targetPath,
+        path: [...mapping.targetPath],
         message: `Mapping ${mapping.externalName} targets unsafe path segment ${String(unsafeSegment)}.`
       });
       continue;
@@ -80,7 +80,7 @@ export function createMappedOverrideSource(input: CreateMappedOverrideSourceInpu
         code: parsed.code ?? "mapping_parse_failed",
         severity: "error",
         sourceId: input.descriptor.id,
-        path: mapping.targetPath,
+        path: [...mapping.targetPath],
         message: parsed.message
       });
       continue;
@@ -94,7 +94,7 @@ export function createMappedOverrideSource(input: CreateMappedOverrideSourceInpu
         code: "mapping_set_failed",
         severity: "error",
         sourceId: input.descriptor.id,
-        path: mapping.targetPath,
+        path: [...mapping.targetPath],
         message: "Failed to apply override mapping. Internal exception details were omitted from diagnostics."
       });
     }

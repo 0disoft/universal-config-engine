@@ -7,6 +7,20 @@ function descriptor(kind: ConfigSourceDescriptor["kind"]): ConfigSourceDescripto
 }
 
 describe("override source dictionary keys", () => {
+  it.each([
+    { argv: ["--token"], code: "argv_missing_value" },
+    { argv: ["--token=one", "--token=two"], code: "argv_duplicate_argument" }
+  ])("detaches $code paths from reusable mappings", ({ argv, code }) => {
+    const targetPath = ["auth", "token"];
+    const loaded = createArgvSource({ descriptor: descriptor("argv"), argv,
+      mappings: [{ externalName: "--token", sourceKind: "argv", targetPath }] });
+    targetPath.splice(0, targetPath.length, "server", "port");
+    expect(loaded.issues).toEqual([expect.objectContaining({ code, path: ["auth", "token"] })]);
+    expect(loaded.issues?.[0]?.path).not.toBe(targetPath);
+    expect(Object.isFrozen(targetPath)).toBe(false);
+    expect(resolveConfig({ sources: [loaded] }).issues[0]?.path).toEqual(["auth", "token"]);
+  });
+
   it.each(["__proto__", "constructor", "toString"])("preserves an explicit %s through argv, env and dotenv mapping", (externalName) => {
     const target = { externalName, targetPath: ["port"], parseAs: "number" as const };
     for (const argv of [[externalName, "9000"], [`${externalName}=9000`]]) {
