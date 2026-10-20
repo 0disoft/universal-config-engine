@@ -139,6 +139,22 @@ and parser exception text are omitted from these issues. JSON strings containing
 numeric text remain strings; finite values at the JavaScript numeric boundary are
 accepted.
 
+JSON value checks, structural validation and `cloneConfigValue` traverse containers
+iteratively. Valid deep JSON is not mislabeled as invalid syntax because a JSON
+reviver or value copy exhausts the call stack. Mapping and standalone coercion do
+not impose a separate depth policy: `resolveConfig` applies its configured
+depth/path/key limits to the
+staged source or expanded config and returns `resource-limit` issues. Native JSON
+parsing still allocates the decoded value before those structural checks; bound
+raw input bytes at the source adapter boundary.
+Cloning preserves array holes, creates null-prototype object copies, and copies
+shared acyclic children independently. Unsafe keys and cycles remain strict-helper
+errors; cloning is not a substitute for source validation.
+Structural traversal reuses its current path, copying it only for retained entries
+and diagnostics. Large explicit depth/path limits therefore do not require a
+separate copied path at every active level. The resolved-path index also visits
+and prunes deep paths iteratively, including when a later source replaces them.
+
 Source descriptor ids are resolution identities and must be unique. A duplicate id
 returns `source-load/duplicate_source_id` before any source value or source issue is
 merged, preventing ambiguous provenance and redaction-policy lookup.

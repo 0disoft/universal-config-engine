@@ -51,11 +51,19 @@ checks shared by loader and validator boundaries. It is not a package entry poin
 Core's internal `json-value.ts` owns JSON parsing, unsafe-key detection and finite
 value checks shared by mapping and coercion. Each stage owns its diagnostic
 category, codes and messages; parsing failures never reach the mutation helpers.
+JSON checks, `value.ts` structural validation and `path.ts` value cloning use
+explicit traversal stacks so encoded nesting reaches resolution's structural
+budgets rather than recursive reviver or copy failures. Native parsing remains
+subject to adapter-owned raw-input bounds.
+Structural validation maintains one mutable traversal path and copies only emitted
+paths; array emission still waits for complete validation within the issue budget.
 
 `merge.ts` owns source ordering, precedence, provenance and resolution budgets.
 Its internal `resolved-path-index.ts` owns the synchronized path map/trie,
 overlap lookup and ownership projection after coercion. Trie mutations stay in
 that module so merge policy changes do not need to reimplement index bookkeeping.
+Descendant collection and path pruning are iterative so caller-selected high depth
+limits also work when a later source replaces a deeply nested path.
 
 Node's internal `file-source.ts` shares bounded text-file loading and exception
 conversion between JSON and dotenv adapters. Each adapter keeps its parser,

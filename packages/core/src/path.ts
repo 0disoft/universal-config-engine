@@ -112,16 +112,44 @@ export function cloneConfigValue(value: ConfigValue): ConfigValue {
     return value;
   }
 
-  if (Array.isArray(value)) {
-    return value.map((item) => cloneConfigValue(item));
-  }
-
-  const output = createConfigObject();
-  for (const [key, child] of Object.entries(value)) {
+  const root = createCloneFrame(value);
+  const stack = [root];
+  const ancestors = new WeakSet<object>([value]);
+  while (stack.length > 0) {
+    const frame = stack[stack.length - 1]!;
+    const next = frame.entries.next();
+    if (next.done) {
+      ancestors.delete(frame.source);
+      stack.pop();
+      continue;
+    }
+    const [key, child] = next.value;
+    // Match Array.map's hole preservation; array metadata is not config data.
+    if (Array.isArray(frame.source) && !(key in frame.source)) continue;
     assertSafeObjectPathSegment(key);
-    output[key] = cloneConfigValue(child);
+    if (child === null || typeof child !== "object") {
+      frame.output[key] = child;
+      continue;
+    }
+    if (ancestors.has(child)) throw new Error("Cyclic config values cannot be cloned.");
+    const childFrame = createCloneFrame(child);
+    frame.output[key] = childFrame.output;
+    ancestors.add(child);
+    stack.push(childFrame);
   }
-  return output;
+  return root.output;
+}
+
+function createCloneFrame(value: object): {
+  readonly source: object;
+  readonly output: Record<string, ConfigValue>;
+  readonly entries: Iterator<readonly [string | number, ConfigValue]>;
+} {
+  return {
+    source: value,
+    output: Array.isArray(value) ? new Array(value.length) as unknown as Record<string, ConfigValue> : createConfigObject(),
+    entries: Array.isArray(value) ? Array.prototype.entries.call(value) : Object.entries(value).values()
+  };
 }
 
 function assertSafeObjectPathSegment(segment: ConfigPathSegment): void {

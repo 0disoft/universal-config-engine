@@ -75,8 +75,6 @@ export function flattenConfigObject(
     entries: [],
     keyCount: 0
   };
-  const ancestors = new WeakSet<object>();
-
   if (!isPlainConfigObject(value)) {
     state.issues.push({
       category: "parse",
@@ -88,172 +86,110 @@ export function flattenConfigObject(
     return state;
   }
 
-  walk(sourceId, value, [], 0, limits, state, ancestors, true);
+  walk(sourceId, value, limits, state);
   return state;
 }
 
 function walk(
   sourceId: string,
   value: unknown,
-  path: ConfigPath,
-  depth: number,
   limits: ResourceLimitPolicy,
-  state: ValidationState,
-  ancestors: WeakSet<object>,
-  emitEntries: boolean
+  state: ValidationState
 ): void {
-  if (state.issues.length >= limits.maxDiagnostics) {
-    markDiagnosticsOverflow(state.issues, limits.maxDiagnostics);
-    return;
+  const path: (string | number)[] = [];
+  const ancestors = new WeakSet<object>();
+  const stack: {
+    readonly source: object;
+    readonly entries: Iterator<readonly [string | number, unknown]>;
+    readonly array: boolean;
+    readonly emitEntries: boolean;
+    readonly initialIssueCount: number;
+  }[] = [];
+
+  function issue(category: ConfigIssue["category"], code: string, message: string): void {
+    state.issues.push({ category, code, severity: "error", sourceId, path: [...path], message });
   }
 
-  if (depth > limits.maxDepth) {
-    state.issues.push({
-      category: "resource-limit",
-      code: "max_depth_exceeded",
-      severity: "error",
-      sourceId,
-      path,
-      message: `Config depth exceeds the maximum depth of ${limits.maxDepth}.`
-    });
-    return;
-  }
-
-  if (path.length > limits.maxPathLength) {
-    state.issues.push({
-      category: "resource-limit",
-      code: "max_path_length_exceeded",
-      severity: "error",
-      sourceId,
-      path,
-      message: `Config path ${formatPath(path)} exceeds the maximum path length of ${limits.maxPathLength}.`
-    });
-    return;
-  }
-
-  if (value !== null && typeof value === "object") {
-    if (ancestors.has(value)) {
-      state.issues.push({
-        category: "parse",
-        code: "cyclic_value",
-        severity: "error",
-        sourceId,
-        path,
-        message: `Config value at ${formatPath(path)} contains a cycle.`
-      });
-      return;
-    }
-    ancestors.add(value);
-    try {
-      walkObject(sourceId, value, path, depth, limits, state, ancestors, emitEntries);
-    } finally {
-      ancestors.delete(value);
-    }
-    return;
-  }
-
-  if (!isConfigValue(value)) {
-    state.issues.push({
-      category: "parse",
-      code: "invalid_value",
-      severity: "error",
-      sourceId,
-      path,
-      message: `Config value at ${formatPath(path)} is not JSON-compatible.`
-    });
-  } else if (emitEntries) {
-    state.entries.push({ path, value });
-  }
-}
-
-function walkObject(
-  sourceId: string,
-  value: object,
-  path: ConfigPath,
-  depth: number,
-  limits: ResourceLimitPolicy,
-  state: ValidationState,
-  ancestors: WeakSet<object>,
-  emitEntries: boolean
-): void {
-  if (Array.isArray(value)) {
-    const valid = validateArray(sourceId, value, path, depth, limits, state, ancestors);
-    if (valid && emitEntries) {
-      state.entries.push({ path, value });
-    }
-    return;
-  }
-
-  if (isPlainConfigObject(value)) {
-    const entries = Object.entries(value);
-    if (entries.length === 0 && path.length > 0 && emitEntries) {
-      state.entries.push({ path, value: {} });
-      return;
-    }
-
-    for (const [key, child] of entries) {
-      if (state.issues.length >= limits.maxDiagnostics) {
-        markDiagnosticsOverflow(state.issues, limits.maxDiagnostics);
-        return;
-      }
-      state.keyCount += 1;
-      const childPath = [...path, key];
-
-      if (state.keyCount > limits.maxKeyCount) {
-        state.issues.push({
-          category: "resource-limit",
-          code: "max_key_count_exceeded",
-          severity: "error",
-          sourceId,
-          path: childPath,
-          message: `Config key count exceeds the maximum of ${limits.maxKeyCount}.`
-        });
-        return;
-      }
-
-      if (isUnsafePathSegment(key)) {
-        state.issues.push({
-          category: "merge",
-          code: "unsafe_key",
-          severity: "error",
-          sourceId,
-          path: childPath,
-          message: `Unsafe config path segment ${key} is rejected.`
-        });
-        continue;
-      }
-
-      walk(sourceId, child, childPath, depth + 1, limits, state, ancestors, emitEntries);
-    }
-    return;
-  }
-
-  state.issues.push({
-    category: "parse",
-    code: "invalid_value",
-    severity: "error",
-    sourceId,
-    path,
-    message: `Config value at ${formatPath(path)} is not JSON-compatible.`
-  });
-}
-
-function validateArray(
-  sourceId: string,
-  value: readonly unknown[],
-  path: ConfigPath,
-  depth: number,
-  limits: ResourceLimitPolicy,
-  state: ValidationState,
-  ancestors: WeakSet<object>
-): boolean {
-  const initialIssueCount = state.issues.length;
-  for (const [index, child] of value.entries()) {
+  function enter(child: unknown, emitEntries: boolean): boolean {
     if (state.issues.length >= limits.maxDiagnostics) {
       markDiagnosticsOverflow(state.issues, limits.maxDiagnostics);
       return false;
     }
-    walk(sourceId, child, [...path, index], depth + 1, limits, state, ancestors, false);
+    if (path.length > limits.maxDepth) {
+      issue("resource-limit", "max_depth_exceeded", `Config depth exceeds the maximum depth of ${limits.maxDepth}.`);
+      return false;
+    }
+    if (path.length > limits.maxPathLength) {
+      issue("resource-limit", "max_path_length_exceeded",
+        `Config path ${formatPath(path)} exceeds the maximum path length of ${limits.maxPathLength}.`);
+      return false;
+    }
+    if (child !== null && typeof child === "object") {
+      if (ancestors.has(child)) {
+        issue("parse", "cyclic_value", `Config value at ${formatPath(path)} contains a cycle.`);
+        return false;
+      }
+      const array = Array.isArray(child);
+      if (!array && !isPlainConfigObject(child)) {
+        issue("parse", "invalid_value", `Config value at ${formatPath(path)} is not JSON-compatible.`);
+        return false;
+      }
+      const entries = array ? undefined : Object.entries(child);
+      if (entries?.length === 0) {
+        if (path.length > 0 && emitEntries) state.entries.push({ path: [...path], value: {} });
+        return false;
+      }
+      ancestors.add(child);
+      stack.push({ source: child, array, emitEntries, initialIssueCount: state.issues.length,
+        entries: array ? Array.prototype.entries.call(child) : entries!.values() });
+      return true;
+    }
+    if (!isConfigValue(child)) {
+      issue("parse", "invalid_value", `Config value at ${formatPath(path)} is not JSON-compatible.`);
+    } else if (emitEntries) {
+      state.entries.push({ path: [...path], value: child });
+    }
+    return false;
   }
-  return state.issues.length === initialIssueCount;
+
+  function leave(complete: boolean): void {
+    const frame = stack.pop()!;
+    if (complete && frame.array && frame.emitEntries && state.issues.length === frame.initialIssueCount) {
+      state.entries.push({ path: [...path], value: frame.source as readonly ConfigValue[] });
+    }
+    ancestors.delete(frame.source);
+    if (stack.length > 0) path.pop();
+  }
+
+  enter(value, true);
+  while (stack.length > 0) {
+    const frame = stack[stack.length - 1]!;
+    const next = frame.entries.next();
+    if (next.done) {
+      leave(true);
+      continue;
+    }
+    if (state.issues.length >= limits.maxDiagnostics) {
+      markDiagnosticsOverflow(state.issues, limits.maxDiagnostics);
+      leave(false);
+      continue;
+    }
+    const [key, child] = next.value;
+    path.push(key);
+    if (!frame.array) {
+      state.keyCount += 1;
+      if (state.keyCount > limits.maxKeyCount) {
+        issue("resource-limit", "max_key_count_exceeded", `Config key count exceeds the maximum of ${limits.maxKeyCount}.`);
+        path.pop();
+        leave(false);
+        continue;
+      }
+      if (isUnsafePathSegment(key)) {
+        issue("merge", "unsafe_key", `Unsafe config path segment ${key} is rejected.`);
+        path.pop();
+        continue;
+      }
+    }
+    if (!enter(child, frame.emitEntries && !frame.array)) path.pop();
+  }
 }

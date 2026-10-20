@@ -7,6 +7,10 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Inspect and clone deeply nested JSON iteratively so valid input reaches configured
+  structural limits instead of syntax/set failures or stack overflow. Detect unsafe
+  keys at deep positions without a recursive JSON reviver. Validate structures and
+  replace deep indexed paths without recursion when callers select larger limits.
 - Reject non-finite JSON mapping values before assignment, including nested
   numeric overflow. Share JSON checks with coercion and report unsafe JSON keys as
   `mapping/unsafe_key` instead of a late `mapping_set_failed` with partial targets.

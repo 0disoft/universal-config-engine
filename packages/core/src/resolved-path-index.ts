@@ -118,31 +118,26 @@ export function deleteResolvedPath(index: MutableResolvedPathIndex, key: string)
   }
 
   index.byPath.delete(key);
-  deleteTriePath(index.root, resolved.path, 0);
+  deleteTriePath(index.root, resolved.path);
 }
 
-function deleteTriePath(node: ResolvedPathTrieNode, path: ConfigPath, depth: number): boolean {
-  if (depth === path.length) {
-    delete node.entryKey;
-    return node.children.size === 0;
+function deleteTriePath(root: ResolvedPathTrieNode, path: ConfigPath): void {
+  const parents: { readonly node: ResolvedPathTrieNode; readonly key: string }[] = [];
+  let node = root;
+  for (const segment of path) {
+    const key = trieSegmentKey(segment);
+    const child = node.children.get(key);
+    if (child === undefined) return;
+    parents.push({ node, key });
+    node = child;
   }
-
-  const segment = path[depth];
-  if (segment === undefined) {
-    return node.children.size === 0 && node.entryKey === undefined;
+  delete node.entryKey;
+  for (let index = parents.length - 1; index >= 0; index -= 1) {
+    if (node.children.size > 0 || node.entryKey !== undefined) break;
+    const parent = parents[index]!;
+    parent.node.children.delete(parent.key);
+    node = parent.node;
   }
-
-  const segmentKey = trieSegmentKey(segment);
-  const child = node.children.get(segmentKey);
-  if (child === undefined) {
-    return node.children.size === 0 && node.entryKey === undefined;
-  }
-
-  if (deleteTriePath(child, path, depth + 1)) {
-    node.children.delete(segmentKey);
-  }
-
-  return node.children.size === 0 && node.entryKey === undefined;
 }
 
 function collectAncestorResolvedPathKeys(
@@ -186,13 +181,16 @@ function findTrieNode(root: ResolvedPathTrieNode, path: ConfigPath): ResolvedPat
 }
 
 function collectDescendantResolvedPathKeys(node: ResolvedPathTrieNode, relatedKeys: Set<string>): void {
-  const entryKey = node.entryKey;
-  if (entryKey !== undefined) {
-    relatedKeys.add(entryKey);
-  }
-
-  for (const child of node.children.values()) {
-    collectDescendantResolvedPathKeys(child, relatedKeys);
+  // Iterator frames preserve the original depth-first insertion order.
+  const stack: Iterator<ResolvedPathTrieNode>[] = [[node].values()];
+  while (stack.length > 0) {
+    const next = stack[stack.length - 1]!.next();
+    if (next.done) {
+      stack.pop();
+      continue;
+    }
+    if (next.value.entryKey !== undefined) relatedKeys.add(next.value.entryKey);
+    stack.push(next.value.children.values());
   }
 }
 

@@ -8,16 +8,28 @@ type JsonValueResult =
 
 /** Shared JSON checks; callers own stage-specific issue codes and messages. */
 export function parseJsonConfigValue(raw: string): JsonValueResult {
+  let parsed: unknown;
   try {
-    let unsafeKey = false;
-    const parsed: unknown = JSON.parse(raw, (key: string, child: unknown) => {
-      if (isUnsafePathSegment(key)) unsafeKey = true;
-      return child;
-    });
-    if (unsafeKey) return { ok: false, reason: "unsafe-key" };
-    if (!isConfigValue(parsed)) return { ok: false, reason: "invalid-value" };
-    return { ok: true, value: parsed };
+    // A reviver recursively visits containers and can reject valid deep JSON.
+    parsed = JSON.parse(raw);
   } catch {
     return { ok: false, reason: "invalid-json" };
   }
+
+  const stack: Iterator<unknown>[] = [[parsed].values()];
+  while (stack.length > 0) {
+    const next = stack[stack.length - 1]!.next();
+    if (next.done) {
+      stack.pop();
+      continue;
+    }
+    const value = next.value;
+    if (value === null || typeof value !== "object") continue;
+    if (!Array.isArray(value) && Object.keys(value).some(isUnsafePathSegment)) {
+      return { ok: false, reason: "unsafe-key" };
+    }
+    stack.push(Array.isArray(value) ? value.values() : Object.values(value).values());
+  }
+  if (!isConfigValue(parsed)) return { ok: false, reason: "invalid-value" };
+  return { ok: true, value: parsed };
 }
