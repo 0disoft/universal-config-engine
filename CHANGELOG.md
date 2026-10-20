@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Detach coercion issue and provenance paths from rule arrays so later rule reuse
+  cannot rewrite conversion history or its redaction decisions.
 - Copy validator issue paths at normalization so adapter array reuse cannot rewrite
   earlier diagnostics or change their secret-path redaction decisions.
 - Preserve loading preflight failures in pipeline results and reports so exceeding

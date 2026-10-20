@@ -134,6 +134,9 @@ value, not fabricated positions inside that string. Empty objects and arrays kee
 their existing atomic path representation. Coercion provenance remains a separate
 event, and the resolved-path cap applies after expansion even when the retained
 provenance budget is already full.
+Coercion issues and provenance copy their rule paths when emitted. Reusing a rule's
+path array during later validation or after completion cannot rewrite retained
+paths or change their redaction decisions; the caller's array remains mutable.
 
 `createMappedOverrideSource` rejects active mappings whose target paths are equal or
 have an ancestor/descendant relationship. Exact duplicates use

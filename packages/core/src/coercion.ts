@@ -54,7 +54,7 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
         category: "coercion",
         code: coerced.code ?? "coercion_failed",
         severity: "error",
-        path: rule.path,
+        path: [...rule.path],
         message: coerced.message
       });
       continue;
@@ -63,7 +63,7 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
     try {
       setExistingCoercionValue(config, rule.path, coerced.value);
       provenance.push({
-        path: rule.path,
+        path: [...rule.path],
         action: "coerced",
         sourceId: "core:coercion",
         message: `Path was coerced from ${rule.from} to ${rule.to}.`
@@ -73,7 +73,7 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
         category: "coercion",
         code: "coercion_set_failed",
         severity: "error",
-        path: rule.path,
+        path: [...rule.path],
         message: "Failed to set coerced config value. Internal exception details were omitted from diagnostics."
       });
     }

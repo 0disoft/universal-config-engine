@@ -3,6 +3,21 @@ import { applyCoercionRules, buildDiagnosticReport, getConfigValueAtPath, resolv
 import { source } from "./helpers/source.js";
 
 describe("applyCoercionRules", () => {
+  it.each([
+    { key: "value", raw: "42", code: null },
+    { key: "value", raw: "invalid", code: "coercion_failed" }
+  ])("detaches rule paths in retained output ($key, $code)", ({ key, raw, code }) => {
+    const path = [key];
+    const result = applyCoercionRules({ config: { [key]: raw },
+      rules: [{ path, from: "string", to: "number", onFailure: "issue" }] });
+    const retained = code === null ? result.provenance[0] : result.issues[0];
+    if (code !== null) expect(result.issues[0]?.code).toBe(code);
+    path.splice(0, path.length, "reused");
+    expect(retained?.path).toEqual([key]);
+    expect(retained?.path).not.toBe(path);
+    expect(Object.isFrozen(path)).toBe(false);
+  });
+
   it("projects JSON-expanded paths with inherited source history and locations", () => {
     const lower = source("vault", 0, { auth: "lower input" });
     const higher = source("file", 10, { auth: '{"password":"redaction marker","nested":{"port":"41"}}', stable: true });

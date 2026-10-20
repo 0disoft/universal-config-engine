@@ -29,6 +29,28 @@ function loader(
 }
 
 describe("runConfigPipeline", () => {
+  it("keeps coercion provenance stable when a validator reuses a rule path", async () => {
+    const path = ["auth", "token"];
+    const pipeline = await runConfigPipeline({
+      loaders: [loader("defaults", 0, { auth: { token: "42" } })],
+      context: undefined,
+      coercionRules: [{ path, from: "string", to: "number", onFailure: "issue" }],
+      validators: [{ id: "reuses-rule", validate() {
+        path.splice(0, path.length, "server", "port");
+        return { ok: true, issues: [] };
+      } }]
+    });
+
+    expect(pipeline.result.ok).toBe(true);
+    expect(pipeline.result.config).toEqual({ auth: { token: 42 } });
+    expect(pipeline.result.provenance.find((event) => event.action === "coerced")?.path).toEqual(["auth", "token"]);
+    expect(pipeline.report.provenance).toContainEqual(expect.objectContaining({
+      action: "coerced", path: ["auth", "token"],
+      message: "Provenance message redacted because it is associated with a secret path or source."
+    }));
+    expect(path).toEqual(["server", "port"]);
+  });
+
   it("keeps validator issue paths stable when later adapters reuse the original array", async () => {
     const path = ["auth", "password"];
     const pipeline = await runConfigPipeline({
