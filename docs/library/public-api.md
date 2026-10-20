@@ -165,6 +165,11 @@ merged, preventing ambiguous provenance and redaction-policy lookup.
 Node JSON and dotenv loaders accept `FileReadPolicy.allowedRootPath`. When set,
 they verify the canonical path and opened file identity before reading from the
 handle; see ADR 0012.
+JSON source syntax is checked by native `JSON.parse`; location collection then
+scans tokens iteratively and omits array descendants. Deep arrays do not fail
+loading merely because position collection exhausts a recursive visitor. They
+reach resolution's configured structural limits, with container positions and
+one-based line/column coordinates preserved.
 
 The Node package exports `readTextFileWithinLimit` for bounded consumers such as
 the CLI pipeline declaration loader. It reads through an open handle and returns a

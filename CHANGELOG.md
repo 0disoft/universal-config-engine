@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Collect JSON file locations without recursive parsing so valid deeply nested
+  files reach structural-limit checks rather than `json_parse_failed`.
 - Freeze validator config iteratively so deeply nested configurations accepted by
   resolution do not reject the pipeline before validation starts.
 - Inspect and clone deeply nested JSON iteratively so valid input reaches configured

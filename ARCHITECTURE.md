@@ -69,6 +69,9 @@ Node's internal `file-source.ts` shares bounded text-file loading and exception
 conversion between JSON and dotenv adapters. Each adapter keeps its parser,
 source-location extraction and existing format-specific failure codes. The
 open-handle identity/root checks and byte limits remain in `file.ts`.
+The JSON adapter uses native parsing for syntax and a token scanner for locations.
+Position collection is iterative and skips array descendants, whose individual
+locations are not retained; it does not impose a separate structural depth policy.
 
 Node's argv adapter builds one mapping-name index per call. Its single scan owns
 both value consumption and unmapped-token classification, keeping strict mode's
