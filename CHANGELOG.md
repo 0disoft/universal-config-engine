@@ -5,6 +5,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+## 1.1.1-rc.1 - 2026-10-21
+
 ### Fixed
 
 - Reject excessive source counts before full-list copying and sorting. Failure
