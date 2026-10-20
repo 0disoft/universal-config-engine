@@ -72,6 +72,9 @@ open-handle identity/root checks and byte limits remain in `file.ts`.
 The JSON adapter uses native parsing for syntax and a token scanner for locations.
 Position collection is iterative and skips array descendants, whose individual
 locations are not retained; it does not impose a separate structural depth policy.
+Location collection has an independent UTF-8 record budget to bound metadata
+amplification from copied ancestor paths. Exceeding it omits the optional locations
+with a warning while preserving parsed values and resolution's structural policy.
 
 Node's argv adapter builds one mapping-name index per call. Its single scan owns
 both value consumption and unmapped-token classification, keeping strict mode's

@@ -457,6 +457,8 @@ import type { FileReadPolicy } from "./file.js";
 export interface LoadJsonFileSourceInput extends FileReadPolicy {
     readonly descriptor: ConfigSourceDescriptor;
     readonly filePath: string;
+    /** Compact UTF-8 location-record budget; defaults to 4 MiB. */
+    readonly maxLocationBytes?: number;
 }
 export declare function loadJsonFileSource(input: LoadJsonFileSourceInput): Promise<LoadedSource>;
 

@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Bound JSON source location metadata to 4 MiB by default, configurable through
+  `maxLocationBytes`. Excess metadata is omitted with a warning while config values
+  remain usable, preventing quadratic path storage from exhausting memory first.
 - Collect JSON file locations without recursive parsing so valid deeply nested
   files reach structural-limit checks rather than `json_parse_failed`.
 - Freeze validator config iteratively so deeply nested configurations accepted by

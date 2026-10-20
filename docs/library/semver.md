@@ -36,6 +36,10 @@ Minor versions may add new optional fields, new adapter hooks, new diagnostics,
 new CLI report sections, or new loader examples when existing behavior remains
 compatible.
 
+The optional Node JSON-loader `maxLocationBytes` policy and its warning are
+additive library API work. Config values and structural resolution semantics stay
+unchanged; location metadata beyond the explicit/default budget is omitted.
+
 The 0.3 validator boundary adds `ValidatorIssue` while retaining optional legacy
 `ConfigIssue`-shaped input fields. Removing those compatibility fields or changing
 which structured fields core trusts requires a deliberate pre-1.0 minor or stable

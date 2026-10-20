@@ -170,6 +170,16 @@ scans tokens iteratively and omits array descendants. Deep arrays do not fail
 loading merely because position collection exhausts a recursive visitor. They
 reach resolution's configured structural limits, with container positions and
 one-based line/column coordinates preserved.
+`loadJsonFileSource` accepts `maxLocationBytes` (default 4 MiB), independent of
+`maxFileBytes`. This bounds the sum of compact UTF-8 JSON bytes of retained
+location records, excluding the surrounding array delimiters and commas. Duplicate
+paths replace their previous record in the budget. Invalid limits fall back to the
+default using the same positive-safe-integer rule as other Node limits.
+When collection would exceed the budget, it stops and omits all locations, adding
+one `resource-limit/max_location_bytes_exceeded` warning. Parsed config values
+remain available and the warning alone does not fail resolution. Omission avoids
+attaching stale coordinates to duplicate keys appearing after the stopping point;
+callers requiring all positions can explicitly increase the budget.
 
 The Node package exports `readTextFileWithinLimit` for bounded consumers such as
 the CLI pipeline declaration loader. It reads through an open handle and returns a

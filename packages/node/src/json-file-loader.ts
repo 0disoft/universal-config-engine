@@ -2,6 +2,9 @@ import type { ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-co
 import { createScanner } from "jsonc-parser";
 import type { FileReadPolicy } from "./file.js";
 import { loadTextFileSource } from "./file-source.js";
+import { positiveSafeIntegerLimit } from "./limits.js";
+
+const DEFAULT_MAX_LOCATION_BYTES = 4 * 1024 * 1024;
 
 // jsonc-parser's ambient const enum cannot be imported with verbatimModuleSyntax.
 // These are its stable scanner token IDs, not a separate syntax validator.
@@ -11,6 +14,8 @@ const TOKEN = { objectBegin: 1, objectEnd: 2, arrayBegin: 3, arrayEnd: 4,
 export interface LoadJsonFileSourceInput extends FileReadPolicy {
   readonly descriptor: ConfigSourceDescriptor;
   readonly filePath: string;
+  /** Compact UTF-8 location-record budget; defaults to 4 MiB. */
+  readonly maxLocationBytes?: number;
 }
 
 export async function loadJsonFileSource(input: LoadJsonFileSourceInput): Promise<LoadedSource> {
@@ -28,24 +33,39 @@ export async function loadJsonFileSource(input: LoadJsonFileSourceInput): Promis
     parse: (raw, canonicalPath) => ({
       descriptor: input.descriptor,
       value: JSON.parse(raw) as unknown,
-      locations: collectJsonLocations(input.descriptor.id, canonicalPath, raw)
+      ...collectJsonLocations(input.descriptor.id, canonicalPath, raw,
+        positiveSafeIntegerLimit(input.maxLocationBytes, DEFAULT_MAX_LOCATION_BYTES))
     })
   });
 }
 
-function collectJsonLocations(sourceId: string, sourcePath: string, raw: string) {
-  const locations = new Map<string, NonNullable<LoadedSource["locations"]>[number]>();
+function collectJsonLocations(
+  sourceId: string, sourcePath: string, raw: string, maxLocationBytes: number
+): Pick<LoadedSource, "locations" | "issues"> {
+  const locations = new Map<string, { readonly entry: NonNullable<LoadedSource["locations"]>[number]; readonly bytes: number }>();
+  const encoder = new TextEncoder();
+  let locationBytes = 0;
+  let exceeded = false;
   const scanner = createScanner(raw, true);
   const path: string[] = [];
   const expectingKeys: boolean[] = [];
   let skippedArrayDepth = 0;
   const add = () => {
     if (path.length === 0) return;
-    locations.set(JSON.stringify(path), {
+    const key = JSON.stringify(path);
+    const entry = {
       path: [...path],
       location: { sourceId, sourcePath, line: scanner.getTokenStartLine() + 1,
         column: scanner.getTokenStartCharacter() + 1 }
-    });
+    };
+    const bytes = encoder.encode(JSON.stringify(entry)).byteLength;
+    const nextBytes = locationBytes - (locations.get(key)?.bytes ?? 0) + bytes;
+    if (nextBytes > maxLocationBytes) {
+      exceeded = true;
+      return;
+    }
+    locations.set(key, { entry, bytes });
+    locationBytes = nextBytes;
   };
   // JSON.parse already owns syntax validation. Scan positions without the
   // recursive visitor, and skip array contents: they have no retained locations.
@@ -76,6 +96,14 @@ function collectJsonLocations(sourceId: string, sourcePath: string, raw: string)
       add();
       if (expectingKeys.length > 0) path.pop();
     }
+    if (exceeded) break;
   }
-  return [...locations.values()];
+  if (exceeded) {
+    // A partial scan could attach stale coordinates to a later duplicate key.
+    // Keep the already parsed config and omit all optional location metadata.
+    return { locations: [], issues: [{ category: "resource-limit", code: "max_location_bytes_exceeded",
+      severity: "warning", sourceId, message: "JSON source locations were omitted because their metadata exceeded the byte budget.",
+      details: { maxLocationBytes } }] };
+  }
+  return { locations: [...locations.values()].map(({ entry }) => entry) };
 }
