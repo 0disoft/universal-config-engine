@@ -5,6 +5,11 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+## 1.1.2 - 2026-10-21
+
+- Promote `1.1.2-rc.1` with unchanged runtime, public declarations, dependencies
+  and package READMEs. All five packages use npm `latest`.
+
 ## 1.1.2-rc.1 - 2026-10-21
 
 ### Fixed
