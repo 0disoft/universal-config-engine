@@ -5,6 +5,12 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+### Fixed
+
+- Centralize validator provenance-budget accounting. Pipelines no longer reject
+  valid history by subtracting it twice, and direct validation bounds incoming
+  history plus new events before invoking further adapters.
+
 ## 1.1.1 - 2026-10-21
 
 - Promote `1.1.1-rc.1` with unchanged runtime, public declarations, dependencies

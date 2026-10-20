@@ -304,6 +304,10 @@ migration review before running `pnpm run update:api-snapshot`.
   mutate the pipeline output or affect later validators by modifying `input.config`.
 - Copy and deeply freeze validator provenance input, including event paths, so
   adapters cannot rewrite the provenance later consumed by reports.
+- Count incoming history and new validator events against the same
+  `maxProvenanceEvents` budget. `runValidators` returns only new events and skips
+  subsequent validators once that shared budget is full. The pipeline passes the
+  original limit rather than subtracting the history twice.
 - Bound validator issues with the same diagnostics limit used by merge/source
   reporting. When validator output exceeds `maxDiagnostics`, emit
   `resource-limit/max_diagnostics_exceeded` instead of unbounded validation output.

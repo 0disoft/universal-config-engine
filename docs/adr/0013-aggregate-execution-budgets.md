@@ -30,6 +30,11 @@ retained public result is capped, and the existing `maxKeyCount` bounds the inte
 index. Exceeding any retained-entry limit produces a stable `resource-limit` issue
 and makes the result fail.
 
+Validation owns provenance-budget accounting: incoming history and newly generated
+validator events share the original limit. The pipeline forwards that limit
+unchanged. `runValidators` returns only new events, stops before invoking an adapter
+whose event would exceed the budget, and reports the original configured maximum.
+
 `buildDiagnosticReport` performs redaction first and then measures the compact UTF-8
 JSON representation. An oversized report is replaced with a fixed-shape error report
 containing `resource-limit/max_report_bytes_exceeded`; raw or partially truncated

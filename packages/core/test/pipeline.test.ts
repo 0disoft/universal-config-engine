@@ -29,6 +29,50 @@ function loader(
 }
 
 describe("runConfigPipeline", () => {
+  it.each([3, 4])("uses the remaining provenance budget exactly once at limit %i", async (maxProvenanceEvents) => {
+    const histories: number[] = [];
+    const pipeline = await runConfigPipeline({
+      loaders: [loader("defaults", 0, { port: 3000, enabled: true })],
+      context: undefined,
+      limits: { maxProvenanceEvents },
+      validators: Array.from({ length: maxProvenanceEvents - 2 }, (_, index) => ({
+        id: `validator-${index}`,
+        validate(input) {
+          histories.push(input.provenance.length);
+          expect(Object.isFrozen(input.provenance)).toBe(true);
+          return { ok: true, issues: [] };
+        }
+      }))
+    });
+
+    expect(histories).toEqual(Array(maxProvenanceEvents - 2).fill(2));
+    expect(pipeline.result.ok).toBe(true);
+    expect(pipeline.report.status).toBe("ok");
+    expect(pipeline.result.issues).toEqual([]);
+    expect(pipeline.result.provenance).toHaveLength(maxProvenanceEvents);
+  });
+
+  it.each([2, 3])("stops validation when the aggregate provenance budget %i is full", async (maxProvenanceEvents) => {
+    const invoked: string[] = [];
+    const pipeline = await runConfigPipeline({
+      loaders: [loader("defaults", 0, { port: 3000, enabled: true })],
+      context: undefined,
+      limits: { maxProvenanceEvents },
+      validators: ["first", "second"].map((id) => ({
+        id,
+        validate() { invoked.push(id); return { ok: true, issues: [] }; }
+      }))
+    });
+
+    expect(invoked).toEqual(maxProvenanceEvents === 2 ? [] : ["first"]);
+    expect(pipeline.result.ok).toBe(false);
+    expect(pipeline.result.provenance).toHaveLength(maxProvenanceEvents);
+    expect(pipeline.result.issues).toEqual([expect.objectContaining({
+      code: "max_provenance_events_exceeded",
+      message: `Retained entries exceeded the maximum of ${maxProvenanceEvents}.`
+    })]);
+  });
+
   it("keeps coercion provenance stable when a validator reuses a rule path", async () => {
     const path = ["auth", "token"];
     const pipeline = await runConfigPipeline({

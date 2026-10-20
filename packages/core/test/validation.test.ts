@@ -4,6 +4,33 @@ import type { ValidatorResult } from "../src/index.js";
 import { source } from "./helpers/source.js";
 
 describe("runValidators", () => {
+  it("shares the provenance budget between input history and new validator events", async () => {
+    const history = [
+      { path: ["port"], action: "defined" as const, sourceId: "defaults", message: "Defined port." },
+      { path: ["enabled"], action: "defined" as const, sourceId: "defaults", message: "Defined enabled." }
+    ];
+    const invoked: string[] = [];
+    const validation = await runValidators({
+      config: { port: 3000, enabled: true }, provenance: history,
+      limits: { maxProvenanceEvents: 3 },
+      validators: ["first", "second"].map((id) => ({
+        id,
+        validate(input) {
+          expect(input.provenance).toEqual(history);
+          expect(input.provenance).not.toBe(history);
+          invoked.push(id);
+          return { ok: true, issues: [] };
+        }
+      }))
+    });
+
+    expect(invoked).toEqual(["first"]);
+    expect(validation.provenance).toEqual([expect.objectContaining({ sourceId: "first", action: "validated" })]);
+    expect(validation.issues).toEqual([expect.objectContaining({ code: "max_provenance_events_exceeded" })]);
+    expect(history).toHaveLength(2);
+    expect(Object.isFrozen(history)).toBe(false);
+  });
+
   it.each([NaN, Infinity, -Infinity, -1, 0.5, Number.MAX_SAFE_INTEGER + 1])(
     "rejects invalid numeric validator path segments (%s)", async (segment) => {
       const result = await runValidators({

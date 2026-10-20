@@ -68,17 +68,11 @@ async function applyPipelineValidators(
     return result;
   }
 
-  const remainingProvenanceEvents = result.limits.maxProvenanceEvents - result.provenance.length;
-  if (remainingProvenanceEvents <= 0) {
-    const issues = combineConfigIssues(result.issues, [provenanceLimitIssue(result.limits.maxProvenanceEvents)], result.limits.maxDiagnostics);
-    return { ...result, ok: false, issues };
-  }
-
   const validation = await runValidators({
     config: result.config,
     provenance: result.provenance,
     validators,
-    limits: { ...result.limits, maxProvenanceEvents: remainingProvenanceEvents }
+    limits: result.limits
   });
   const issues = combineConfigIssues(
     result.issues,
@@ -91,15 +85,6 @@ async function applyPipelineValidators(
     ok: !issues.some((issue) => issue.severity === "error"),
     issues,
     provenance: [...result.provenance, ...validation.provenance].slice(0, result.limits.maxProvenanceEvents)
-  };
-}
-
-function provenanceLimitIssue(maximum: number): ConfigIssue {
-  return {
-    category: "resource-limit",
-    code: "max_provenance_events_exceeded",
-    severity: "error",
-    message: `Retained entries exceeded the maximum of ${maximum}.`
   };
 }
 

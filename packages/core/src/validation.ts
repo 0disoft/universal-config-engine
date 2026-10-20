@@ -29,7 +29,8 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
   const provenance: ProvenanceEvent[] = [];
   const limits = normalizeResourceLimits(input.limits);
   const maxDiagnostics = limits.maxDiagnostics;
-  if (input.provenance.length > limits.maxProvenanceEvents) {
+  const remainingProvenanceEvents = limits.maxProvenanceEvents - input.provenance.length;
+  if (remainingProvenanceEvents < 0 || (remainingProvenanceEvents === 0 && input.validators.length > 0)) {
     return {
       issues: [provenanceLimitIssue(limits.maxProvenanceEvents)],
       provenance
@@ -39,7 +40,7 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
   const validatorProvenance = freezeProvenance(input.provenance);
 
   for (const validator of input.validators) {
-    if (provenance.length >= limits.maxProvenanceEvents) {
+    if (provenance.length >= remainingProvenanceEvents) {
       appendBoundedIssues(issues, [provenanceLimitIssue(limits.maxProvenanceEvents)], maxDiagnostics);
       break;
     }
