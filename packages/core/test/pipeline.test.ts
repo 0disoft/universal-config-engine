@@ -5,6 +5,7 @@ import {
 } from "../src/index.js";
 import type {
   ConfigLoader,
+  ConfigValue,
   ValidatorAdapter
 } from "../src/index.js";
 
@@ -28,6 +29,33 @@ function loader(
 }
 
 describe("runConfigPipeline", () => {
+  it.each(["array", "object"])("validates deeply nested %s config without overflowing input freezing", async (kind) => {
+    let value: ConfigValue = true;
+    for (let depth = 0; depth < 6_000; depth += 1) value = kind === "array" ? [value] : { child: value };
+    let inspectedContainers = 0;
+    const pipeline = await runConfigPipeline({
+      loaders: [loader("deep", 0, { payload: value })], context: undefined,
+      limits: { maxDepth: 6_001, maxPathLength: 6_001 },
+      validators: [{ id: "frozen-check", validate(input) {
+        expect(Object.isFrozen(input.config)).toBe(true);
+        let current = getConfigValueAtPath(input.config, ["payload"]);
+        while (current !== null && typeof current === "object") {
+          expect(Object.isFrozen(current)).toBe(true);
+          inspectedContainers += 1;
+          current = Array.isArray(current) ? current[0] : Object.values(current)[0];
+        }
+        expect(current).toBe(true);
+        return { ok: true, issues: [] };
+      } }]
+    });
+    expect(pipeline.result.issues).toEqual([]);
+    expect(pipeline.result.ok).toBe(true);
+    expect(pipeline.report.status).toBe("ok");
+    expect(inspectedContainers).toBe(6_000);
+    expect(Object.isFrozen(value)).toBe(false);
+    expect(Object.isFrozen(pipeline.result.config)).toBe(false);
+  });
+
   it("loads, resolves, validates, and reports through one public facade", async () => {
     const pipeline = await runConfigPipeline({
       loaders: [

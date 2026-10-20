@@ -128,21 +128,19 @@ function freezeProvenance(input: readonly ProvenanceEvent[]): readonly Provenanc
 }
 
 function freezeConfigValue(value: ConfigValue): ConfigValue {
-  if (value === null || typeof value !== "object") {
-    return value;
-  }
-
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      freezeConfigValue(item);
+  const stack: Iterator<ConfigValue>[] = [[value].values()];
+  while (stack.length > 0) {
+    const next = stack[stack.length - 1]!.next();
+    if (next.done) {
+      stack.pop();
+      continue;
     }
-    return Object.freeze(value);
+    const child = next.value;
+    if (child === null || typeof child !== "object") continue;
+    Object.freeze(child);
+    stack.push(Array.isArray(child) ? child.values() : Object.values(child).values());
   }
-
-  for (const child of Object.values(value)) {
-    freezeConfigValue(child);
-  }
-  return Object.freeze(value);
+  return value;
 }
 
 function normalizeValidatorIssues(

@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Freeze validator config iteratively so deeply nested configurations accepted by
+  resolution do not reject the pipeline before validation starts.
 - Inspect and clone deeply nested JSON iteratively so valid input reaches configured
   structural limits instead of syntax/set failures or stack overflow. Detect unsafe
   keys at deep positions without a recursive JSON reviver. Validate structures and

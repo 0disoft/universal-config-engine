@@ -33,6 +33,9 @@ Repository Type: library
   `prototype` at any depth with `coercion/unsafe_key` before assignment, leaving the
   original string intact and omitting raw input from the diagnostic.
 - `ValidatorAdapter`: validation boundary for consumer-selected validators.
+  Validator config is a deeply frozen private clone. Freezing is iterative, so
+  configurations accepted with large explicit depth limits also reach validators
+  without stack overflow; caller and resolved config objects remain unfrozen.
 - `ValidatorIssue`: structured validator output containing a stable code, severity,
   and optional normalized config path.
 - `ConfigProvenance`: value-level source, override, default, coercion, validation,
