@@ -16,6 +16,9 @@ semantic versioning and keeps package versions aligned across the workspace.
   existing synchronous schema contract for JavaScript callers before pending
   validation Promises can be mistaken for successful results.
 
+- Own the Vite test peer explicitly and update it to 8.1.6, removing vulnerable
+  8.1.3 peer snapshots from the development dependency graph.
+
 ## 1.1.1 - 2026-10-21
 
 - Promote `1.1.1-rc.1` with unchanged runtime, public declarations, dependencies
