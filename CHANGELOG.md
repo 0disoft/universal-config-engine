@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Share loader/validator issue-detail validation and reject non-finite numbers in
+  legacy validator details, matching the existing loader boundary.
 - Bound diagnostic retention during resolution without first copying the complete
   source issue array. Preserve issue order and source rejection for discarded errors.
 

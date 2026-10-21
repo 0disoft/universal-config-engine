@@ -1,9 +1,59 @@
 import { describe, expect, it } from "vitest";
-import { getConfigValueAtPath, runValidators, resolveConfig } from "../src/index.js";
+import { getConfigValueAtPath, loadConfigSources, runValidators, resolveConfig } from "../src/index.js";
 import type { ValidatorResult } from "../src/index.js";
 import { source } from "./helpers/source.js";
 
 describe("runValidators", () => {
+  it.each([NaN, Infinity, -Infinity])(
+    "rejects non-finite issue details consistently at both adapter boundaries (%s)", async (count) => {
+      const issue = {
+        category: "validation" as const, code: "notice", severity: "warning" as const,
+        message: "Adapter notice.", details: { count }
+      };
+      const loaded = await loadConfigSources({
+        context: undefined, loaders: [{
+          descriptor: { id: "loader", kind: "adapter", priority: 0, displayName: "loader" },
+          load: () => ({ value: {}, issues: [issue] })
+        }]
+      });
+      const validation = await runValidators({
+        config: {}, provenance: [], validators: [{
+          id: "validator", validate: () => ({ ok: true, issues: [issue] })
+        }]
+      });
+
+      expect(loaded.issues).toEqual([expect.objectContaining({ code: "invalid_loader_result", severity: "error" })]);
+      expect(validation.issues).toEqual([expect.objectContaining({ code: "validator_issue_invalid", severity: "error" })]);
+    }
+  );
+
+  it("accepts JSON-compatible detail primitives while keeping validator details private", async () => {
+    const details = { count: 1.5, negative: -2, largest: Number.MAX_VALUE, zero: 0,
+      label: "Adapter notice", enabled: true, absent: null };
+    const issue = {
+      category: "validation" as const, code: "notice", severity: "warning" as const,
+      message: "Adapter notice.", details
+    };
+    const loaded = await loadConfigSources({
+      context: undefined, loaders: [{
+        descriptor: { id: "loader", kind: "adapter", priority: 0, displayName: "loader" },
+        load: () => ({ value: {}, issues: [issue] })
+      }]
+    });
+    const validation = await runValidators({
+      config: {}, provenance: [], validators: [{
+        id: "validator", validate: () => ({ ok: true, issues: [issue] })
+      }]
+    });
+
+    expect(loaded.issues[0]?.details).toEqual(details);
+    expect(loaded.issues[0]?.details).not.toBe(details);
+    expect(validation.issues).toEqual([{
+      category: "validation", code: "notice", severity: "warning", sourceId: "validator",
+      message: "Validator validator reported validation issue notice."
+    }]);
+  });
+
   it("shares the provenance budget between input history and new validator events", async () => {
     const history = [
       { path: ["port"], action: "defined" as const, sourceId: "defaults", message: "Defined port." },

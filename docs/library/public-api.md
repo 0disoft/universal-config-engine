@@ -284,6 +284,10 @@ migration review before running `pnpm run update:api-snapshot`.
 - Accept only strings and non-negative safe integers as loader issue, source
   location and validator issue path segments; reject sparse paths and invalid
   numeric indexes as malformed adapter output.
+- Validate legacy issue `details` consistently at loader and validator boundaries:
+  values must be JSON-compatible primitives, including finite numbers. Non-finite
+  details reject the adapter issue; accepted validator details remain omitted from
+  public diagnostics. Both boundaries use one internal details guard.
 - Do not copy thrown validator exception text or validator-provided message,
   details, category, or source identity into diagnostics. Core reconstructs public
   validation issues from `code`, `severity`, and optional `path`; see ADR 0011.

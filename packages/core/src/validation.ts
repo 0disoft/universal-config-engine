@@ -1,5 +1,5 @@
 import { appendBoundedIssues, isDiagnosticsLimitReached, markDiagnosticsOverflow } from "./diagnostics.js";
-import { isConfigPath, isIssueCode, isRecord } from "./adapter-guards.js";
+import { isConfigPath, isIssueCode, isIssueDetails, isRecord } from "./adapter-guards.js";
 import { normalizeResourceLimits } from "./limits.js";
 import { cloneConfigValue } from "./path.js";
 import type {
@@ -236,17 +236,4 @@ function validatorFailedWithoutIssuesIssue(validatorId: string): ConfigIssue {
 
 function validatorStatus(result: ValidatorResult, issues: readonly ConfigIssue[]): "ok" | "error" {
   return result.ok && !issues.some((issue) => issue.severity === "error") ? "ok" : "error";
-}
-
-function isIssueDetails(value: unknown): value is Readonly<Record<string, string | number | boolean | null>> {
-  return (
-    isRecord(value) &&
-    Object.values(value).every(
-      (detailValue) =>
-        typeof detailValue === "string" ||
-        typeof detailValue === "number" ||
-        typeof detailValue === "boolean" ||
-        detailValue === null
-    )
-  );
 }

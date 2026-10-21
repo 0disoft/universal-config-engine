@@ -21,3 +21,16 @@ export function isConfigPath(value: unknown): value is ConfigPath {
   }
   return true;
 }
+
+export function isIssueDetails(value: unknown): value is Readonly<Record<string, string | number | boolean | null>> {
+  return (
+    isRecord(value) &&
+    Object.values(value).every(
+      (detail) =>
+        detail === null ||
+        typeof detail === "string" ||
+        typeof detail === "boolean" ||
+        (typeof detail === "number" && Number.isFinite(detail))
+    )
+  );
+}

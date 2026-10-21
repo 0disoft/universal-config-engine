@@ -1,5 +1,5 @@
 import { appendBoundedIssues, markDiagnosticsOverflow } from "./diagnostics.js";
-import { isConfigPath, isIssueCode, isRecord } from "./adapter-guards.js";
+import { isConfigPath, isIssueCode, isIssueDetails, isRecord } from "./adapter-guards.js";
 import type {
   ConfigIssue,
   ConfigLoader,
@@ -198,19 +198,6 @@ function isValueLocation(value: unknown): value is ValueLocation {
     (location.sourcePath === undefined || typeof location.sourcePath === "string") &&
     (location.line === undefined || isPositiveSafeInteger(location.line)) &&
     (location.column === undefined || isPositiveSafeInteger(location.column))
-  );
-}
-
-function isIssueDetails(value: unknown): value is Readonly<Record<string, string | number | boolean | null>> {
-  return (
-    isRecord(value) &&
-    Object.values(value).every(
-      (detail) =>
-        detail === null ||
-        typeof detail === "string" ||
-        typeof detail === "boolean" ||
-        (typeof detail === "number" && Number.isFinite(detail))
-    )
   );
 }
 
