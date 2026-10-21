@@ -12,12 +12,16 @@ import { formatHumanReport, formatJsonReport } from "./output.js";
 import { formatInspection } from "./inspection-output.js";
 import { declarationFailure, executeDeclaration } from "./execution.js";
 import { runDiffCli } from "./diff.js";
+import { prepareDiscoveryArgs } from "./discovery.js";
+import { PipelineDeclarationError } from "./pipeline.js";
 import type { CliResult, CliRuntime } from "./types.js";
 
 export async function runCli(args: readonly string[], runtime: CliRuntime): Promise<CliResult> {
   let parsed;
+  let selection;
   try {
-    parsed = parseInspectionArgs(args);
+    selection = await prepareDiscoveryArgs(args, runtime);
+    parsed = parseInspectionArgs(selection.args);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid CLI arguments.";
     const usageContext = getCliUsageContext(args);
@@ -33,7 +37,9 @@ export async function runCli(args: readonly string[], runtime: CliRuntime): Prom
 
   if (parsed.command === "diff") return runDiffCli(parsed, runtime);
   try {
-    const { result: finalResult, report } = await executeDeclaration(parsed.configPath, runtime, parsed.sourceArgv, parsed.command === "validate" || parsed.values === true);
+    if (selection.issues !== undefined) throw new PipelineDeclarationError(selection.issues);
+    const { result: finalResult, report } = await executeDeclaration(parsed.configPath, runtime, parsed.sourceArgv, parsed.command === "validate" || parsed.values === true,
+      selection.workspacePath === undefined ? {} : { allowedRootPath: selection.workspacePath });
     if (parsed.values === true) {
       const inspection = buildConfigInspection(finalResult, parsed.path === undefined ? {} : { path: parsed.path });
       runtime.stdout(formatInspection(inspection, parsed.output === "json"));

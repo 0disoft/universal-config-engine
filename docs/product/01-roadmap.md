@@ -188,7 +188,7 @@ legacy command output remain unchanged. Publication was separately authorized.
 ## Local Adoption Delivery (ADR 0018, Unreleased)
 
 - [x] Official JSONC/YAML/TOML/JSON5 loaders and CLI source integration.
-- [ ] Bounded, explicit workspace discovery.
+- [x] Bounded, explicit workspace discovery.
 - [ ] Standard Schema adapter and separate typed pipeline output.
 - [ ] Explicit profiles and safe workspace-local inheritance.
 - [ ] Serialized reload, last successful snapshots and disposable file watching.

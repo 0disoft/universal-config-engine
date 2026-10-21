@@ -20,7 +20,7 @@ export {
   loadPipelineDeclaration,
   loadPipelineDeclarationContext
 } from "./pipeline.js";
-export type { LoadedPipelineDeclaration } from "./pipeline.js";
+export type { LoadedPipelineDeclaration, PipelineDeclarationReadPolicy } from "./pipeline.js";
 export {
   runCli
 } from "./run.js";

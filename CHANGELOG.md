@@ -16,6 +16,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 - Node workspace-bounded declaration discovery with deterministic filenames,
   nearest-directory precedence and a capped upward search. Configuration code is
   never executed and unsafe/broken candidates fail instead of being skipped.
+- Opt-in CLI `explain`/`validate --discover <workspace>` and an opened-file root
+  policy for declarations. Explicit config paths and legacy parser behavior remain
+  unchanged; discovered files are rechecked when opened.
 
 ## 1.2.0 - 2026-10-21
 

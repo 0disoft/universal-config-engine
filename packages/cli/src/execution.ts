@@ -2,13 +2,14 @@ import {
   buildDiagnosticReport, combineConfigIssues, runConfigPipeline,
   type ConfigLoader, type ConfigResult, type LoadedSource, type RunConfigPipelineResult
 } from "@0disoft/universal-config-engine-core";
-import { loadDeclaredSources, loadPipelineDeclarationContext, sourceLoadFailedIssues } from "./pipeline.js";
+import { loadDeclaredSources, loadPipelineDeclarationContext, sourceLoadFailedIssues, type PipelineDeclarationReadPolicy } from "./pipeline.js";
 import { createDeclaredValidators } from "./validators.js";
 import type { CliRuntime } from "./types.js";
 
 /** One pipeline implementation for legacy commands, inspection and both diff sides. */
-export async function executeDeclaration(configPath: string, runtime: CliRuntime, argv: readonly string[], validate: boolean): Promise<RunConfigPipelineResult> {
-  const context = await loadPipelineDeclarationContext(configPath, runtime.cwd);
+export async function executeDeclaration(configPath: string, runtime: CliRuntime, argv: readonly string[], validate: boolean,
+  policy: PipelineDeclarationReadPolicy = {}): Promise<RunConfigPipelineResult> {
+  const context = await loadPipelineDeclarationContext(configPath, runtime.cwd, policy);
   const declaration = context.declaration;
   const sources = await loadDeclaredSources({ declaration, configPath: context.canonicalConfigPath,
     cwd: runtime.cwd, env: runtime.env, argv });

@@ -672,11 +672,23 @@ import type { ParsedInspectionArgs } from "./args.js";
 import type { CliResult, CliRuntime } from "./types.js";
 export declare function runDiffCli(parsed: ParsedInspectionArgs, runtime: CliRuntime): Promise<CliResult>;
 
+### discovery.d.ts
+import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
+import type { CliRuntime } from "./types.js";
+export interface PreparedDiscoveryArgs {
+    readonly args: readonly string[];
+    readonly workspacePath?: string;
+    readonly issues?: readonly ConfigIssue[];
+}
+/** Keep filesystem selection outside the exported synchronous legacy parser. */
+export declare function prepareDiscoveryArgs(args: readonly string[], runtime: CliRuntime): Promise<PreparedDiscoveryArgs>;
+
 ### execution.d.ts
 import { type ConfigResult, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
+import { type PipelineDeclarationReadPolicy } from "./pipeline.js";
 import type { CliRuntime } from "./types.js";
 /** One pipeline implementation for legacy commands, inspection and both diff sides. */
-export declare function executeDeclaration(configPath: string, runtime: CliRuntime, argv: readonly string[], validate: boolean): Promise<RunConfigPipelineResult>;
+export declare function executeDeclaration(configPath: string, runtime: CliRuntime, argv: readonly string[], validate: boolean, policy?: PipelineDeclarationReadPolicy): Promise<RunConfigPipelineResult>;
 export declare function declarationFailure(error: unknown): ConfigResult;
 
 ### exit-codes.d.ts
@@ -695,7 +707,7 @@ export { parseCliArgs } from "./args.js";
 export { EXIT_POLICY_FAILED, EXIT_REDACTION_FAILED, EXIT_SOURCE_FAILED, EXIT_SUCCESS, EXIT_USAGE_ERROR, EXIT_VALIDATION_FAILED, exitCodeForIssues, exitCodeForResult } from "./exit-codes.js";
 export { formatHumanReport, formatJsonReport } from "./output.js";
 export { loadDeclaredSources, loadPipelineDeclaration, loadPipelineDeclarationContext } from "./pipeline.js";
-export type { LoadedPipelineDeclaration } from "./pipeline.js";
+export type { LoadedPipelineDeclaration, PipelineDeclarationReadPolicy } from "./pipeline.js";
 export { runCli } from "./run.js";
 export { createDeclaredValidators } from "./validators.js";
 export type { ArgvSourceDeclaration, CliCommand, CliOutputMode, CliResult, CliRuntime, DotenvFileSourceDeclaration, FileAdapterSourceDeclaration, JsonFileSourceDeclaration, ObjectSourceDeclaration, PipelineDeclaration, PipelineSourceDeclaration, ProcessEnvSourceDeclaration } from "./types.js";
@@ -725,8 +737,11 @@ export interface LoadedPipelineDeclaration {
     readonly declaration: PipelineDeclaration;
     readonly canonicalConfigPath: string;
 }
-export declare function loadPipelineDeclaration(configPath: string, cwd?: string): Promise<PipelineDeclaration>;
-export declare function loadPipelineDeclarationContext(configPath: string, cwd?: string): Promise<LoadedPipelineDeclaration>;
+export interface PipelineDeclarationReadPolicy {
+    readonly allowedRootPath?: string;
+}
+export declare function loadPipelineDeclaration(configPath: string, cwd?: string, policy?: PipelineDeclarationReadPolicy): Promise<PipelineDeclaration>;
+export declare function loadPipelineDeclarationContext(configPath: string, cwd?: string, policy?: PipelineDeclarationReadPolicy): Promise<LoadedPipelineDeclaration>;
 export { loadDeclaredSources } from "./pipeline/source-loading.js";
 export { PipelineDeclarationError, sourceLoadFailedIssue, sourceLoadFailedIssues } from "./pipeline/declaration-diagnostics.js";
 

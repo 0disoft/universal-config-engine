@@ -36,6 +36,16 @@ Candidate responsibilities:
 - report source-aware error paths;
 - emit redacted text and JSON reports.
 
+## Opt-in Workspace Discovery (ADR 0018, Unreleased)
+
+`uce explain --discover <workspace>` and `uce validate --discover <workspace>`
+select a nearby JSON pipeline declaration within the explicit workspace. This
+replaces `--config` for that invocation; the two options are mutually exclusive.
+The Node discovery API owns ordered filenames and directory budgets, and the
+opened declaration is checked against the same root. Diff retains explicit
+before/after paths. Legacy synchronous argument parsing and missing-path behavior
+remain unchanged. See [the discovery contract](discovery.md).
+
 ## Opt-in Inspection
 
 ### Opt-in inspection (ADR 0017)

@@ -1,8 +1,21 @@
 # Explicit Workspace Discovery
 
-Status: Implemented in the Node API, unreleased (ADR 0018). CLI integration follows
-as a separate delivery unit. Existing explicit configuration paths retain their
-behavior, and published `1.2.0` does not include this API.
+Status: Implemented, unreleased (ADR 0018). Existing explicit configuration paths
+retain their behavior, and published `1.2.0` does not include these additions.
+
+```sh
+uce explain --discover . --values --json
+uce validate --discover /app --json
+```
+
+`--discover <workspace>` opts `explain` or `validate` into bounded search. Use it
+instead of `--config`, once per command. Start at the working directory when it is
+inside the selected workspace; otherwise start at the selected workspace root.
+`--discover` after the source-argument separator is ordinary argv source data.
+Diff continues to require explicit before/after declarations. Missing configuration
+still produces the legacy usage error unless discovery was explicitly requested.
+The exported synchronous `parseCliArgs` retains its explicit-path contract;
+asynchronous discovery belongs to `runCli` and the installed executable.
 
 ```ts
 import { discoverPipelineDeclaration, readTextFileWithinLimit } from "@0disoft/universal-config-engine-node";
@@ -44,3 +57,7 @@ Discovery is selection, not an open-file capability. Consumers must still use th
 bounded file reader with `allowedRootPath` when opening the selected declaration,
 so a link or junction swap cannot bypass the workspace boundary. The existing
 opened-file identity verification remains authoritative.
+The CLI passes the selected workspace to `loadPipelineDeclarationContext`'s
+optional `PipelineDeclarationReadPolicy.allowedRootPath` and rechecks that boundary
+on the opened file. Discovery failures retain command-appropriate diagnostic or
+inspection envelopes and existing source-load/resource exit codes.

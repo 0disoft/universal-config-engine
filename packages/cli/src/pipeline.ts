@@ -13,18 +13,24 @@ export interface LoadedPipelineDeclaration {
   readonly canonicalConfigPath: string;
 }
 
-export async function loadPipelineDeclaration(configPath: string, cwd = process.cwd()): Promise<PipelineDeclaration> {
-  return (await loadPipelineDeclarationContext(configPath, cwd)).declaration;
+export interface PipelineDeclarationReadPolicy {
+  readonly allowedRootPath?: string;
+}
+
+export async function loadPipelineDeclaration(configPath: string, cwd = process.cwd(), policy: PipelineDeclarationReadPolicy = {}): Promise<PipelineDeclaration> {
+  return (await loadPipelineDeclarationContext(configPath, cwd, policy)).declaration;
 }
 
 export async function loadPipelineDeclarationContext(
   configPath: string,
-  cwd = process.cwd()
+  cwd = process.cwd(),
+  policy: PipelineDeclarationReadPolicy = {}
 ): Promise<LoadedPipelineDeclaration> {
   const readResult = await readTextFileWithinLimit({
     filePath: resolveInputPath(configPath, cwd),
     sourceId: "cli:pipeline-declaration",
-    maxFileBytes: DEFAULT_MAX_FILE_BYTES
+    maxFileBytes: DEFAULT_MAX_FILE_BYTES,
+    ...(policy.allowedRootPath === undefined ? {} : { allowedRootPath: policy.allowedRootPath })
   });
   if (!readResult.ok) {
     throw new PipelineDeclarationError(readResult.issues);
