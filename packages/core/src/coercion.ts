@@ -1,10 +1,15 @@
 import { cloneConfigValue, getConfigValueAtPath, isUnsafePathSegment } from "./path.js";
 import { parseJsonConfigValue } from "./json-value.js";
-import type { CoercionRule, ConfigIssue, ConfigPath, ConfigValue, ProvenanceEvent } from "./types.js";
+import { appendBoundedIssues, isDiagnosticsLimitReached } from "./diagnostics.js";
+import { normalizeResourceLimits } from "./limits.js";
+import type { CoercionRule, ConfigIssue, ConfigPath, ConfigValue, ProvenanceEvent, ResourceLimitPolicy } from "./types.js";
 
 export interface ApplyCoercionRulesInput {
   readonly config: ConfigValue;
   readonly rules: readonly CoercionRule[];
+  readonly limits?: Partial<ResourceLimitPolicy>;
+  /** Existing history shares the event budget; returned provenance contains only new events. */
+  readonly provenance?: readonly ProvenanceEvent[];
 }
 
 export interface ApplyCoercionRulesResult {
@@ -16,6 +21,15 @@ export interface ApplyCoercionRulesResult {
 export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercionRulesResult {
   const issues: ConfigIssue[] = [];
   const provenance: ProvenanceEvent[] = [];
+  const limits = normalizeResourceLimits(input.limits);
+  // Include no-op rules in the execution bound, before copying or inspecting config.
+  if (input.rules.length > limits.maxProvenanceEvents) {
+    return { config: {}, issues: [resourceIssue("max_coercion_rules_exceeded", limits.maxProvenanceEvents)], provenance };
+  }
+  const remainingEvents = limits.maxProvenanceEvents - (input.provenance?.length ?? 0);
+  if (remainingEvents < 0) {
+    return { config: {}, issues: [resourceIssue("max_provenance_events_exceeded", limits.maxProvenanceEvents)], provenance };
+  }
   const config = cloneConfigValue(input.config);
 
   if (input.rules.length === 0) {
@@ -38,6 +52,7 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
   }
 
   for (const rule of input.rules) {
+    if (isDiagnosticsLimitReached(issues, limits.maxDiagnostics)) break;
     const currentValue = getConfigValueAtPath(config, rule.path);
     if (currentValue === undefined) {
       continue;
@@ -47,16 +62,21 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
       continue;
     }
 
+    if (provenance.length >= remainingEvents) {
+      appendBoundedIssues(issues, [resourceIssue("max_provenance_events_exceeded", limits.maxProvenanceEvents)], limits.maxDiagnostics);
+      break;
+    }
+
     const stringValue = currentValue as string;
     const coerced = coerceString(stringValue, rule);
     if (!coerced.ok) {
-      issues.push({
+      appendBoundedIssues(issues, [{
         category: "coercion",
         code: coerced.code ?? "coercion_failed",
         severity: "error",
         path: [...rule.path],
         message: coerced.message
-      });
+      }], limits.maxDiagnostics);
       continue;
     }
 
@@ -69,17 +89,22 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
         message: `Path was coerced from ${rule.from} to ${rule.to}.`
       });
     } catch {
-      issues.push({
+      appendBoundedIssues(issues, [{
         category: "coercion",
         code: "coercion_set_failed",
         severity: "error",
         path: [...rule.path],
         message: "Failed to set coerced config value. Internal exception details were omitted from diagnostics."
-      });
+      }], limits.maxDiagnostics);
     }
   }
 
   return { config, issues, provenance };
+}
+
+function resourceIssue(code: string, maximum: number): ConfigIssue {
+  return { category: "resource-limit", code, severity: "error",
+    message: `Coercion exceeded its configured budget of ${maximum}.` };
 }
 
 function setExistingCoercionValue(config: ConfigValue, path: ConfigPath, value: ConfigValue): void {

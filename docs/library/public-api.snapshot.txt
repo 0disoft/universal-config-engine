@@ -44,10 +44,13 @@ export interface ConfigChangeCheck {
 export declare function checkConfigChanges(before: ConfigResult, after: ConfigResult, policy: unknown, options?: Omit<BuildConfigDiffOptions, "path">): ConfigChangeCheck;
 
 ### coercion.d.ts
-import type { CoercionRule, ConfigIssue, ConfigValue, ProvenanceEvent } from "./types.js";
+import type { CoercionRule, ConfigIssue, ConfigValue, ProvenanceEvent, ResourceLimitPolicy } from "./types.js";
 export interface ApplyCoercionRulesInput {
     readonly config: ConfigValue;
     readonly rules: readonly CoercionRule[];
+    readonly limits?: Partial<ResourceLimitPolicy>;
+    /** Existing history shares the event budget; returned provenance contains only new events. */
+    readonly provenance?: readonly ProvenanceEvent[];
 }
 export interface ApplyCoercionRulesResult {
     readonly config: ConfigValue;

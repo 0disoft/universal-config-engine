@@ -121,10 +121,12 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
   }
 
   let didCoerce = false;
-  if (input.coercionRules !== undefined && input.coercionRules.length > 0) {
+  if (input.coercionRules !== undefined && input.coercionRules.length > 0 && !issues.some(issue => issue.severity === "error")) {
     const coercionResult = applyCoercionRules({
       config,
-      rules: input.coercionRules
+      rules: input.coercionRules,
+      limits,
+      provenance
     });
     config = coercionResult.config as Record<string, ConfigValue>;
     didCoerce = coercionResult.provenance.length > 0;

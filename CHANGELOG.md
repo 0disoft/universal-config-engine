@@ -7,6 +7,10 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Bound coercion diagnostics during generation, account for existing provenance
+  before conversion, cap rule count by `maxProvenanceEvents` (including no-op
+  rules), and skip coercion after merge failure. Standalone coercion accepts
+  optional limits and incoming history; rule-count preflight returns empty config.
 - Reject non-finite source priorities before loading or sorting, preventing silent
   precedence inversion and invalid numeric metadata in successful reports.
 - Count array indexes and repeated references against `maxKeyCount`, stopping

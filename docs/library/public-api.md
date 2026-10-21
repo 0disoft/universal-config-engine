@@ -35,6 +35,13 @@ Repository Type: library
 - `CoercionPolicy`: opt-in type conversion rules.
 - `applyCoercionRules`: immutable coercion stage that returns a cloned `config`
   together with issues and provenance; caller input is never modified.
+  Optional `limits` bound diagnostics at creation and share the event budget with
+  optional incoming `provenance` (only new events are returned). The full
+  `maxProvenanceEvents` also caps the rule count, including no-op rules; excessive
+  lists fail before rule/config inspection and return an empty config. No further
+  conversion runs after diagnostic overflow or when no event slot remains.
+  Resolution skips coercion after merge failure. Structural depth/path policy
+  remains owned by resolution, independently of these execution/retention budgets.
   Numeric path segments address existing array elements, including nested arrays;
   coercion never creates sparse arrays or missing indexes. This uses an internal
   updater: the public `setConfigValueAtPath` retains its object-only, numeric-write

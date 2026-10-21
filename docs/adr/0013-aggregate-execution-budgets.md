@@ -35,6 +35,13 @@ validator events share the original limit. The pipeline forwards that limit
 unchanged. `runValidators` returns only new events, stops before invoking an adapter
 whose event would exceed the budget, and reports the original configured maximum.
 
+Coercion receives the original limits and incoming provenance, creates only bounded
+diagnostics, and stops conversions before exhausting the remaining event slots.
+The full `maxProvenanceEvents` also bounds the number of declared coercion rules
+(including no-op rules), preventing unbounded traversal even without diagnostics.
+Rule-count preflight fails before copying config and returns an empty config plus
+`max_coercion_rules_exceeded`. Resolution does not run coercion after merge failure.
+
 The existing `maxKeyCount` is an expanded key/index budget: array elements and each
 occurrence of shared acyclic references count alongside object keys. Exhaustion
 stops traversal immediately and rejects the source before atomic arrays are cloned.
