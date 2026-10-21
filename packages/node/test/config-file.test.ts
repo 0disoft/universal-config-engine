@@ -18,6 +18,20 @@ async function load(format: ConfigFileFormat, text: string, options: Partial<Loa
 }
 
 describe("official configuration file formats", () => {
+  it.each(['{"items":[,]}', '{,}', '{"items":[1,,]}'])(
+    "rejects JSONC elisions even when trailing commas are enabled: %s", async text => {
+      const loaded = await load("jsonc", text, { allowTrailingComma: true });
+      expect(loaded.value).toEqual({});
+      expect(loaded.issues?.[0]?.code).toBe("config_file_parse_failed");
+    }
+  );
+
+  it("accepts trailing commas after real JSONC values", async () => {
+    const loaded = await load("jsonc", '{"items":[1, /* comment */],}', { allowTrailingComma: true });
+    expect(loaded.value).toEqual({ items: [1] });
+    expect(loaded.issues).toBeUndefined();
+  });
+
   it.each([
     ["json", '{"service":{"port":8080}}'],
     ["jsonc", '{/* comment */ "service":{"port":8080}}'],

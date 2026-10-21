@@ -50,7 +50,10 @@ export async function loadConfigFileSource(input: LoadConfigFileSourceInput): Pr
 async function parseDialect(raw: string, input: LoadConfigFileSourceInput): Promise<unknown> {
   switch (input.format) {
     case "jsonc": {
-      const { createScanner } = await import("jsonc-parser");
+      const { createScanner, visit } = await import("jsonc-parser");
+      // Validate grammar before removing commas: empty elisions are never trailing commas.
+      visit(raw, { onError: () => { throw new Error("Invalid JSONC syntax."); } },
+        { allowTrailingComma: input.allowTrailingComma === true });
       const scanner = createScanner(raw, false);
       const commas: number[] = [];
       const uncommented: string[] = [];
