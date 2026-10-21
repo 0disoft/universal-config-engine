@@ -17,6 +17,25 @@ import { loadDeclaredSources, loadPipelineDeclaration, loadPipelineDeclarationCo
 import { withTempDir } from "./helpers/temp-directory.js";
 
 describe("loadPipelineDeclaration", () => {
+  it.each(["constructor", "__proto__", "toString", "unsupported"])(
+    "reports unsupported source kind %s without falling through to an internal exception", async (kind) => {
+      await withTempDir(async dir => {
+        await writeFile(join(dir, "uce.json"), JSON.stringify({ sources: [{ id: "input", kind, priority: 0 }] }));
+        await expect(loadPipelineDeclaration(join(dir, "uce.json"), dir)).rejects.toMatchObject({
+          issues: [expect.objectContaining({ code: "unsupported_source_kind", path: ["sources", 0, "kind"], sourceId: "input" })]
+        });
+        let stdout = "";
+        const result = await runCli(["validate", "--config", "uce.json", "--json"], {
+          cwd: dir, env: {}, stdout: text => { stdout += text; }, stderr: () => {}
+        });
+        expect(result.exitCode).toBe(2);
+        expect(JSON.parse(stdout)).toMatchObject({ status: "error", issues: [
+          expect.objectContaining({ code: "unsupported_source_kind", path: ["sources", 0, "kind"] })
+        ] });
+        expect(stdout).not.toContain("pipeline_declaration_load_failed");
+      });
+    });
+
   it("bounds malformed declaration diagnostics with a bootstrap limit", async () => {
     await withTempDir(async (dir) => {
       const configPath = join(dir, "uce.json");

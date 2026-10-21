@@ -159,7 +159,8 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
   const issues: ConfigIssue[] = [];
   const sourceId = typeof source.id === "string" && source.id.length > 0 ? source.id : undefined;
   const sourcePath = (field: string): ConfigPath => [...path, field];
-  const allowedSourceFields = typeof source.kind === "string" ? SOURCE_KIND_FIELDS[source.kind] : undefined;
+  const allowedSourceFields = typeof source.kind === "string" && Object.hasOwn(SOURCE_KIND_FIELDS, source.kind)
+    ? SOURCE_KIND_FIELDS[source.kind] : undefined;
 
   if (allowedSourceFields !== undefined) {
     issues.push(

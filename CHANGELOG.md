@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Reject prototype-named CLI source kinds with a precise `unsupported_source_kind`
+  diagnostic instead of an internal exception and generic declaration failure.
 - Attribute override provenance to the immediately previous winner instead of the
   oldest historical source, preserving complete oldest-first override history.
 - Cap file-watch debounce postponement at one second so continuous changes still
