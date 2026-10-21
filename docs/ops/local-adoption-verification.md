@@ -2,8 +2,9 @@
 
 Date: 2026-10-21. Decision: [ADR 0018](../adr/0018-local-config-adoption.md).
 All nine implementation units in the [roadmap](../product/01-roadmap.md) are
-complete. Implementation source ends at `5b42ed025d495c572272aae60ddf3172cc232de6`;
-this record adds documentation only. Work used the existing main checkout, with
+complete. The initial delivery ended at `5b42ed025d495c572272aae60ddf3172cc232de6`;
+the resumed completion audit below covers three subsequent corrections. This record
+adds documentation only. Work used the existing main checkout, with
 no additional branch or worktree and no publication of the adoption changes.
 
 ## Released baseline versus local development
@@ -116,3 +117,71 @@ than adding unrelated features to fill a maintenance quota.
 Applied repository skills: feature, library-package, cli-tool, dependency-upgrade,
 ops-change, test-hardening and bugfix. Security/performance and corresponding
 package/CLI/ops/dependency checklists guided the boundaries and verification.
+
+## Resumed completion audit
+
+Audit source: `49b5f6eb96222730b208aeb8eb78099bff4b1a29`.
+The previous goal turn made implementation progress. On resumption, the original
+attached feedback, ADR 0017/0018, roadmap, contracts, implementation and regression
+cases were inspected again instead of accepting the completion checklist alone.
+Current branch/worktree inspection found only main and this original checkout.
+
+| Original requirement | Inspected implementation | Behavioral evidence |
+| --- | --- | --- |
+| First priority: value explain, typed paths, diff and change reasons | Core `inspection.ts`, `diff.ts`, `change-policy.ts`; CLI inspection/diff dispatch | Core and CLI inspection/diff/policy suites; installed seven-case feature checker and three-rule comparison example |
+| JSONC/YAML/TOML/JSON5 official adapters | Node `config-file-loader.ts`, shared bounded file reader, CLI source loading | `config-file.test.ts` and CLI `file-adapters.test.ts`: syntax, unsafe keys, non-finite/runtime types, YAML duplicates/aliases/tags, bytes/depth, JSONC coordinates; installed dialect consumers |
+| Explicit configuration discovery | Node `discovery.ts`, CLI `discovery.ts` and opened declaration policy | Node/CLI discovery suites: ordered nearest filenames, canonical selection metadata, directory budget, workspace/symlink boundaries, malformed nearest input, explicit-path compatibility; installed discovery consumer |
+| Standard Schema and separate inferred output | Core `standard-schema.ts`, `typed-pipeline.ts`; no core runtime dependencies | Both core suites: one awaited callback, immutable input, path normalization, malformed/bounded failures, no successful value after failure, resolved input preserved; installed strict TS `schema-types.ts` with actual Zod |
+| Profiles, inheritance and workspaces | CLI profiles, declaration validation/normalization, inheritance graph and source path resolver | Profile/selection/inheritance suites: explicit selection without NODE_ENV inference, original priorities and identities, origin-relative files, cycles, diamond deduplication, unique ids, source/file/byte caps and root checks; installed profile consumer |
+| Safe reload and file watching | Node `reload.ts` and `watch.ts` | Reload/watch suites: one active/one queued load, immutable last-good snapshots, failure and close semantics, secret-free events, atomic replacement, path cap and symlink checks; reentrant callback and caller-mutation regressions below; installed lifecycle example |
+| Init, doctor and CI checks | Exclusive init file creation, shared doctor pipeline, existing change policy engine | Init/doctor suites: usable new declaration, no overwrite/symlink follow, sanitized failures/advice, parser output modes; actual installed init/doctor and CI example exits 3 with three exact rule ids |
+| Public sharing and metadata masking | Core `public-report.ts` allowlist, CLI `public-output.ts` and error dispatch | Core public-report suite and CLI public-output suite: values, names, ids, paths, locations, codes/prose/details omitted; stable aliases/relationships, enum allowlist and byte failure; private usage strings do not escape the public envelope |
+| Node/Bun/Deno/Workers consumers | `smoke-portable-runtimes.mjs`, installed core bytes and shared `portable-core.mjs` exercise | Actual selected runtime executables, seven feature groups each; workerd test handler without Node flags; version/digest evidence. Adapter/CLI Node requirements remain separately stated |
+| Adoption and reproducible value demonstration | `examples/adoption`, `examples/comparison`, copied installed `adoption.mjs` | Exact environment winner 9443, inherited YAML/TOML paths, typed output, closed watch/reload handles, public report and three named CI violations asserted against installed tarballs |
+
+Two lifecycle requirements initially contradicted the claimed completion:
+
+- A first `load` callback synchronously calling `refresh()` started two loads.
+  Its regression observed two calls where one was required. Commit `c25b1a3`
+  claims the running slot before invoking application code; the queued request
+  now publishes revision 2 after revision 1, with no overlap or stale overwrite.
+- Mutating a caller's `paths` array while watch setup awaited its first filesystem
+  operation changed the selected inputs after the 64-path check. Its regression
+  changed one valid path into 65 entries including an outside path. Commit
+  `54b11fc` validates and copies the bounded selection before the first await;
+  later mutations do not affect the selected files or resource boundary.
+
+The CLI output contract also had an inconsistency: split `--output json` emitted
+human output, and an explicit human override after JSON still emitted JSON.
+The regressions failed against the original implementation. Commit `49b5f6e`
+uses the shared parser's final choice and its JSON usage-error context. The
+installed adoption fixture now uses the split alias, not just `--json`.
+
+Fresh verification on `49b5f6e` passed, with the commands run serially:
+
+- `pnpm run check`: 503 package tests (core 253, Node 110, CLI 111, Ajv 22,
+  Zod 7), 46 script tests, strict typechecking, unchanged public declaration
+  snapshot, secret/adapter/action guards and deterministic complexity checks.
+- `pnpm run smoke:packages`: five actual tarballs and installed JS/strict TS,
+  formats, profiles, discovery, init/doctor (including split JSON output), public
+  projection, typed output, reload/watch disposal and exact CI violations.
+- `pnpm run smoke:consumer-matrix`: independent core/strict TS/Node/Ajv/Zod/CLI
+  consumers, including the updated installed adoption example.
+- `pnpm run smoke:portable-runtimes`: Node 24.14.0, Bun 1.4.3, Deno 2.9.7 and
+  workerd 2026-10-21 passed all seven shared core feature groups again. The core
+  tarball digest remained `2dfa2e0883d79ebc6cffc5c136dca201880d47ec2a76dfc0cfe703294fd66a1d`;
+  the corrections affect Node/CLI behavior, not core bytes.
+
+Authoritative fresh command logs are ignored `.tmp/completion-audit-{check,
+packages,matrix,portable}.log`; failing-before/fixed-after regression logs use
+the same prefix. Historical results above remain tied to their earlier commits.
+The current audit exercised the requirement-specific behavior listed in the table;
+it did not use a test count or a checked roadmap alone as completion proof.
+
+No required implementation unit remains. Publication of new work, hosted Actions
+on the unpublished commits, external adoption/score measurements and a hosted
+Workers deployment were not performed or claimed. They are not implementation
+gates for this local-only objective. Public API shape, DB/schema, dependencies,
+hygiene configuration and hosted workflows were unchanged by these corrections.
+Source-of-truth updates are the reload/onboarding contracts, changelog and this
+audit record. Applied skills: bugfix, library-package, cli-tool and ops-change.
