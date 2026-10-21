@@ -49,4 +49,18 @@ describe("serialized config reload", () => {
     release(await pipeline()); expect(await active).toMatchObject({ ok: false, reason: "closed" });
     expect(reloader.getSnapshot()).toBeUndefined(); expect(events).toEqual([]);
   });
+
+  it("does not count secret type or source changes as public changes", async () => {
+    const events: ConfigReloadEvent[] = [];
+    let changed = false;
+    const reloader = createConfigReloader({ load: () => runConfigPipeline({ context: undefined, loaders: [{
+      descriptor: { id: changed ? "new-source" : "old-source", kind: "object", displayName: "settings", priority: 0 },
+      load: () => ({ value: { password: changed ? 123 : "UCE_RELOAD_PRIVATE" } })
+    }] }), onChange: event => { events.push(event); } });
+    try {
+      await reloader.refresh(); changed = true; await reloader.refresh();
+      expect(events[1]).toMatchObject({ status: "updated", revision: 2, changedPathCount: 0 });
+      expect(JSON.stringify(events)).not.toContain("UCE_RELOAD_PRIVATE");
+    } finally { reloader.close(); }
+  });
 });

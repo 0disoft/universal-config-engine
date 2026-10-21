@@ -48,6 +48,11 @@ semantic versioning and keeps package versions aligned across the workspace.
 - Copyable adoption example covering profile/file precedence, typed validation,
   reload/watch disposal, public diagnostics and an executable three-rule CI case.
 
+### Fixed
+
+- Exclude redacted-path type/source/add/remove metadata from reload public change
+  counts, in addition to skipping secret value comparison.
+
 ## 1.2.0 - 2026-10-21
 
 - Promote verified `1.2.0-rc.1` with unchanged runtime, declarations, dependencies,

@@ -58,7 +58,8 @@ export function createReloadState(input: CreateConfigReloaderInput) {
       next = freezeSnapshot(loaded);
       if (snapshot !== undefined) {
         const diff = buildConfigDiff(snapshot.result, next.result);
-        if (diff.status === "ok") changedPathCount = diff.changes.length;
+        if (diff.status === "ok") changedPathCount = diff.changes.filter(change =>
+          change.before?.visibility !== "redacted" && change.after?.visibility !== "redacted").length;
       }
     } catch { return reject("snapshot_failed"); }
     snapshot = next;
