@@ -10,6 +10,24 @@ import { source } from "./helpers/source.js";
 import type { ConfigIssue } from "../src/index.js";
 
 describe("resolveConfig", () => {
+  it.each([NaN, Infinity, -Infinity])("rejects priority %s before inspecting values or applying precedence", (priority) => {
+    let reads = 0;
+    const bad = { ...source("bad", priority, {}), get value() { reads++; throw new Error("Must not load invalid metadata."); } };
+    const result = resolveConfig({ sources: [source("high", 10, { port: 9000 }), bad, source("low", 0, { port: 80 })] });
+    expect(result.ok).toBe(false);
+    expect(result.config).toEqual({});
+    expect(result.sources).toEqual([]);
+    expect(result.issues).toEqual([expect.objectContaining({ code: "source_priority_invalid", sourceId: "bad" })]);
+    expect(reads).toBe(0);
+    expect(buildDiagnosticReport(result).status).toBe("error");
+  });
+
+  it("retains finite fractional and negative priority ordering", () => {
+    const result = resolveConfig({ sources: [source("higher", -0.5, { port: 9000 }), source("lower", -1, { port: 80 })] });
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({ port: 9000 });
+  });
+
   it.each([0, 10])("deep merges an empty object without removing descendants or their ownership (priority %i)", (priority) => {
     const location = { sourceId: "defaults", line: 2, column: 3 };
     const result = resolveConfig({ sources: [

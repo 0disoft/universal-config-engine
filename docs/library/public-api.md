@@ -12,6 +12,9 @@ Repository Type: library
 ## Public API Areas
 
 - `ConfigSource`: source identity, priority, loader, and redaction metadata.
+  Priorities must be finite numbers. Core loading and direct resolution reject
+  invalid priorities before invoking loaders, inspecting values or sorting; failure
+  uses `source_priority_invalid` and omits invalid descriptor metadata.
 - `ConfigLoader`: adapter interface that owns source metadata and returns normalized
   config data, value locations, and source issues.
 - `ConfigPipeline`: ordered execution of load, override, merge, coerce, validate,

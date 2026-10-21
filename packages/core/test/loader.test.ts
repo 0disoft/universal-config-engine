@@ -8,6 +8,18 @@ import {
 import type { ConfigLoader, ConfigLoaderResult } from "../src/index.js";
 
 describe("loadConfigSources", () => {
+  it("rejects non-finite priorities before any loader callback runs, with bounded issues", async () => {
+    let calls = 0;
+    const loaded = await loadConfigSources({ context: undefined, limits: { maxDiagnostics: 1 },
+      loaders: [0, NaN, Infinity].map((priority, index) => ({
+        descriptor: { id: `input-${index}`, kind: "object", priority, displayName: "input" },
+        load() { calls++; return { value: {} }; }
+      })) });
+    expect(calls).toBe(0);
+    expect(loaded.sources).toEqual([]);
+    expect(loaded.issues).toEqual([expect.objectContaining({ code: "max_diagnostics_exceeded", severity: "error" })]);
+  });
+
   it("cannot hide a discarded error behind an adapter's warning-shaped overflow marker", async () => {
     const loaded = await loadConfigSources({ context: undefined, limits: { maxDiagnostics: 2 },
       loaders: [{ descriptor: { id: "noisy", kind: "adapter", priority: 0, displayName: "noisy" },

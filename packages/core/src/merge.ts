@@ -3,6 +3,7 @@ import { applyCoercionRules } from "./coercion.js";
 import { getConfigValueAtPath, pathToKey, setConfigValueAtPath } from "./path.js";
 import { flattenConfigObject } from "./value.js";
 import { normalizeResourceLimits } from "./limits.js";
+import { sourcePriorityIssues } from "./source-priority.js";
 import {
   createResolvedPathIndex,
   deleteResolvedPath,
@@ -54,6 +55,10 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
       resolvedPaths: [],
       limits
     };
+  }
+  const priorityIssues = sourcePriorityIssues(input.sources, limits.maxDiagnostics);
+  if (priorityIssues.length > 0) {
+    return { ok: false, config: {}, sources: [], issues: priorityIssues, provenance: [], resolvedPaths: [], limits };
   }
   const policy: MergePolicy = { ...DEFAULT_MERGE_POLICY, ...input.mergePolicy };
   const sources = sortSources(input.sources);

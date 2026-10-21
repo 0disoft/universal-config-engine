@@ -310,6 +310,13 @@ export declare function setResolvedPath(index: MutableResolvedPathIndex, resolve
 export declare function deleteResolvedPath(index: MutableResolvedPathIndex, key: string): void;
 export {};
 
+### source-priority.d.ts
+import type { ConfigIssue, ConfigSourceDescriptor } from "./types.js";
+/** Shared preflight, after the source-count check and before loading or sorting. */
+export declare function sourcePriorityIssues(sources: readonly {
+    readonly descriptor: ConfigSourceDescriptor;
+}[], maxDiagnostics: number): ConfigIssue[];
+
 ### standard-schema.d.ts
 import type { ValidatorAdapter } from "./types.js";
 /** Structural Standard Schema v1 compatibility; no provider/runtime dependency. */

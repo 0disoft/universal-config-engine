@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Reject non-finite source priorities before loading or sorting, preventing silent
+  precedence inversion and invalid numeric metadata in successful reports.
 - Count array indexes and repeated references against `maxKeyCount`, stopping
   oversized/shared-array expansion before merge allocation. Large arrays may need
   an explicitly increased key/index budget.

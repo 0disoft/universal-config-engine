@@ -9,6 +9,7 @@ import type {
   ValueLocation
 } from "./types.js";
 import { normalizeResourceLimits } from "./limits.js";
+import { sourcePriorityIssues } from "./source-priority.js";
 
 const ISSUE_CATEGORIES = new Set([
   "usage",
@@ -52,6 +53,9 @@ export async function loadConfigSources<TContext = undefined>(
       }]
     };
   }
+
+  const priorityIssues = sourcePriorityIssues(input.loaders, maxDiagnostics);
+  if (priorityIssues.length > 0) return { sources, issues: priorityIssues };
 
   for (const loader of input.loaders) {
     try {

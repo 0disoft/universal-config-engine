@@ -29,6 +29,14 @@ function loader(
 }
 
 describe("runConfigPipeline", () => {
+  it("carries source-priority preflight errors into a failed pipeline report", async () => {
+    const pipeline = await runConfigPipeline({ context: undefined, loaders: [loader("invalid", NaN, { port: 80 })] });
+    expect(pipeline.result.ok).toBe(false);
+    expect(pipeline.result.config).toEqual({});
+    expect(pipeline.report.status).toBe("error");
+    expect(pipeline.report.issues).toEqual([expect.objectContaining({ code: "source_priority_invalid" })]);
+  });
+
   it.each([3, 4])("uses the remaining provenance budget exactly once at limit %i", async (maxProvenanceEvents) => {
     const histories: number[] = [];
     const pipeline = await runConfigPipeline({
