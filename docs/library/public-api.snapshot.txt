@@ -1187,6 +1187,8 @@ import type { z } from "zod";
 export interface CreateZodValidatorInput<TSchema extends z.ZodType> {
     readonly id?: string;
     readonly schema: TSchema;
+    /** Retained issue budget, including truncation; defaults to 200, capped at 10,000. */
+    readonly maxIssues?: number;
 }
 export type ZodValidatorOutput<TSchema extends z.ZodType> = z.output<TSchema>;
 export declare function createZodValidator<TSchema extends z.ZodType>(input: CreateZodValidatorInput<TSchema>): ValidatorAdapter<ZodValidatorOutput<TSchema>>;

@@ -447,6 +447,11 @@ migration review before running `pnpm run update:api-snapshot`.
   direct callers must await it. Parse each input once, retain structured failure
   codes/paths, and let rejected callbacks reach core's `validator_threw` boundary
   without retaining raw exception text. Async typed output remains adapter-local.
+- Zod's optional `maxIssues` bounds converted issue records and paths, including
+  one `zod_issues_truncated` error when needed. It defaults to 200 and is capped at
+  10,000; invalid values use the default. This bounds adapter conversion and direct
+  output, not Zod's own parsing/error collection. Configure the schema to bound
+  provider work; core still independently applies the pipeline diagnostics limit.
 - Normalize inconsistent validator status. A validator that returns `ok: false`
   without error issues produces a validation error issue, and any returned error
   issue makes the validator provenance status `error`.

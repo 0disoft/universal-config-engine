@@ -9,6 +9,34 @@ import {
 import { createZodValidator } from "../src/index.js";
 
 describe("createZodValidator", () => {
+  it("bounds converted errors, preserves exact limits and reserves a truncation slot", async () => {
+    const schema = z.object({ items: z.array(z.number()) });
+    const input = { config: { items: Array(1000).fill("invalid") }, provenance: [] };
+    expect((await createZodValidator({ schema, maxIssues: 2 }).validate(input)).issues).toEqual([
+      { code: "invalid_type", severity: "error", path: ["items", 0] },
+      { code: "zod_issues_truncated", severity: "error" }
+    ]);
+    expect((await createZodValidator({ schema, maxIssues: 1 }).validate(input)).issues).toEqual([
+      { code: "zod_issues_truncated", severity: "error" }
+    ]);
+    const exact = await createZodValidator({ schema, maxIssues: 2 }).validate({ config: { items: ["a", "b"] }, provenance: [] });
+    expect(exact.issues.map(issue => issue.path)).toEqual([["items", 0], ["items", 1]]);
+  });
+
+  it.each([undefined, 0, -1, NaN, Infinity, 1.5])("uses the default issue budget for %s", async maxIssues => {
+    const result = await createZodValidator({ schema: z.array(z.number()), ...(maxIssues === undefined ? {} : { maxIssues }) })
+      .validate({ config: Array(201).fill("invalid"), provenance: [] });
+    expect(result.issues).toHaveLength(200);
+    expect(result.issues.at(-1)?.code).toBe("zod_issues_truncated");
+  });
+
+  it("caps explicit conversion budgets at 10,000", async () => {
+    const result = await createZodValidator({ schema: z.array(z.number()), maxIssues: 100_000 })
+      .validate({ config: Array(10_001).fill("invalid"), provenance: [] });
+    expect(result.issues).toHaveLength(10_000);
+    expect(result.issues.at(-1)?.code).toBe("zod_issues_truncated");
+  });
+
   it("awaits an asynchronous refinement exactly once", async () => {
     let calls = 0;
     const validator = createZodValidator({

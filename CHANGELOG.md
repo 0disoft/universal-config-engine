@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Bound Zod issue conversion with optional `maxIssues` (default 200, cap 10,000),
+  preserving failure and a truncation marker without copying the complete tail.
 - Enforce the combined key/index budget before merge writes, subtract replaced
   subtrees and stop further source work when the intermediate tree would overflow.
 - Preflight CLI validator counts, compile only after successful resolution with
