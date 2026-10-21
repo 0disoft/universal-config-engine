@@ -6,6 +6,7 @@ import {
 import { getCliUsageContext, parseInspectionArgs } from "./args.js";
 import {
   EXIT_USAGE_ERROR,
+  exitCodeForIssues,
   exitCodeForResult
 } from "./exit-codes.js";
 import { formatHumanReport, formatJsonReport } from "./output.js";
@@ -76,7 +77,8 @@ export async function runCli(args: readonly string[], runtime: CliRuntime): Prom
         ? formatJsonReport(parsed.command, report)
         : formatHumanReport(parsed.command, report);
     runtime.stdout(output);
-    return { exitCode: exitCodeForResult(finalResult) };
+    return { exitCode: !finalResult.ok ? exitCodeForResult(finalResult)
+      : report.status === "ok" ? 0 : exitCodeForIssues(report.issues) };
   } catch (error) {
     const failureResult = declarationFailure(error);
     if (publicMode) {

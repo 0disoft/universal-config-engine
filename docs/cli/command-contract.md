@@ -12,6 +12,9 @@ Repository Type: cli-tool
 
 ## Commands
 
+Diagnostic report byte-budget failures return exit code `3`, including ordinary
+`explain` and `validate` output when config resolution itself succeeded.
+
 Unreleased local onboarding adds `uce init` and `uce doctor` (ADR 0018), with
 separate opt-in envelopes; see [onboarding](onboarding.md). Profile/workspace
 selection is documented in [profiles and inheritance](profiles-and-inheritance.md).

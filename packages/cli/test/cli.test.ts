@@ -6,6 +6,24 @@ import { parseCliArgs, runCli } from "../src/index.js";
 import { withTempDir } from "./helpers/temp-directory.js";
 
 describe("runCli", () => {
+  it.each(["validate", "explain"])("fails %s when the diagnostic report exceeds its byte budget", async (command) => {
+    await withTempDir(async dir => {
+      await writeFile(join(dir, "uce.json"), JSON.stringify({
+        sources: [{ id: "file", kind: "object", priority: 0,
+          value: Object.fromEntries(Array.from({ length: 20 }, (_, index) => [`port${index}`, index])) }],
+        limits: { maxReportBytes: 1024 }
+      }));
+      for (const output of [[], ["--json"]]) {
+        let stdout = "";
+        const result = await runCli([command, "--config", "uce.json", ...output], {
+          cwd: dir, env: {}, stdout: text => { stdout += text; }, stderr: () => {}
+        });
+        expect(result.exitCode).toBe(3);
+        expect(stdout).toContain("max_report_bytes_exceeded");
+      }
+    });
+  });
+
   it.each(["--config", "-c", "--output"])(
     "does not consume a short option as the value of %s", async (option) => {
       let stdout = "";

@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Return policy failure exit code 3 from ordinary CLI validation/explanation when
+  diagnostic reporting exceeds its byte budget, instead of reporting success.
 - Compare descendant source ownership beneath opaque secret objects so source-only
   changes cannot pass a `forbid-changes` rule when secret comparison is enabled.
 
