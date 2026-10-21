@@ -57,4 +57,7 @@ to the loader and the pipeline when overriding structural budgets.
 
 Parser and loader boundaries are covered by executable Node package tests,
 including hostile syntax, unsafe keys, malformed comments, aliases, resource
-budgets and JSONC coordinates. CLI integration and discovery are separate units.
+budgets and JSONC coordinates. CLI declarations use `kind: "adapter"`, an explicit
+`format` and `path`; see [CLI configuration](../cli/configuration.md). Packed
+consumers exercise all four dialects through both the installed Node library and
+the actual installed CLI executable. Discovery remains a separate unit.

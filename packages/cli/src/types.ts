@@ -5,7 +5,7 @@ import type {
   ResourceLimitPolicy
 } from "@0disoft/universal-config-engine-core";
 import type { Schema } from "ajv/dist/ajv.js";
-import type { UnmappedInputBehavior } from "@0disoft/universal-config-engine-node";
+import type { ConfigFileFormat, UnmappedInputBehavior } from "@0disoft/universal-config-engine-node";
 
 export type CliCommand = "explain" | "validate";
 
@@ -23,6 +23,7 @@ export interface PipelineDeclaration {
 export type PipelineSourceDeclaration =
   | ObjectSourceDeclaration
   | JsonFileSourceDeclaration
+  | FileAdapterSourceDeclaration
   | DotenvFileSourceDeclaration
   | ProcessEnvSourceDeclaration
   | ArgvSourceDeclaration;
@@ -49,6 +50,14 @@ export interface DotenvFileSourceDeclaration extends BaseSourceDeclaration {
   readonly kind: "dotenv-file";
   readonly path: string;
   readonly maxFileBytes?: number;
+}
+
+export interface FileAdapterSourceDeclaration extends BaseSourceDeclaration {
+  readonly kind: "adapter";
+  readonly format: ConfigFileFormat;
+  readonly path: string;
+  readonly maxFileBytes?: number;
+  readonly allowTrailingComma?: boolean;
 }
 
 export interface ProcessEnvSourceDeclaration extends BaseSourceDeclaration {

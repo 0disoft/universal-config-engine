@@ -1,6 +1,7 @@
 import type { ConfigPath } from "@0disoft/universal-config-engine-core";
 
-export const SUPPORTED_SOURCE_KINDS = new Set(["object", "json-file", "dotenv-file", "process-env", "argv"]);
+export const SUPPORTED_SOURCE_KINDS = new Set(["object", "json-file", "dotenv-file", "adapter", "process-env", "argv"]);
+export const SUPPORTED_FILE_FORMATS = new Set(["json", "jsonc", "yaml", "toml", "json5"]);
 
 export const SUPPORTED_MAPPING_PARSE_AS = new Set(["string", "number", "boolean", "json"]);
 
@@ -21,6 +22,7 @@ export const SOURCE_KIND_FIELDS: Readonly<Record<string, ReadonlySet<string>>> =
   object: new Set(["value"]),
   "json-file": new Set(["path", "maxFileBytes"]),
   "dotenv-file": new Set(["path", "maxFileBytes"]),
+  adapter: new Set(["format", "path", "maxFileBytes", "allowTrailingComma"]),
   "process-env": new Set(["mappings", "maxEnvEntries", "unmappedBehavior", "unmappedPrefix"]),
   argv: new Set(["mappings", "maxArgvEntries", "unmappedBehavior"])
 };

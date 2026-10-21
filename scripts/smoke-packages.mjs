@@ -155,6 +155,7 @@ function smokeConsumerInstall(tarballs, consumerDir) {
   copyFileSync(join(root, "examples", "basic-library.mjs"), join(consumerDir, "basic-library.mjs"));
   copyFileSync(join(root, "fixtures", "consumer", "validator-0.2.ts"), join(consumerDir, "validator-0.2.ts"));
   copyFileSync(join(root, "fixtures", "consumer", "inspection-types.ts"), join(consumerDir, "inspection-types.ts"));
+  copyFileSync(join(root, "fixtures", "consumer", "file-formats.mjs"), join(consumerDir, "file-formats.mjs"));
   copyFileSync(
     join(root, "fixtures", "consumer", "validator-1.0-types.ts"),
     join(consumerDir, "validator-1.0-types.ts")
@@ -190,6 +191,7 @@ function smokeConsumerInstall(tarballs, consumerDir) {
   );
 
   runNpm(["install", "--ignore-scripts"], consumerDir);
+  execFileSync(process.execPath, [join(consumerDir, "file-formats.mjs")], { cwd: consumerDir, stdio: "inherit" });
   checkPackedCliFailures(consumerDir);
   assertInstalledPackageReadmes(tarballs, consumerDir);
   const basicLibraryOutput = execFileSync(process.execPath, [join(consumerDir, "basic-library.mjs")], {

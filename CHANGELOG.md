@@ -10,6 +10,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 - Node `loadConfigFileSource` for explicit JSONC, YAML, TOML and JSON5 files using
   bounded opened-file reads and existing structural/unsafe-key validation. Parser
   errors remain sanitized; JSONC locations and opt-in trailing commas are supported.
+- CLI `kind: "adapter"` file sources with explicit format, the existing declaration
+  directory boundary and shared loader budgets. Legacy commands and envelopes are
+  unchanged; inspection, diff and CI policies use the same declared sources.
 
 ## 1.2.0 - 2026-10-21
 

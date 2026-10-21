@@ -59,6 +59,28 @@ full grammar implemented by shell-aware dotenv tools:
 Use a separate adapter when a project needs a broader dotenv dialect. Expanding
 this built-in grammar is a compatibility decision, not an implicit parser upgrade.
 
+### Official File Adapters (Unreleased)
+
+ADR 0018 adds explicit file adapters without changing existing source declarations:
+
+```json
+{
+  "sources": [{
+    "id": "settings", "kind": "adapter", "format": "yaml",
+    "priority": 10, "path": "settings.yaml"
+  }]
+}
+```
+
+Supported `format` values are `json`, `jsonc`, `yaml`, `toml` and `json5`.
+Paths retain the declaration-directory boundary and files retain the default 1 MiB
+byte cap or explicit `maxFileBytes`. The shared pipeline `limits` also reach the
+dialect loader. Optional boolean `allowTrailingComma` is accepted only for JSONC;
+it defaults to false. Formats are never inferred from a declared source's filename.
+Unknown formats/options fail before opening files. Node owns parsing, and all
+commands, inspection, diff and CI checks use that same loader contract. See
+[format restrictions and diagnostics](../adapters/official-files.md).
+
 The CLI validates the declaration shape before loading sources. Unsupported source
 kinds, unknown declaration fields, missing or duplicate source ids, missing file
 paths, malformed redaction policies, malformed override mappings, malformed

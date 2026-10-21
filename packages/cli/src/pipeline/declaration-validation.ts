@@ -3,6 +3,7 @@ import { DEFAULT_RESOURCE_LIMITS } from "@0disoft/universal-config-engine-core";
 import { pipelineDeclarationIssue, appendDeclarationIssues } from "./declaration-diagnostics.js";
 import {
   SUPPORTED_SOURCE_KINDS,
+  SUPPORTED_FILE_FORMATS,
   SUPPORTED_MAPPING_PARSE_AS,
   SUPPORTED_COERCION_TARGETS,
   SUPPORTED_VALIDATOR_KINDS,
@@ -236,6 +237,19 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
       break;
     case "json-file":
     case "dotenv-file":
+    case "adapter":
+      if (source.kind === "adapter") {
+        if (typeof source.format !== "string" || !SUPPORTED_FILE_FORMATS.has(source.format)) {
+          issues.push(pipelineDeclarationIssue({ code: "pipeline_file_format_invalid",
+            path: sourcePath("format"), sourceId, message: "File adapters require a supported explicit format." }));
+        }
+        if (source.allowTrailingComma !== undefined &&
+            (typeof source.allowTrailingComma !== "boolean" || source.format !== "jsonc")) {
+          issues.push(pipelineDeclarationIssue({ code: "pipeline_file_trailing_comma_invalid",
+            path: sourcePath("allowTrailingComma"), sourceId,
+            message: "allowTrailingComma must be a boolean and is only supported for JSONC." }));
+        }
+      }
       if (typeof source.path !== "string" || source.path.length === 0) {
         issues.push(
           pipelineDeclarationIssue({

@@ -34,6 +34,7 @@ export type {
   CliResult,
   CliRuntime,
   DotenvFileSourceDeclaration,
+  FileAdapterSourceDeclaration,
   JsonFileSourceDeclaration,
   ObjectSourceDeclaration,
   PipelineDeclaration,

@@ -5,6 +5,7 @@ import type {
   RedactionPolicyInput,
   ResourceLimitPolicy
 } from "@0disoft/universal-config-engine-core";
+import type { ConfigFileFormat } from "@0disoft/universal-config-engine-node";
 import type {
   PipelineDeclaration,
   PipelineValidatorDeclaration,
@@ -62,6 +63,13 @@ function normalizeSourceDeclaration(source: unknown): PipelineSourceDeclaration 
         kind: "dotenv-file",
         path: stringField(source, "path"),
         ...optionalPositiveIntegerField(source, "maxFileBytes")
+      };
+    case "adapter":
+      return {
+        ...base, kind: "adapter", path: stringField(source, "path"),
+        format: stringField(source, "format") as ConfigFileFormat,
+        ...optionalPositiveIntegerField(source, "maxFileBytes"),
+        ...optionalBooleanField(source, "allowTrailingComma")
       };
     case "process-env":
       return {

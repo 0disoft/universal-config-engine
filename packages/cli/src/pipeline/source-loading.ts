@@ -3,7 +3,8 @@ import {
   createArgvSource,
   createProcessEnvSource,
   loadDotenvFileSource,
-  loadJsonFileSource
+  loadJsonFileSource,
+  loadConfigFileSource
 } from "@0disoft/universal-config-engine-node";
 import type {
   ConfigPath,
@@ -37,63 +38,26 @@ export async function loadDeclaredSources(input: {
         });
         break;
       case "json-file":
-        {
-          const filePath = await resolveConfigRelativePath({
-            configPath: input.configPath,
-            cwd: input.cwd,
-            sourceIndex: index,
-            sourceId: descriptor.id,
-            targetPath: source.path
-          });
-          sources.push(
-            filePath.ok
-              ? withCliSourcePaths(await loadJsonFileSource(
-                  source.maxFileBytes === undefined
-                    ? {
-                        descriptor,
-                        filePath: filePath.path,
-                        allowedRootPath: filePath.allowedRootPath
-                      }
-                    : {
-                        descriptor,
-                        filePath: filePath.path,
-                        allowedRootPath: filePath.allowedRootPath,
-                        maxFileBytes: source.maxFileBytes
-                      }
-                ), input.configPath)
-              : failedDeclaredSource(descriptor, filePath.issue)
-          );
-        }
-        break;
       case "dotenv-file":
-        {
-          const filePath = await resolveConfigRelativePath({
-            configPath: input.configPath,
-            cwd: input.cwd,
-            sourceIndex: index,
-            sourceId: descriptor.id,
-            targetPath: source.path
-          });
-          sources.push(
-            filePath.ok
-              ? withCliSourcePaths(await loadDotenvFileSource(
-                  source.maxFileBytes === undefined
-                    ? {
-                        descriptor,
-                        filePath: filePath.path,
-                        allowedRootPath: filePath.allowedRootPath
-                      }
-                    : {
-                        descriptor,
-                        filePath: filePath.path,
-                        allowedRootPath: filePath.allowedRootPath,
-                        maxFileBytes: source.maxFileBytes
-                      }
-                ), input.configPath)
-              : failedDeclaredSource(descriptor, filePath.issue)
-          );
+      case "adapter": {
+        const filePath = await resolveConfigRelativePath({
+          configPath: input.configPath, cwd: input.cwd, sourceIndex: index,
+          sourceId: descriptor.id, targetPath: source.path
+        });
+        if (!filePath.ok) {
+          sources.push(failedDeclaredSource(descriptor, filePath.issue));
+          break;
         }
+        const fileInput = { descriptor, filePath: filePath.path, allowedRootPath: filePath.allowedRootPath,
+          ...(source.maxFileBytes === undefined ? {} : { maxFileBytes: source.maxFileBytes }) };
+        const loaded = source.kind === "adapter"
+          ? await loadConfigFileSource({ ...fileInput, format: source.format,
+              ...(input.declaration.limits === undefined ? {} : { limits: input.declaration.limits }),
+              ...(source.allowTrailingComma === undefined ? {} : { allowTrailingComma: source.allowTrailingComma }) })
+          : source.kind === "json-file" ? await loadJsonFileSource(fileInput) : await loadDotenvFileSource(fileInput);
+        sources.push(withCliSourcePaths(loaded, input.configPath));
         break;
+      }
       case "process-env":
         sources.push(
           createProcessEnvSource({
