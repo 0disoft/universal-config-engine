@@ -2,6 +2,7 @@ import { isConfigPath, isIssueCode, isRecord } from "./adapter-guards.js";
 import { buildConfigDiff, configValuesEqual, diffFailure, type BuildConfigDiffOptions, type ConfigDiff } from "./diff.js";
 import { getConfigValueAtPath, isPathPrefix, isUnsafePathSegment } from "./path.js";
 import type { ConfigPath, ConfigResult } from "./types.js";
+import { sourceIdentity } from "./source-identity.js";
 
 export type ConfigChangeRule = {
   readonly id: string;
@@ -86,8 +87,7 @@ function evaluateRule(rule: ConfigChangeRule, diff: ConfigDiff, before: ConfigRe
 function ownershipAtPath(result: ConfigResult, path: ConfigPath): string {
   const priorities = new Map(result.sources.map(source => [source.id, source.priority]));
   return JSON.stringify(result.resolvedPaths.filter(entry => intersects(path, entry.path)).map(entry =>
-    JSON.stringify([entry.path, entry.winningSourceId, entry.winningPriority,
-      entry.overriddenSourceIds.map(id => [id, priorities.get(id)]), entry.winningLocation, entry.overriddenLocations])
+    JSON.stringify([entry.path, sourceIdentity(entry, priorities)])
   ).sort());
 }
 

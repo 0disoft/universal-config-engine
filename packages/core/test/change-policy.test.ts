@@ -6,6 +6,21 @@ const result = (value: unknown, id = "file") => resolveConfig({ sources: [source
 const policy = (rules: ConfigChangePolicy["rules"]): ConfigChangePolicy => ({ version: "change-policy-1", rules });
 
 describe("CI change policies", () => {
+  it("accepts reordered locations but rejects changed ownership metadata under opaque objects", () => {
+    const located = (reverse: boolean, column = 9) => resolveConfig({ sources: ["defaults", "file"].map((id, priority) => ({
+      ...source(id, priority, { password: { nested: "unchanged private input" } }),
+      locations: [{ path: ["password", "nested"], location: reverse
+        ? { column, line: 1, sourcePath: "settings.json", sourceId: id }
+        : { sourceId: id, sourcePath: "settings.json", line: 1, column } }]
+    })) });
+    const rules = policy([{ id: "stable", path: ["password"], mode: "forbid-changes" }]);
+    const options = { detectSecretChanges: true };
+    expect(checkConfigChanges(located(false), located(true), rules, options).policy.status).toBe("passed");
+    expect(checkConfigChanges(located(false), located(true, 10), rules, options).policy).toMatchObject({
+      status: "failed", violations: [{ code: "change_forbidden" }]
+    });
+  });
+
   it("reports independent forbidden changes, required-path deletion and unexpected source ownership", () => {
     const check = checkConfigChanges(result({ port: 80, enabled: null }), result({ port: 443 }, "env"), policy([
       { id: "stable-port", path: ["port"], mode: "forbid-changes" },

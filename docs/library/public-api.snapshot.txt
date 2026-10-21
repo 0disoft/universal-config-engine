@@ -313,6 +313,11 @@ export declare function setResolvedPath(index: MutableResolvedPathIndex, resolve
 export declare function deleteResolvedPath(index: MutableResolvedPathIndex, key: string): void;
 export {};
 
+### source-identity.d.ts
+import type { ResolvedPath } from "./types.js";
+/** Compare metadata fields, independent of the adapter's object insertion order. */
+export declare function sourceIdentity(source: Pick<ResolvedPath, "winningSourceId" | "overriddenSourceIds" | "winningLocation" | "overriddenLocations">, priorities: ReadonlyMap<string, number>): string;
+
 ### source-priority.d.ts
 import type { ConfigIssue, ConfigSourceDescriptor } from "./types.js";
 /** Shared preflight, after the source-count check and before loading or sorting. */

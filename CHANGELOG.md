@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Compare source location fields independently of object property order in diffs
+  and change policies, preventing false source changes and CI rejections.
 - Bound coercion diagnostics during generation, account for existing provenance
   before conversion, cap rule count by `maxProvenanceEvents` (including no-op
   rules), and skip coercion after merge failure. Standalone coercion accepts

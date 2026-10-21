@@ -5,6 +5,19 @@ import { source } from "./helpers/source.js";
 function result(value: unknown, id = "file") { return resolveConfig({ sources: [source(id, 0, value)] }); }
 
 describe("config diff", () => {
+  it("compares winning and overridden location fields independently of object key order", () => {
+    const located = (reverse: boolean, line = 1) => resolveConfig({ sources: ["defaults", "file"].map((id, priority) => ({
+      ...source(id, priority, { port: 80 }), locations: [{ path: ["port"], location: reverse
+        ? { column: 9, line, sourcePath: "settings.json", sourceId: id }
+        : { sourceId: id, sourcePath: "settings.json", line, column: 9 } }]
+    })) });
+    const before = located(false);
+    expect(buildConfigDiff(before, located(true)).changes).toEqual([]);
+    expect(buildConfigDiff(before, located(true, 2)).changes).toEqual([
+      expect.objectContaining({ path: ["port"], kinds: ["source-changed"] })
+    ]);
+  });
+
   it("compares complete values, explicit null, types, array indexes and sources deterministically", () => {
     const before = result({ same: 1, long: "a".repeat(1200) + "x", gone: null, type: 2, array: [1] });
     const after = result({ same: 1, long: "a".repeat(1200) + "y", added: null, type: "2", array: [2] });

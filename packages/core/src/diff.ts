@@ -1,7 +1,8 @@
 import { buildConfigInspection, configValueType, type BuildConfigInspectionOptions, type ConfigInspection, type ConfigInspectionEntry } from "./inspection.js";
 import { getConfigValueAtPath, pathToKey } from "./path.js";
 import { buildDiagnosticReport, type BuildDiagnosticReportOptions } from "./redaction.js";
-import type { ConfigPath, ConfigResult, ConfigValue, ResolvedPath } from "./types.js";
+import type { ConfigPath, ConfigResult, ConfigValue } from "./types.js";
+import { sourceIdentity } from "./source-identity.js";
 
 export type ConfigChangeKind = "added" | "removed" | "type-changed" | "value-changed" | "source-changed";
 
@@ -109,11 +110,8 @@ function sourceIdentities(result: ConfigResult, entries: readonly ConfigInspecti
   const priorities = new Map(result.sources.map(source => [source.id, source.priority]));
   const identities = new Map<ConfigInspectionEntry, string>();
   const opaque = new Map<string, { entry: ConfigInspectionEntry; children: string[] }>();
-  const identity = (source: Pick<ResolvedPath, "winningSourceId" | "overriddenSourceIds" | "winningLocation" | "overriddenLocations">) =>
-    JSON.stringify([source.winningSourceId, priorities.get(source.winningSourceId),
-      source.overriddenSourceIds.map(id => [id, priorities.get(id)]), source.winningLocation, source.overriddenLocations]);
   for (const entry of entries) {
-    identities.set(entry, entry.source === undefined ? "" : identity(entry.source));
+    identities.set(entry, entry.source === undefined ? "" : sourceIdentity(entry.source, priorities));
     if (entry.visibility === "redacted" && entry.type === "object" && entry.source === undefined) {
       opaque.set(pathToKey(entry.path), { entry, children: [] });
     }
@@ -121,7 +119,7 @@ function sourceIdentities(result: ConfigResult, entries: readonly ConfigInspecti
   // Display stays opaque; compare retained ownership underneath it in memory.
   // Prefix lookup avoids rescanning every resolved path for each secret object.
   if (opaque.size > 0) for (const source of result.resolvedPaths) {
-    const owner = identity(source);
+    const owner = sourceIdentity(source, priorities);
     for (let length = 0; length <= source.path.length; length += 1) {
       opaque.get(pathToKey(source.path.slice(0, length)))?.children.push(
         JSON.stringify([source.path.slice(length), owner]));
