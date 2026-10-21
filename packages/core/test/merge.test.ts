@@ -10,6 +10,30 @@ import { source } from "./helpers/source.js";
 import type { ConfigIssue } from "../src/index.js";
 
 describe("resolveConfig", () => {
+  it("deduplicates shared parent locations through repeated shape replacements", () => {
+    const location = { sourceId: "initial", sourcePath: "base.json", line: 1, column: 1 };
+    const sources = [{ ...source("initial", 0, { root: 0 }), locations: [{ path: ["root"], location }] }];
+    const replacements = Array.from({ length: 18 }, (_, index) => [
+      source(`expand-${index}`, index * 2 + 1, { root: { a: 1, b: 2 } }),
+      source(`collapse-${index}`, index * 2 + 2, { root: 0 })
+    ]).flat();
+    const result = resolveConfig({ sources: [...sources, ...replacements] });
+    expect(result.ok).toBe(true);
+    expect(result.resolvedPaths[0]?.overriddenLocations).toEqual([location]);
+  });
+
+  it("omits oversized optional override locations without rejecting config", () => {
+    const result = resolveConfig({ limits: { maxReportBytes: 1024 }, sources: [
+      { ...source("base", 0, { port: 1 }), locations: [{ path: ["port"],
+        location: { sourceId: "base", sourcePath: "x".repeat(1025) } }] },
+      source("override", 1, { port: 2 })
+    ] });
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({ port: 2 });
+    expect(result.resolvedPaths[0]?.overriddenLocations ?? []).toEqual([]);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "max_location_metadata_exceeded", severity: "warning" }));
+  });
+
   it("stops aggregate key growth before writing or reading subsequent source values", () => {
     let reads = 0;
     const result = resolveConfig({ limits: { maxKeyCount: 1 }, sources: Array.from({ length: 64 }, (_, index) => ({

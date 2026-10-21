@@ -364,7 +364,7 @@ function applyEntry(input: {
   }
 
   const overriddenSourceIds = collectOverriddenSourceIds(relatedResolved, input.descriptor.id);
-  const overriddenLocations = collectOverriddenLocations(relatedResolved);
+  const overriddenLocations = collectOverriddenLocations(relatedResolved, input.issues, input.limits);
   for (const { key, resolved } of liveRelated) {
     if (resolved.path.length < input.entryPath.length) setResolvedPath(input.displacedParents, resolved);
     deleteResolvedPath(input.resolvedIndex, key);
@@ -456,14 +456,41 @@ function collectOverriddenSourceIds(
 }
 
 function collectOverriddenLocations(
-  relatedResolved: readonly { readonly resolved: MutableResolvedPath }[]
+  relatedResolved: readonly { readonly resolved: MutableResolvedPath }[],
+  issues: ConfigIssue[],
+  limits: ResourceLimitPolicy
 ): SourceLocation[] {
   const locations: SourceLocation[] = [];
+  const seen = new Set<string>();
+  let bytes = 0;
   for (const { resolved } of relatedResolved) {
-    locations.push(...resolved.overriddenLocations);
-    if (resolved.winningLocation !== undefined) locations.push(resolved.winningLocation);
+    for (const location of locationHistory(resolved)) {
+      const characters = location.sourceId.length + (location.sourcePath?.length ?? 0);
+      if (characters > limits.maxReportBytes) return omit();
+      const key = JSON.stringify([location.sourceId, location.sourcePath, location.line, location.column]);
+      if (seen.has(key)) continue;
+      bytes += new TextEncoder().encode(key).byteLength;
+      if (locations.length >= limits.maxResolvedPaths || bytes > limits.maxReportBytes) return omit();
+      seen.add(key);
+      locations.push(location);
+    }
   }
   return locations;
+
+  function omit(): SourceLocation[] {
+    if (!issues.some(issue => issue.code === "max_location_metadata_exceeded")) {
+      pushBoundedIssue(issues, {
+        category: "resource-limit", code: "max_location_metadata_exceeded", severity: "warning",
+        message: "Override locations exceeded their count or byte budget; optional history was omitted."
+      }, limits);
+    }
+    return [];
+  }
+}
+
+function* locationHistory(resolved: MutableResolvedPath): Iterable<SourceLocation> {
+  yield* resolved.overriddenLocations;
+  if (resolved.winningLocation !== undefined) yield resolved.winningLocation;
 }
 
 function pushBoundedIssue(

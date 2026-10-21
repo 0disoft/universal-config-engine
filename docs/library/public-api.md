@@ -522,3 +522,5 @@ migration review before running `pnpm run update:api-snapshot`.
   schema `0.2`, adapter ownership, and validator typed output are decided in ADRs
   0003, 0004, 0006, and 0009. ADR 0016 fixes the `1.x` stability, deprecation,
   report, CLI, low-level helper, and runtime compatibility contracts.
+
+Override location history deduplicates identical source/position tuples in first-seen order. Each retained history is bounded by `maxResolvedPaths` and `maxReportBytes`; overflow omits optional history with `max_location_metadata_exceeded`, without discarding configuration values.
