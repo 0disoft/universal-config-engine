@@ -19,8 +19,8 @@ export function createZodValidator<TSchema extends z.ZodType>(
 ): ValidatorAdapter<ZodValidatorOutput<TSchema>> {
   return {
     id: input.id ?? "zod",
-    validate(validatorInput: ValidatorInput): ValidatorResult<ZodValidatorOutput<TSchema>> {
-      const result = input.schema.safeParse(validatorInput.config);
+    async validate(validatorInput: ValidatorInput): Promise<ValidatorResult<ZodValidatorOutput<TSchema>>> {
+      const result = await input.schema.safeParseAsync(validatorInput.config);
 
       if (result.success) {
         return {

@@ -1,12 +1,112 @@
 import { describe, expect, it } from "vitest";
+import { spawnSync } from "node:child_process";
 import * as z from "zod";
 import {
   resolveConfig,
+  runConfigPipeline,
   runValidators
 } from "@0disoft/universal-config-engine-core";
 import { createZodValidator } from "../src/index.js";
 
 describe("createZodValidator", () => {
+  it("awaits an asynchronous refinement exactly once", async () => {
+    let calls = 0;
+    const validator = createZodValidator({
+      schema: z.object({ port: z.number().refine(async (port) => {
+        await Promise.resolve();
+        calls++;
+        return port > 0;
+      }) })
+    });
+    const result = await validator.validate({ config: { port: 3000 }, provenance: [] });
+
+    expect(result).toEqual({ ok: true, value: { port: 3000 }, issues: [] });
+    expect(calls).toBe(1);
+  });
+
+  it("retains asynchronous validation paths and redacts private issue messages", async () => {
+    const pipeline = await runConfigPipeline({
+      context: undefined,
+      loaders: [{
+        descriptor: { id: "defaults", kind: "object", priority: 0, displayName: "defaults" },
+        load: () => ({ value: { auth: { password: "example-value" } } })
+      }],
+      validators: [createZodValidator({
+        id: "async-schema",
+        schema: z.object({ auth: z.object({ password: z.string().refine(async () => {
+          await Promise.resolve();
+          return false;
+        }, { message: "private-refinement-message" }) }) })
+      })]
+    });
+
+    expect(pipeline.result.ok).toBe(false);
+    expect(pipeline.result.issues).toEqual([expect.objectContaining({
+      code: "custom", path: ["auth", "password"], severity: "error", sourceId: "async-schema"
+    })]);
+    expect(pipeline.report.issues[0]?.message).toContain("redacted");
+    expect(JSON.stringify(pipeline.report)).not.toContain("private-refinement-message");
+    expect(JSON.stringify(pipeline.report)).not.toContain("example-value");
+  });
+
+  it("keeps asynchronous transform output adapter-local", async () => {
+    const validator = createZodValidator({
+      schema: z.object({ port: z.string().transform(async (port) => {
+        await Promise.resolve();
+        return Number(port);
+      }) })
+    });
+    const result = await validator.validate({ config: { port: "3000" }, provenance: [] });
+    expect(result).toEqual({ ok: true, value: { port: 3000 }, issues: [] });
+
+    let observed: unknown;
+    const pipeline = await runConfigPipeline({
+      context: undefined,
+      loaders: [{
+        descriptor: { id: "defaults", kind: "object", priority: 0, displayName: "defaults" },
+        load: () => ({ value: { port: "3000" } })
+      }],
+      validators: [validator, { id: "observer", validate(input) {
+        observed = input.config;
+        return { ok: true, issues: [] };
+      } }]
+    });
+    expect(pipeline.result.ok).toBe(true);
+    expect(pipeline.result.config).toEqual({ port: "3000" });
+    expect(observed).toEqual({ port: "3000" });
+  });
+
+  it.each(["refinement", "transform"])(
+    "normalizes rejected async %s promises without terminating Node", (kind) => {
+      const result = spawnSync(process.execPath, ["--unhandled-rejections=strict", "--input-type=module", "--eval", `
+        import assert from "node:assert/strict";
+        import * as z from "zod";
+        import { runValidators } from "@0disoft/universal-config-engine-core";
+        import { createZodValidator } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
+        const reject = async () => {
+          await Promise.resolve();
+          throw new Error("private-async-exception");
+        };
+        const field = ${JSON.stringify(kind)} === "refinement"
+          ? z.string().refine(reject) : z.string().transform(reject);
+        const validation = await runValidators({
+          config: { value: "example-value" }, provenance: [],
+          validators: [createZodValidator({ schema: z.object({ value: field }) })]
+        });
+        assert.equal(validation.issues[0].code, "validator_threw");
+        assert.equal(validation.issues[0].severity, "error");
+        assert.equal(JSON.stringify(validation).includes("private-async-exception"), false);
+        await new Promise(setImmediate);
+        process.stdout.write("rejection-normalized");
+      `], { cwd: new URL("..", import.meta.url), encoding: "utf8", timeout: 5000 });
+
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe("");
+      expect(result.stdout).toBe("rejection-normalized");
+    }
+  );
+
   it("returns ok with validated output", async () => {
     const result = resolveConfig({
       sources: [

@@ -33,11 +33,19 @@ const validation = await runValidators({
   validators: [validator]
 });
 
-console.log(validation.ok);
+console.log(validation.issues);
 ```
 
 `ValidatorResult.value` is adapter-local typed output. It does not replace the
 pipeline config and is not passed to later validators.
+
+Schemas may contain asynchronous refinements or transforms. The adapter waits for
+validation to finish and returns a Promise for both synchronous and asynchronous
+schemas. Always `await validator.validate(...)` when calling the adapter directly;
+`runValidators` and `runConfigPipeline` already await it. Each parse runs once.
+Ordinary validation failures preserve structured issue codes and paths. Rejected
+refinement/transform Promises reach core's `validator_threw` boundary, which omits
+exception details; direct adapter callers receive a rejected Promise instead.
 
 See the [validator adapter contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/adapters/README.md)
 and [typed output decision](https://github.com/0disoft/universal-config-engine/blob/main/docs/adr/0009-validator-typed-output-boundary.md).

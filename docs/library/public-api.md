@@ -308,6 +308,11 @@ migration review before running `pnpm run update:api-snapshot`.
   `Schema` input contract even for JavaScript callers. No validation Promise is
   started or mistaken for a successful result. Synchronous schemas retain their
   existing result shape and error/path normalization.
+- Await Zod refinements and transforms through asynchronous schema parsing. The
+  adapter returns a Promise for every schema, consistent with `ValidatorAdapter`;
+  direct callers must await it. Parse each input once, retain structured failure
+  codes/paths, and let rejected callbacks reach core's `validator_threw` boundary
+  without retaining raw exception text. Async typed output remains adapter-local.
 - Normalize inconsistent validator status. A validator that returns `ok: false`
   without error issues produces a validation error issue, and any returned error
   issue makes the validator provenance status `error`.

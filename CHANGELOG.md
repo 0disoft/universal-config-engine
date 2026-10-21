@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Await Zod schema execution so asynchronous refinements and transforms complete
+  before reporting results. Rejected callbacks reach core's sanitized exception
+  boundary instead of leaving an unhandled rejection that can terminate Node.
 - Share loader/validator issue-detail validation and reject non-finite numbers in
   legacy validator details, matching the existing loader boundary.
 - Bound diagnostic retention during resolution without first copying the complete
