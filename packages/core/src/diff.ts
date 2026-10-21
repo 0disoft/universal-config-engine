@@ -1,7 +1,7 @@
 import { buildConfigInspection, configValueType, type BuildConfigInspectionOptions, type ConfigInspection, type ConfigInspectionEntry } from "./inspection.js";
 import { getConfigValueAtPath, pathToKey } from "./path.js";
 import { buildDiagnosticReport, type BuildDiagnosticReportOptions } from "./redaction.js";
-import type { ConfigPath, ConfigResult, ConfigValue } from "./types.js";
+import type { ConfigPath, ConfigResult, ConfigValue, ResolvedPath } from "./types.js";
 
 export type ConfigChangeKind = "added" | "removed" | "type-changed" | "value-changed" | "source-changed";
 
@@ -55,6 +55,8 @@ export function buildConfigDiff(before: ConfigResult, after: ConfigResult, optio
   }
   const changes: ConfigChange[] = [];
   const uncomparedSecretPaths: ConfigPath[] = [];
+  const leftSources = sourceIdentities(before, left.entries);
+  const rightSources = sourceIdentities(after, right.entries);
   for (const key of keys) {
     const previous = leftIndex.get(key);
     const next = rightIndex.get(key);
@@ -70,7 +72,7 @@ export function buildConfigDiff(before: ConfigResult, after: ConfigResult, optio
         !configValuesEqual(getConfigValueAtPath(before.config, path)!, getConfigValueAtPath(after.config, path)!)) {
         kinds.push("value-changed");
       }
-      if (sourceIdentity(previous, before) !== sourceIdentity(next, after)) kinds.push("source-changed");
+      if (leftSources.get(previous) !== rightSources.get(next)) kinds.push("source-changed");
     }
     if (kinds.length > 0) changes.push({ path: [...path], kinds,
       ...(previous === undefined ? {} : { before: previous }), ...(next === undefined ? {} : { after: next }) });
@@ -103,12 +105,30 @@ function comparisonInspection(result: ConfigResult, options: BuildConfigInspecti
   return report;
 }
 
-function sourceIdentity(entry: ConfigInspectionEntry, result: ConfigResult): string {
-  const source = entry.source;
-  if (source === undefined) return "";
-  return JSON.stringify([source.winningSourceId, result.sources.find((candidate) => candidate.id === source.winningSourceId)?.priority,
-    source.overriddenSourceIds.map((id) => [id, result.sources.find((candidate) => candidate.id === id)?.priority]),
-    source.winningLocation, source.overriddenLocations]);
+function sourceIdentities(result: ConfigResult, entries: readonly ConfigInspectionEntry[]): ReadonlyMap<ConfigInspectionEntry, string> {
+  const priorities = new Map(result.sources.map(source => [source.id, source.priority]));
+  const identities = new Map<ConfigInspectionEntry, string>();
+  const opaque = new Map<string, { entry: ConfigInspectionEntry; children: string[] }>();
+  const identity = (source: Pick<ResolvedPath, "winningSourceId" | "overriddenSourceIds" | "winningLocation" | "overriddenLocations">) =>
+    JSON.stringify([source.winningSourceId, priorities.get(source.winningSourceId),
+      source.overriddenSourceIds.map(id => [id, priorities.get(id)]), source.winningLocation, source.overriddenLocations]);
+  for (const entry of entries) {
+    identities.set(entry, entry.source === undefined ? "" : identity(entry.source));
+    if (entry.visibility === "redacted" && entry.type === "object" && entry.source === undefined) {
+      opaque.set(pathToKey(entry.path), { entry, children: [] });
+    }
+  }
+  // Display stays opaque; compare retained ownership underneath it in memory.
+  // Prefix lookup avoids rescanning every resolved path for each secret object.
+  if (opaque.size > 0) for (const source of result.resolvedPaths) {
+    const owner = identity(source);
+    for (let length = 0; length <= source.path.length; length += 1) {
+      opaque.get(pathToKey(source.path.slice(0, length)))?.children.push(
+        JSON.stringify([source.path.slice(length), owner]));
+    }
+  }
+  for (const { entry, children } of opaque.values()) identities.set(entry, JSON.stringify(children.sort()));
+  return identities;
 }
 
 /** Iterative and order-insensitive for objects; arrays retain positional semantics. */

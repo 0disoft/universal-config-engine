@@ -77,6 +77,8 @@ arguments must be resolved results. It compares complete values, not truncated
 inspection previews, and emits `added`, `removed`, `type-changed`, `value-changed`
 and `source-changed` kinds. Container children are independent entries. Source
 identity includes winning priority, override history and retained source locations.
+Opaque secret objects also compare descendant ownership in memory without adding
+their children or ownership fingerprints to displayed entries.
 Entries are deterministically sorted by serialized typed path. Both sides' secret
 policies apply to both outputs; metadata remains visible. Secrets are explicitly
 uncompared by default. `detectSecretChanges: true` compares opaque secret values

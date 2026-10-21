@@ -78,8 +78,17 @@ function evaluateRule(rule: ConfigChangeRule, diff: ConfigDiff, before: ConfigRe
   const unknown = diff.uncomparedSecretPaths.some((path) => intersects(rule.path, path));
   const knownChanges = diff.changes.filter((change) => intersects(rule.path, change.path));
   if (unknown) return knownChanges.length > 0 ? "change_forbidden" : "comparison_indeterminate";
-  if (!configValuesEqual(previous, next) || knownChanges.some((change) => change.kinds.includes("source-changed"))) return "change_forbidden";
+  if (!configValuesEqual(previous, next) || knownChanges.some(change => change.kinds.includes("source-changed")) &&
+      ownershipAtPath(before, rule.path) !== ownershipAtPath(after, rule.path)) return "change_forbidden";
   return undefined;
+}
+
+function ownershipAtPath(result: ConfigResult, path: ConfigPath): string {
+  const priorities = new Map(result.sources.map(source => [source.id, source.priority]));
+  return JSON.stringify(result.resolvedPaths.filter(entry => intersects(path, entry.path)).map(entry =>
+    JSON.stringify([entry.path, entry.winningSourceId, entry.winningPriority,
+      entry.overriddenSourceIds.map(id => [id, priorities.get(id)]), entry.winningLocation, entry.overriddenLocations])
+  ).sort());
 }
 
 function intersects(left: ConfigPath, right: ConfigPath) {

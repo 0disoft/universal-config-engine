@@ -57,6 +57,24 @@ describe("CI change policies", () => {
     expect(reads).toBe(0);
   });
 
+  it("rejects source-only changes inside secret objects", () => {
+    const before = result({ password: { nested: "unchanged private input" } }, "vault-a");
+    const after = result({ password: { nested: "unchanged private input" } }, "vault-b");
+    const rules = policy([{ id: "stable-source", path: ["password"], mode: "forbid-changes" }]);
+    for (const detectSecretChanges of [false, true]) {
+      expect(checkConfigChanges(before, after, rules, { detectSecretChanges }).policy).toMatchObject({
+        status: "failed", violations: [{ code: "change_forbidden" }]
+      });
+    }
+    const mixed = (id: string) => resolveConfig({ sources: [
+      source("stable", 0, { password: { stable: 1 } }),
+      source(id, 1, { password: { changed: 2 } })
+    ] });
+    expect(checkConfigChanges(mixed("vault-a"), mixed("vault-b"), policy([
+      { id: "stable-child", path: ["password", "stable"], mode: "forbid-changes" }
+    ]), { detectSecretChanges: true }).policy.status).toBe("passed");
+  });
+
   it("enforces whole-config policies and wrapper byte budgets", () => {
     const before = result({ stable: 1, changed: 1 });
     const after = result({ stable: 1, changed: 2 });

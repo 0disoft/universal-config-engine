@@ -62,6 +62,19 @@ describe("config diff", () => {
     expect(JSON.stringify(report)).not.toContain("added private input");
   });
 
+  it("compares ownership under opaque secret objects without exposing their children", () => {
+    const before = result({ password: { nested: "unchanged private input" } }, "vault-a");
+    const after = result({ password: { nested: "unchanged private input" } }, "vault-b");
+    for (const detectSecretChanges of [false, true]) {
+      const report = buildConfigDiff(before, after, { detectSecretChanges });
+      expect(report.changes).toEqual([expect.objectContaining({ path: ["password"], kinds: ["source-changed"] })]);
+      expect(report.before.entries.some(entry => entry.path.length > 1)).toBe(false);
+      expect(JSON.stringify(report.changes)).not.toContain("nested");
+      expect(JSON.stringify(report)).not.toContain("unchanged private input");
+    }
+    expect(buildConfigDiff(before, before, { detectSecretChanges: true }).changes).toEqual([]);
+  });
+
   it("supports absent query sides, shape changes and fails closed on failed input and union limits", () => {
     expect(buildConfigDiff(result({}), result({ a: 1 }), { path: ["a"] }).changes[0]?.kinds).toEqual(["added"]);
     const before = result({ a: 1 });

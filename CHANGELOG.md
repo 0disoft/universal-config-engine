@@ -5,6 +5,11 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+### Fixed
+
+- Compare descendant source ownership beneath opaque secret objects so source-only
+  changes cannot pass a `forbid-changes` rule when secret comparison is enabled.
+
 ### Added
 
 - Node `loadConfigFileSource` for explicit JSONC, YAML, TOML and JSON5 files using
