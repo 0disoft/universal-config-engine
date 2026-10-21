@@ -8,6 +8,48 @@ import {
 import type { ConfigLoader, ConfigLoaderResult } from "../src/index.js";
 
 describe("loadConfigSources", () => {
+  const withLocations = (locations: unknown[], limits = {}) => loadConfigSources({ context: undefined, limits,
+    loaders: [{ descriptor: { id: "file", kind: "adapter", priority: 0, displayName: "file" },
+      load: () => ({ value: { port: 80 }, locations }) as ConfigLoaderResult }] });
+  const position = (path: (string | number)[] = ["port"], line = 1, sourcePath?: string) => ({
+    path, location: { sourceId: "untrusted", line, ...(sourcePath === undefined ? {} : { sourcePath }) }
+  });
+
+  it("deduplicates locations before copying paths and keeps the last position", async () => {
+    let copies = 0;
+    const path = Object.defineProperty(["port"], Symbol.iterator, { value: function* () { copies++; yield "port"; } });
+    const positions = new Array(1_000).fill(position(path));
+    positions.push(position(path, 2));
+    const loaded = await withLocations(positions, { maxResolvedPaths: 1 });
+    expect(loaded.issues).toEqual([]);
+    expect(loaded.sources[0]?.locations).toEqual([{ path: ["port"], location: { sourceId: "file", line: 2 } }]);
+    expect(copies).toBe(positions.length + 1);
+  });
+
+  it.each([
+    { locations: [position(), position(["other"])], limits: { maxResolvedPaths: 1 } },
+    { locations: [position(["too", "deep"])], limits: { maxPathLength: 1 } },
+    { locations: [position(["port"], 1, "x".repeat(2_000))], limits: { maxReportBytes: 1024 } },
+    { locations: [position(["port"], 1, "😀".repeat(300))], limits: { maxReportBytes: 1024 } }
+  ])("omits optional locations exceeding count, path or UTF-8 budgets", async ({ locations, limits }) => {
+    const loaded = await withLocations(locations, limits);
+    expect(loaded.sources[0]?.locations).toEqual([]);
+    expect(loaded.issues).toEqual([expect.objectContaining({ code: "max_location_metadata_exceeded", severity: "warning" })]);
+    expect(resolveConfig({ sources: loaded.sources })).toMatchObject({ ok: true, config: { port: 80 } });
+    expect((await withLocations([...locations, null], limits)).issues).toEqual([
+      expect.objectContaining({ code: "invalid_loader_result", severity: "error" })
+    ]);
+  });
+
+  it("accepts the exact serialized location byte limit and distinguishes typed paths", async () => {
+    const prefix = { path: ["port"], location: { sourceId: "file", sourcePath: "", line: 1 } };
+    const bytes = new TextEncoder().encode(JSON.stringify(prefix)).byteLength;
+    const loaded = await withLocations([position(["port"], 1, "x".repeat(1024 - bytes))], { maxReportBytes: 1024 });
+    expect(loaded.issues).toEqual([]);
+    expect(loaded.sources[0]?.locations).toHaveLength(1);
+    expect((await withLocations([position(["array", 0]), position(["array", "0"])])).sources[0]?.locations).toHaveLength(2);
+  });
+
   it("rejects non-finite priorities before any loader callback runs, with bounded issues", async () => {
     let calls = 0;
     const loaded = await loadConfigSources({ context: undefined, limits: { maxDiagnostics: 1 },

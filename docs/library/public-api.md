@@ -188,6 +188,15 @@ validated: a malformed tail rejects the source even when it cannot be retained.
 Validation remains linear in adapter output size; excess diagnostics do not cause
 unbounded additional copies before the cap is applied.
 
+Loader locations are deduplicated by typed path (last position wins), with at most
+`maxResolvedPaths` unique records, `maxPathLength` segments per path, and
+`maxReportBytes` total UTF-8 bytes of serialized normalized records, excluding
+array delimiters and commas. Exceeding any budget drops all optional locations
+and emits one `resource-limit/max_location_metadata_exceeded` warning; valid config
+values remain usable. The complete raw location list is still validated, including
+after overflow. Duplicate paths reuse the retained path copy. As with other
+warnings, overflowing `maxDiagnostics` produces a fatal diagnostics overflow marker.
+
 `resolveConfig` appends source and structure diagnostics directly into the bounded
 issue list without first copying or concatenating the complete source issue array.
 Source issues still precede structure issues. Error detection also inspects the

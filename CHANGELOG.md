@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Deduplicate and bound normalized loader locations by path length, unique path
+  count and serialized bytes; omit optional positions with a warning on overflow
+  while continuing to reject malformed adapter metadata anywhere in the list.
 - Compare source location fields independently of object property order in diffs
   and change policies, preventing false source changes and CI rejections.
 - Bound coercion diagnostics during generation, account for existing provenance

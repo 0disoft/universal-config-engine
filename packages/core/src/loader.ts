@@ -10,6 +10,7 @@ import type {
 } from "./types.js";
 import { normalizeResourceLimits } from "./limits.js";
 import { sourcePriorityIssues } from "./source-priority.js";
+import { normalizeLoaderLocations } from "./loader-locations.js";
 
 const ISSUE_CATEGORIES = new Set([
   "usage",
@@ -60,7 +61,7 @@ export async function loadConfigSources<TContext = undefined>(
   for (const loader of input.loaders) {
     try {
       const result = await loader.load(input.context);
-      const source = toLoadedSource(loader, result, maxDiagnostics);
+      const source = toLoadedSource(loader, result, limits);
       sources.push(source);
       appendBoundedIssues(issues, source.issues ?? [], maxDiagnostics);
     } catch {
@@ -84,9 +85,9 @@ export async function loadConfigSources<TContext = undefined>(
 function toLoadedSource<TContext>(
   loader: ConfigLoader<TContext>,
   result: ConfigLoaderResult,
-  maxDiagnostics: number
+  limits: ResourceLimitPolicy
 ): LoadedSource {
-  const normalized = normalizeLoaderResult(loader, result, maxDiagnostics);
+  const normalized = normalizeLoaderResult(loader, result, limits);
   if (!normalized.ok) {
     return {
       descriptor: loader.descriptor,
@@ -105,7 +106,7 @@ function toLoadedSource<TContext>(
 function normalizeLoaderResult<TContext>(
   loader: ConfigLoader<TContext>,
   result: ConfigLoaderResult,
-  maxDiagnostics: number
+  limits: ResourceLimitPolicy
 ):
   | {
       readonly ok: true;
@@ -118,6 +119,7 @@ function normalizeLoaderResult<TContext>(
   if (!isRecord(result)) {
     return { ok: false };
   }
+  const { maxDiagnostics } = limits;
 
   const rawIssues = result.issues;
   if (rawIssues !== undefined && !Array.isArray(rawIssues)) {
@@ -149,30 +151,20 @@ function normalizeLoaderResult<TContext>(
   if (rawLocations !== undefined && !Array.isArray(rawLocations)) {
     return { ok: false };
   }
-  const locations: ValueLocation[] = [];
-  for (const valueLocation of rawLocations ?? []) {
-    if (!isValueLocation(valueLocation)) {
-      return { ok: false };
-    }
-    locations.push({
-      path: [...valueLocation.path],
-      location: {
-        sourceId: loader.descriptor.id,
-        ...(valueLocation.location.sourcePath === undefined
-          ? {}
-          : { sourcePath: valueLocation.location.sourcePath }),
-        ...(valueLocation.location.line === undefined ? {} : { line: valueLocation.location.line }),
-        ...(valueLocation.location.column === undefined ? {} : { column: valueLocation.location.column })
-      }
-    });
-  }
+  const positions = normalizeLoaderLocations(rawLocations ?? [], loader.descriptor.id, limits);
+  if (!positions.ok) return { ok: false };
+  if (positions.omitted) appendBoundedIssues(issues, [{
+    category: "resource-limit", code: "max_location_metadata_exceeded", severity: "warning",
+    sourceId: loader.descriptor.id,
+    message: "Source locations exceeded their path, count or byte budget; optional locations were omitted."
+  }], maxDiagnostics);
 
   return {
     ok: true,
     value: result.value,
-    ...(rawLocations === undefined ? {} : { locations }),
+    ...(rawLocations === undefined ? {} : { locations: positions.locations }),
     issues,
-    hasIssuesField: rawIssues !== undefined
+    hasIssuesField: rawIssues !== undefined || positions.omitted
   };
 }
 
@@ -190,23 +182,6 @@ function isConfigIssue(value: unknown): value is ConfigIssue {
     (value.sourceId === undefined || typeof value.sourceId === "string") &&
     (value.details === undefined || isIssueDetails(value.details))
   );
-}
-
-function isValueLocation(value: unknown): value is ValueLocation {
-  if (!isRecord(value) || !isConfigPath(value.path) || !isRecord(value.location)) {
-    return false;
-  }
-  const location = value.location;
-  return (
-    typeof location.sourceId === "string" &&
-    (location.sourcePath === undefined || typeof location.sourcePath === "string") &&
-    (location.line === undefined || isPositiveSafeInteger(location.line)) &&
-    (location.column === undefined || isPositiveSafeInteger(location.column))
-  );
-}
-
-function isPositiveSafeInteger(value: unknown): value is number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 
 function loaderThrewIssue<TContext>(loader: ConfigLoader<TContext>): ConfigIssue {
