@@ -65,5 +65,10 @@ alongside four legacy error cases. No additional hosted workflow or runner is ad
 
 ## Repository Shape
 
+Opt-in `pnpm run smoke:portable-runtimes` executes actual core tarballs on selected
+Node, Bun, Deno and workerd binaries; missing selected tools fail. See
+`docs/library/portable-runtimes.md` for flags, version evidence and scope. This is
+a local check, not an additional hosted workflow or a broader package engine claim.
+
 library, cli-tool validation must stay repository-shape focused and must not imply generated application source code.
 

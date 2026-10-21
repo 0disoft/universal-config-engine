@@ -194,7 +194,7 @@ legacy command output remain unchanged. Publication was separately authorized.
 - [x] Serialized reload, last successful snapshots and disposable file watching.
 - [x] Non-destructive `init` and actionable secret-safe `doctor`.
 - [x] Public-share report projection with metadata pseudonyms.
-- [ ] Actual package consumers for Node, Bun, Deno and Workers.
+- [x] Actual package consumers for Node, Bun, Deno and Workers.
 - [ ] Copyable adoption examples and reproducible comparison case.
 
 Follow the delivery order and validation boundaries in ADR 0018. Each completed

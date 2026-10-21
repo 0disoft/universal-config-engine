@@ -43,6 +43,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   enum allowlists and no values, original names, locations, codes or prose.
 - CLI `--public` for explain, validate and doctor, including private-input-safe
   usage/load failures and explicit rejection of value-bearing inspection modes.
+- Opt-in actual core tarball consumers for Node, Bun, Deno and workerd, sharing
+  portable feature assertions and recording runtime versions/artifact digests.
 
 ## 1.2.0 - 2026-10-21
 
