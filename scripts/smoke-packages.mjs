@@ -166,6 +166,7 @@ function smokeConsumerInstall(tarballs, consumerDir) {
       'import { createProcessEnvSource } from "@0disoft/universal-config-engine-node";',
       'import { createAjvValidator } from "@0disoft/universal-config-engine-validator-ajv";',
       'import { createZodValidator } from "@0disoft/universal-config-engine-validator-zod";',
+      'import { z } from "zod";',
       'import { parseCliArgs } from "@0disoft/universal-config-engine-cli";',
       'const mapped = createProcessEnvSource({',
       '  descriptor: { id: "env", kind: "process-env", priority: 10, displayName: "env" },',
@@ -178,8 +179,8 @@ function smokeConsumerInstall(tarballs, consumerDir) {
       'const ajv = createAjvValidator({ id: "schema", schema: { type: "object" } });',
       "const ajvResult = ajv.validate({ config: result.config, provenance: result.provenance });",
       'if (!ajvResult.ok) throw new Error("installed Ajv validator smoke failed");',
-      'const zodValidator = createZodValidator({ id: "zod", schema: { safeParse: () => ({ success: true, data: result.config }) } });',
-      "const zodResult = zodValidator.validate({ config: result.config, provenance: result.provenance });",
+      'const zodValidator = createZodValidator({ id: "zod", schema: z.unknown() });',
+      "const zodResult = await zodValidator.validate({ config: result.config, provenance: result.provenance });",
       'if (!zodResult.ok) throw new Error("installed Zod validator smoke failed");',
       'const parsed = parseCliArgs(["validate", "--config", "uce.json", "--json"]);',
       'if (parsed.command !== "validate" || parsed.output !== "json") throw new Error("installed CLI export smoke failed");'
