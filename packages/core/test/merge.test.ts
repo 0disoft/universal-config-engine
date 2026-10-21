@@ -10,6 +10,31 @@ import { source } from "./helpers/source.js";
 import type { ConfigIssue } from "../src/index.js";
 
 describe("resolveConfig", () => {
+  it.each(["old", [], {}])("preserves displaced parent history for every child replacing %j", (previous) => {
+    for (const names of [["alpha", "beta"], ["beta", "alpha"]]) {
+      const location = { sourceId: "vault", line: 2, column: 3 };
+      const original = source("vault", 0, { auth: previous, unrelated: 1 });
+      const result = resolveConfig({ sources: [
+        { ...original, descriptor: { ...original.descriptor, redaction: { secretSource: true } },
+          locations: [{ path: ["auth"], location }] },
+        source("file", 1, { auth: Object.fromEntries(names.map(name => [name, { value: 1 }])) }),
+        source("cli", 2, { public: 2 })
+      ] });
+      expect(result.ok).toBe(true);
+      const report = buildDiagnosticReport(result);
+      for (const name of names) {
+        expect(result.resolvedPaths).toContainEqual(expect.objectContaining({
+          path: ["auth", name, "value"], overriddenSourceIds: ["vault"], overriddenLocations: [location]
+        }));
+        expect(result.provenance).toContainEqual(expect.objectContaining({
+          path: ["auth", name, "value"], action: "overridden", previousSourceId: "vault"
+        }));
+        expect(report.resolvedPaths).toContainEqual(expect.objectContaining({ path: ["auth", name, "value"], redacted: true }));
+      }
+      expect(report.resolvedPaths).toContainEqual(expect.objectContaining({ path: ["public"], redacted: false }));
+    }
+  });
+
   it("records the immediately previous winner while retaining oldest-first override history", () => {
     const ids = ["defaults", "file", "env", "cli"];
     const result = resolveConfig({ sources: ids.map((id, priority) => source(id, priority, { port: 80 + priority })) });

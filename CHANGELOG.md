@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Preserve displaced parent ownership, locations and secret-source history for
+  every replacement descendant, independent of sibling key order.
 - Reject prototype-named CLI source kinds with a precise `unsupported_source_kind`
   diagnostic instead of an internal exception and generic declaration failure.
 - Attribute override provenance to the immediately previous winner instead of the

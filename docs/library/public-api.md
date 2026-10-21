@@ -471,6 +471,9 @@ migration review before running `pnpm run update:api-snapshot`.
 - Preserve adapter-provided source locations on winning and overridden resolved
   paths. Node file loaders report canonical opened paths; the CLI emits
   declaration-relative paths. See ADR 0014.
+- When one source replaces an atomic parent with several object descendants,
+  every descendant inherits the displaced parent's ownership and location history,
+  independently of sibling key order. The live index contains only effective paths.
 - Reject unsafe keys in public path setters and deep merge before they can mutate
   object state or object prototypes.
 - Return bounded issues for resource-limit failures.

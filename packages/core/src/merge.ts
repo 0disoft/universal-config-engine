@@ -103,6 +103,10 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     }
 
     const locationIndex = createLocationIndex(source.locations);
+    // An old atomic parent can be displaced by the first flattened child. Keep
+    // that ownership for the remaining siblings from this source, without
+    // retaining obsolete paths in the live resolution index.
+    const displacedParents = createResolvedPathIndex();
     for (const entry of flattened.entries) {
       const entryLocation = locationIndex.get(pathToKey(entry.path));
       applyEntry({
@@ -115,7 +119,8 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
         limits,
         policy,
         provenance,
-        resolvedIndex
+        resolvedIndex,
+        displacedParents
       });
     }
   }
@@ -245,6 +250,7 @@ function applyEntry(input: {
   readonly policy: MergePolicy;
   readonly provenance: ProvenanceEvent[];
   readonly resolvedIndex: MutableResolvedPathIndex;
+  readonly displacedParents: MutableResolvedPathIndex;
 }): void {
   if (input.entryPath.length === 0) {
     pushBoundedIssue(
@@ -268,7 +274,8 @@ function applyEntry(input: {
   // Keep descendant ownership and locations; there was no overlapping write.
   if (isNonArrayObject(input.entryValue) && Object.keys(input.entryValue).length === 0 &&
       isNonArrayObject(existingValue) && Object.keys(existingValue).length > 0) return;
-  const relatedResolved = findRelatedResolvedPaths(input.resolvedIndex, input.entryPath);
+  const liveRelated = findRelatedResolvedPaths(input.resolvedIndex, input.entryPath);
+  const relatedResolved = [...liveRelated, ...findRelatedResolvedPaths(input.displacedParents, input.entryPath)];
 
   if (
     relatedResolved.some(
@@ -344,7 +351,8 @@ function applyEntry(input: {
 
   const overriddenSourceIds = collectOverriddenSourceIds(relatedResolved, input.descriptor.id);
   const overriddenLocations = collectOverriddenLocations(relatedResolved);
-  for (const { key } of relatedResolved) {
+  for (const { key, resolved } of liveRelated) {
+    if (resolved.path.length < input.entryPath.length) setResolvedPath(input.displacedParents, resolved);
     deleteResolvedPath(input.resolvedIndex, key);
   }
   // History is oldest-first; the previous winner must come from current owners.
