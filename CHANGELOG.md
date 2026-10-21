@@ -5,6 +5,13 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+## 1.2.0 - 2026-10-21
+
+- Promote verified `1.2.0-rc.1` with unchanged runtime, declarations, dependencies,
+  package READMEs, fixtures and release tooling. All five packages use npm `latest`.
+- Add safe value/path inspection, source-aware config comparison and bounded CI
+  change policies while preserving default schema `0.2` and legacy commands.
+
 ## 1.2.0-rc.1 - 2026-10-21
 
 ### Added

@@ -187,8 +187,9 @@ the `@0disoft` npm scope, and a manual validation-gated release baseline. ADR 00
 supersedes routine manual publication with tag-driven Trusted Publisher
 automation. The `v0.1.0` GitHub release carries pre-publication inspection assets;
 `v0.1.1` is the
-first npm publication baseline. The stable workspace release is `1.1.2`, promoted from `1.1.2-rc.1`
-with validation-budget accounting and Ajv schema-boundary fixes.
+first npm publication baseline. The stable workspace release is `1.2.0`, promoted from `1.2.0-rc.1`
+with safe value inspection, typed path explanations, source-aware configuration
+comparison and bounded CI change policies (ADR 0017).
 Stable installations use npm `latest`; candidates use npm `next`. CLI
 golden fixtures cover local precedence, opt-in coercion, declared Ajv validation,
 validation failure, source-load failure, mapping policy failure, JSON usage errors,

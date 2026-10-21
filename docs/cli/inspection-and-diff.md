@@ -1,7 +1,7 @@
 # Inspect Values and Check Configuration Changes
 
-Status: Release candidate `1.2.0-rc.1` (ADR 0017). Install that exact version or
-npm `next` to try these commands; npm `latest` remains stable `1.1.2`.
+Status: Stable `1.2.0` (ADR 0017), promoted from verified `1.2.0-rc.1`.
+Install version `1.2.0` explicitly or use npm `latest`.
 
 The examples assume `uce` is installed from this checkout's built package. To try
 them directly from the repository, run `pnpm run build`, then replace `uce` with

@@ -176,12 +176,14 @@ exact candidate without further runtime or dependency changes.
 
 Validated locally on Windows: workspace check (including legacy golden reports,
 API declarations, typechecking and resource/secret guards), packed JavaScript and
-strict TypeScript consumers, and installed CLI inspection/diff/policy cases. Hosted
-platform/runtime checks and publication wait for a separately authorized push.
+strict TypeScript consumers, and installed CLI inspection/diff/policy cases.
+Candidate `1.2.0-rc.1` passed exact-commit CI, CodeQL, runtime and consumer matrices,
+release dry-run, complete 5/5 npm publication, independent tarball/provenance
+verification, public-registry feature consumers and npm signature checks. Stable
+`1.2.0` promotes that candidate without changing runtime or package contents.
 
 These are separate implementation units. Default diagnostic schema `0.2` and
-legacy command output remain unchanged. This local work does not authorize push
-or publication.
+legacy command output remain unchanged. Publication was separately authorized.
 
 ## Explicitly Deferred Features
 
