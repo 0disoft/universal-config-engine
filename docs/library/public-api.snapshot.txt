@@ -1138,6 +1138,8 @@ export interface CreateAjvValidatorInput {
     readonly schema: Schema;
     readonly ajv?: Ajv;
     readonly options?: Options;
+    /** Retained issue budget, including truncation; defaults to 200, capped at 10,000. */
+    readonly maxIssues?: number;
 }
 export declare function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAdapter;
 export declare function instancePathToConfigPath(instancePath: string, rootValue?: unknown): ConfigPath;

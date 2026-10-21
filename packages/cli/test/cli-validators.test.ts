@@ -155,7 +155,8 @@ describe("runCli", () => {
               kind: "json-schema-ajv",
               schema: {
                 type: "object",
-                required: ["service", "database", "features"]
+                // Failed alternatives require multiple diagnostics even in first-error mode.
+                anyOf: ["service", "database", "features"].map(property => ({ required: [property] }))
               }
             }
           ]

@@ -11,17 +11,24 @@ import {
   type Options,
   type Schema
 } from "ajv/dist/ajv.js";
+import { DEFAULT_RESOURCE_LIMITS } from "@0disoft/universal-config-engine-core";
 
 export interface CreateAjvValidatorInput {
   readonly id?: string;
   readonly schema: Schema;
   readonly ajv?: Ajv;
   readonly options?: Options;
+  /** Retained issue budget, including truncation; defaults to 200, capped at 10,000. */
+  readonly maxIssues?: number;
 }
 
 export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAdapter {
   const id = input.id ?? "ajv";
-  const ajv = input.ajv ?? new Ajv({ allErrors: true, ...(input.options ?? {}) });
+  // Ajv's inline first-error required check misses the empty property name;
+  // its loop form preserves that supported path without collecting all errors.
+  const ajv = input.ajv ?? new Ajv({ allErrors: false, loopRequired: 1, ...(input.options ?? {}) });
+  const maximum = typeof input.maxIssues === "number" && Number.isSafeInteger(input.maxIssues) && input.maxIssues > 0
+    ? Math.min(input.maxIssues, 10_000) : DEFAULT_RESOURCE_LIMITS.maxDiagnostics;
   const validate = ajv.compile(input.schema);
   if ("$async" in validate && validate.$async === true) {
     throw new Error("Asynchronous Ajv schemas are not supported by this adapter.");
@@ -31,7 +38,7 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
     id,
     validate(validatorInput: ValidatorInput): ValidatorResult {
       const ok = validate(validatorInput.config);
-      const errors = [...(validate.errors ?? [])];
+      const errors = validate.errors ?? [];
 
       if (ok) {
         return {
@@ -41,10 +48,14 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
         };
       }
 
-      return {
-        ok: false,
-        issues: errors.map((error) => toValidatorIssue(error, validatorInput.config))
-      };
+      const truncated = errors.length > maximum;
+      const retained = truncated ? maximum - 1 : errors.length;
+      const issues: ValidatorIssue[] = [];
+      for (let index = 0; index < retained; index += 1) {
+        issues.push(toValidatorIssue(errors[index]!, validatorInput.config));
+      }
+      if (truncated) issues.push({ code: "ajv_issues_truncated", severity: "error" });
+      return { ok: false, issues };
     }
   };
 }

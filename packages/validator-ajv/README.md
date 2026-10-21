@@ -45,6 +45,15 @@ console.log(validation.ok);
 Ajv instance paths are normalized into Universal Config Engine paths. Numeric-looking
 object keys remain strings unless traversal proves that the parent is an array.
 
+Validation now defaults to `allErrors: false` to stop unnecessary traversal after
+failure. To retain the previous complete-error collection behavior, explicitly use
+`options: { allErrors: true }` or supply an Ajv instance configured that way.
+`maxIssues` bounds converted issues (default 200, hard cap 10,000), reserving the
+last slot for `ajv_issues_truncated` on overflow. Invalid limits use the default.
+This retention limit does not bound Ajv's internal allocation when complete-error
+collection is explicitly enabled or the schema requires evaluating alternatives;
+schema complexity and execution deadlines remain application responsibilities.
+
 Standard Ajv keyword diagnostic codes are preserved. Custom keywords that do not
 match the core's bounded ASCII code grammar use `ajv_custom_keyword` instead.
 Their raw keyword names and Ajv error prose are omitted from diagnostics.

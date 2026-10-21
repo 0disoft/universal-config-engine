@@ -101,6 +101,15 @@ unknown fields, unsafe paths, duplicate ids and bounded rule/path/source-id limi
 are enforced at runtime. See `docs/cli/inspection-and-diff.md` for exact bounds,
 semantics and examples. The combined report obeys the smaller report-byte budget.
 
+## Ajv Execution Budget (Unreleased)
+
+The Ajv adapter defaults to first-error execution (`allErrors: false`). Explicit
+`options.allErrors` and caller-provided Ajv instances retain their chosen behavior.
+`maxIssues` bounds issue conversion/retention to 200 by default, with a hard cap of
+10,000 and an `ajv_issues_truncated` error occupying the last slot on overflow.
+Complete-error collection remains opt-in and can allocate more errors inside Ajv;
+the adapter does not impose an execution deadline or a schema-complexity sandbox.
+
 ## Standard Schema Validation (ADR 0018, Unreleased)
 
 `createStandardSchemaValidator` accepts a structural `StandardConfigSchema` v1

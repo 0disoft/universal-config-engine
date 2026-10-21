@@ -11,6 +11,44 @@ import {
 } from "../src/index.js";
 
 describe("createAjvValidator", () => {
+  it("stops default validation at the first failing item", async () => {
+    let reads = 0;
+    const items = Array.from({ length: 300 }, () => "invalid");
+    const config = { items: new Proxy(items, { get(target, key, receiver) {
+      if (typeof key === "string" && /^\d+$/.test(key)) reads += 1;
+      return Reflect.get(target, key, receiver);
+    } }) };
+    const validator = createAjvValidator({ schema: { type: "object", properties: {
+      items: { type: "array", items: { allOf: Array.from({ length: 30 }, () => ({ type: "number" })) } }
+    } } });
+    const result = await validator.validate({ config, provenance: [] });
+    expect(result.issues).toHaveLength(1);
+    // One validation read and one read while normalizing the retained issue path.
+    expect(reads).toBe(2);
+  });
+
+  it.each([false, true])("bounds explicitly collected errors (custom Ajv: %s)", async customAjv => {
+    const validator = createAjvValidator({ maxIssues: 3,
+      schema: { type: "array", items: { type: "number" } },
+      ...(customAjv ? { ajv: new Ajv({ allErrors: true }) } : { options: { allErrors: true } })
+    });
+    const result = await validator.validate({ config: ["a", "b", "c", "d"], provenance: [] });
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual([
+      { code: "type", severity: "error", path: [0] },
+      { code: "type", severity: "error", path: [1] },
+      { code: "ajv_issues_truncated", severity: "error" }
+    ]);
+  });
+
+  it.each([1, undefined])("reserves the final slot for truncation at budget %s", async maxIssues => {
+    const validator = createAjvValidator({ schema: { type: "array", items: { type: "number" } },
+      options: { allErrors: true }, ...(maxIssues === undefined ? {} : { maxIssues }) });
+    const result = await validator.validate({ config: Array.from({ length: 201 }, () => "invalid"), provenance: [] });
+    expect(result.issues).toHaveLength(maxIssues ?? 200);
+    expect(result.issues.at(-1)).toEqual({ code: "ajv_issues_truncated", severity: "error" });
+  });
+
   it.each([false, true])("rejects unsupported asynchronous schemas before execution (custom Ajv: %s)", (customAjv) => {
     expect(() => createAjvValidator({
       // @ts-expect-error JavaScript callers can bypass the synchronous Schema contract.
