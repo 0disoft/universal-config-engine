@@ -4,10 +4,10 @@
 ## @0disoft/universal-config-engine-core
 
 ### adapter-guards.d.ts
-import type { ConfigPath } from "./types.js";
+import type { ConfigPath, ResourceLimitPolicy } from "./types.js";
 export declare function isRecord(value: unknown): value is Record<string, unknown>;
 export declare function isIssueCode(value: unknown): value is string;
-export declare function isConfigPath(value: unknown): value is ConfigPath;
+export declare function isConfigPath(value: unknown, limits?: Pick<ResourceLimitPolicy, "maxPathLength" | "maxReportBytes">): value is ConfigPath;
 export declare function isIssueDetails(value: unknown): value is Readonly<Record<string, string | number | boolean | null>>;
 
 ### change-policy.d.ts

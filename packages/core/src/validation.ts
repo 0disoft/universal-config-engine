@@ -67,7 +67,8 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
       const validatorIssues = normalizeValidatorIssues(
         validator.id,
         result.issues,
-        Math.max(0, maxDiagnostics - issues.length)
+        Math.max(0, maxDiagnostics - issues.length),
+        limits
       );
       appendBoundedIssues(issues, validatorIssues, maxDiagnostics);
       if (!result.ok && !validatorIssues.some((issue) => issue.severity === "error")) {
@@ -147,7 +148,8 @@ function freezeConfigValue(value: ConfigValue): ConfigValue {
 function normalizeValidatorIssues(
   validatorId: string,
   issues: readonly unknown[],
-  maxDiagnostics: number
+  maxDiagnostics: number,
+  limits: ResourceLimitPolicy
 ): readonly ConfigIssue[] {
   const normalizedIssues: ConfigIssue[] = [];
 
@@ -157,7 +159,7 @@ function normalizeValidatorIssues(
       break;
     }
 
-    if (!isValidatorIssue(issue)) {
+    if (!isValidatorIssue(issue, limits)) {
       normalizedIssues.push(invalidValidatorIssue(validatorId, index));
       if (index < issues.length - 1 && normalizedIssues.length >= maxDiagnostics) {
         markDiagnosticsOverflow(normalizedIssues, maxDiagnostics);
@@ -191,13 +193,13 @@ function isValidatorResult(value: unknown): value is ValidatorResult {
   );
 }
 
-function isValidatorIssue(value: unknown): value is ValidatorIssue {
+function isValidatorIssue(value: unknown, limits: ResourceLimitPolicy): value is ValidatorIssue {
   return (
     isRecord(value) &&
     (value.category === undefined || value.category === "validation") &&
     isIssueCode(value.code) &&
     (value.severity === "error" || value.severity === "warning") &&
-    (value.path === undefined || isConfigPath(value.path)) &&
+    (value.path === undefined || isConfigPath(value.path, limits)) &&
     (value.message === undefined || typeof value.message === "string") &&
     (value.sourceId === undefined || typeof value.sourceId === "string") &&
     (value.details === undefined || isIssueDetails(value.details))

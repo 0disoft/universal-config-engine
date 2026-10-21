@@ -4,6 +4,33 @@ import type { ValidatorResult } from "../src/index.js";
 import { source } from "./helpers/source.js";
 
 describe("runValidators", () => {
+  it.each(["depth", "bytes", "utf8"])("bounds diagnostic path %s at both adapter boundaries", async budget => {
+    const path = budget === "depth" ? new Array(33).fill("x") : [budget === "bytes" ? "x".repeat(1025) : String.fromCodePoint(0x1f600).repeat(300)];
+    if (budget === "depth") Object.defineProperty(path, 0, { get() { throw new Error("Must reject length before reading segments."); } });
+    const issue = { category: "validation" as const, code: "field", severity: "warning" as const,
+      message: "Field issue", path };
+    const limits = { maxPathLength: 32, maxReportBytes: 1024 };
+    const loaded = await loadConfigSources({ context: undefined, limits, loaders: [{
+      descriptor: { id: "adapter", kind: "adapter", priority: 0, displayName: "adapter" },
+      load: () => ({ value: {}, issues: [issue] })
+    }] });
+    const validated = await runValidators({ config: {}, provenance: [], limits, validators: [{
+      id: "adapter", validate: () => ({ ok: true, issues: [issue] })
+    }] });
+    expect(loaded.issues).toEqual([expect.objectContaining({ code: "invalid_loader_result", severity: "error" })]);
+    expect(validated.issues).toEqual([expect.objectContaining({ code: "validator_issue_invalid", severity: "error" })]);
+    expect(validated.issues[0]?.path).toBeUndefined();
+  });
+
+  it("preserves valid typed diagnostic paths at the exact depth limit", async () => {
+    const path = ["items", 0];
+    const result = await runValidators({ config: {}, provenance: [], limits: { maxPathLength: 2 }, validators: [{
+      id: "adapter", validate: () => ({ ok: false, issues: [{ code: "field", severity: "error", path }] })
+    }] });
+    expect(result.issues[0]?.path).toEqual(path);
+    expect(result.issues[0]?.path).not.toBe(path);
+  });
+
   it.each([NaN, Infinity, -Infinity])(
     "rejects non-finite issue details consistently at both adapter boundaries (%s)", async (count) => {
       const issue = {

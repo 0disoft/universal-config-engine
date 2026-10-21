@@ -231,7 +231,7 @@ function getRedactionForAnySource(
   // Arrays are retained as atomic resolved paths; their owned descendants must
   // use the same source policy as inspection, even without their own index entry.
   let secretOwner = redactionContext.secretSourcePaths.has(cacheKey);
-  for (let length = path.length - 1; !secretOwner && length >= 0; length -= 1) {
+  for (let length = path.length - 1; !secretOwner && redactionContext.secretSourcePaths.size > 0 && length >= 0; length -= 1) {
     secretOwner = redactionContext.secretSourcePaths.has(pathToKey(path.slice(0, length)));
   }
   if (secretOwner) {

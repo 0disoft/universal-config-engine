@@ -128,7 +128,7 @@ function normalizeLoaderResult<TContext>(
   const issues: ConfigIssue[] = [];
   let overflowed = false;
   for (const issue of rawIssues ?? []) {
-    if (!isConfigIssue(issue)) {
+    if (!isConfigIssue(issue, limits)) {
       return { ok: false };
     }
     if (issues.length >= maxDiagnostics) {
@@ -168,7 +168,7 @@ function normalizeLoaderResult<TContext>(
   };
 }
 
-function isConfigIssue(value: unknown): value is ConfigIssue {
+function isConfigIssue(value: unknown, limits: ResourceLimitPolicy): value is ConfigIssue {
   if (!isRecord(value)) {
     return false;
   }
@@ -178,7 +178,7 @@ function isConfigIssue(value: unknown): value is ConfigIssue {
     isIssueCode(value.code) &&
     (value.severity === "error" || value.severity === "warning") &&
     typeof value.message === "string" &&
-    (value.path === undefined || isConfigPath(value.path)) &&
+    (value.path === undefined || isConfigPath(value.path, limits)) &&
     (value.sourceId === undefined || typeof value.sourceId === "string") &&
     (value.details === undefined || isIssueDetails(value.details))
   );
