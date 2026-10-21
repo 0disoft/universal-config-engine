@@ -11,7 +11,7 @@ type FailureDiagnostic = Pick<ConfigIssue, "category" | "code" | "message">;
 interface FileSourceOptions {
   readonly readFailure: FailureDiagnostic;
   readonly parseFailure?: FailureDiagnostic;
-  readonly parse: (raw: string, canonicalPath: string) => LoadedSource;
+  readonly parse: (raw: string, canonicalPath: string) => LoadedSource | Promise<LoadedSource>;
 }
 
 /** Shared I/O boundary; format-specific parsing and diagnostic codes stay with the adapter. */
@@ -32,7 +32,7 @@ export async function loadTextFileSource(input: FileSourceInput, options: FileSo
     return { descriptor: input.descriptor, value: {}, issues: readResult.issues };
   }
   try {
-    return options.parse(readResult.raw, readResult.canonicalPath);
+    return await options.parse(readResult.raw, readResult.canonicalPath);
   } catch {
     return failureSource(input.descriptor, options.parseFailure ?? options.readFailure);
   }

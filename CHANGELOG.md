@@ -5,6 +5,12 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+### Added
+
+- Node `loadConfigFileSource` for explicit JSONC, YAML, TOML and JSON5 files using
+  bounded opened-file reads and existing structural/unsafe-key validation. Parser
+  errors remain sanitized; JSONC locations and opt-in trailing commas are supported.
+
 ## 1.2.0 - 2026-10-21
 
 - Promote verified `1.2.0-rc.1` with unchanged runtime, declarations, dependencies,

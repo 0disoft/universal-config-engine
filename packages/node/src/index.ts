@@ -35,3 +35,5 @@ export type {
   CreateArgvSourceInput
 } from "./argv-source.js";
 export type { UnmappedInputBehavior } from "./input-policy.js";
+export { loadConfigFileSource } from "./config-file-loader.js";
+export type { ConfigFileFormat, LoadConfigFileSourceInput } from "./config-file-loader.js";

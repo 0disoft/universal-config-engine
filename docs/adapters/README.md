@@ -16,9 +16,9 @@ Universal Config Engine does not parse every config dialect directly. Parser
 adapters feed normalized config values into the pipeline. Validator adapters inspect
 the normalized config object and report normalized validation issues.
 
-These examples are contract fixtures, not built-in support claims. YAML, TOML, INI,
-and JSON5 remain outside core unless a future ADR adds first-party package
-ownership, parser dependencies, fixtures, and release gates.
+The original examples below are contract fixtures. ADR 0018 separately authorizes
+[official file loaders](official-files.md) for JSONC, YAML, TOML and JSON5 in the
+Node adapter. They remain outside core. INI remains an adapter example only.
 
 ## Loader Adapter Contract
 

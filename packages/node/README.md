@@ -59,6 +59,16 @@ Strict unmapped-input diagnostics are opt-in.
 See the [compatibility contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/library/compatibility.md)
 and [public API contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/library/public-api.md).
 
+## Additional File Formats (Unreleased)
+
+`loadConfigFileSource({ descriptor, filePath, format })` adds explicit `jsonc`,
+`yaml`, `toml` and `json5` loading through the existing bounded file boundary.
+Use descriptor kind `adapter` for dialect sources. JSONC trailing commas require
+`allowTrailingComma: true`. YAML aliases/custom tags and TOML date/time objects are
+rejected; all values must fit the normalized JSON object contract. Parser errors
+never include raw exception text. These additions are not in published `1.2.0`.
+See the [format contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/adapters/official-files.md).
+
 ## License
 
 MIT

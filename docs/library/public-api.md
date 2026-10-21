@@ -235,6 +235,14 @@ Source descriptor ids are resolution identities and must be unique. A duplicate 
 returns `source-load/duplicate_source_id` before any source value or source issue is
 merged, preventing ambiguous provenance and redaction-policy lookup.
 
+Node `loadConfigFileSource` (ADR 0018, unreleased) accepts an explicit
+`ConfigFileFormat`: `json`, `jsonc`, `yaml`, `toml` or `json5`. Additional parsers
+remain in the Node package and load on demand. New dialects reject unsafe keys,
+non-JSON values and structural overflow before returning source values; JSONC
+retains bounded locations and has opt-in trailing commas. YAML aliases/custom
+tags and TOML date/time objects are unsupported. The `json` branch delegates to
+the existing strict loader. See [the format contract](../adapters/official-files.md).
+
 Node JSON and dotenv loaders accept `FileReadPolicy.allowedRootPath`. When set,
 they verify the canonical path and opened file identity before reading from the
 handle; see ADR 0012.

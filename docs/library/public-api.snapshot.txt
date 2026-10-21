@@ -482,6 +482,19 @@ export interface CreateArgvSourceInput {
 }
 export declare function createArgvSource(input: CreateArgvSourceInput): LoadedSource;
 
+### config-file-loader.d.ts
+import { type LoadedSource, type ResourceLimitPolicy } from "@0disoft/universal-config-engine-core";
+import { type LoadJsonFileSourceInput } from "./json-file-loader.js";
+export type ConfigFileFormat = "json" | "jsonc" | "yaml" | "toml" | "json5";
+export interface LoadConfigFileSourceInput extends LoadJsonFileSourceInput {
+    readonly format: ConfigFileFormat;
+    readonly limits?: Partial<ResourceLimitPolicy>;
+    /** JSONC only; false by default, independently of comment support. */
+    readonly allowTrailingComma?: boolean;
+}
+/** First-party parsers share the bounded, opened-file I/O boundary. */
+export declare function loadConfigFileSource(input: LoadConfigFileSourceInput): Promise<LoadedSource>;
+
 ### dotenv-file-loader.d.ts
 import type { ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
 import type { FileReadPolicy } from "./file.js";
@@ -503,7 +516,7 @@ type FailureDiagnostic = Pick<ConfigIssue, "category" | "code" | "message">;
 interface FileSourceOptions {
     readonly readFailure: FailureDiagnostic;
     readonly parseFailure?: FailureDiagnostic;
-    readonly parse: (raw: string, canonicalPath: string) => LoadedSource;
+    readonly parse: (raw: string, canonicalPath: string) => LoadedSource | Promise<LoadedSource>;
 }
 /** Shared I/O boundary; format-specific parsing and diagnostic codes stay with the adapter. */
 export declare function loadTextFileSource(input: FileSourceInput, options: FileSourceOptions): Promise<LoadedSource>;
@@ -550,6 +563,8 @@ export type { LoadDotenvFileSourceInput } from "./dotenv-file-loader.js";
 export type { CreateProcessEnvSourceInput } from "./process-env-source.js";
 export type { CreateArgvSourceInput } from "./argv-source.js";
 export type { UnmappedInputBehavior } from "./input-policy.js";
+export { loadConfigFileSource } from "./config-file-loader.js";
+export type { ConfigFileFormat, LoadConfigFileSourceInput } from "./config-file-loader.js";
 
 ### input-policy.d.ts
 import type { ConfigIssueSeverity } from "@0disoft/universal-config-engine-core";
@@ -566,6 +581,10 @@ export interface LoadJsonFileSourceInput extends FileReadPolicy {
     readonly maxLocationBytes?: number;
 }
 export declare function loadJsonFileSource(input: LoadJsonFileSourceInput): Promise<LoadedSource>;
+
+### json-locations.d.ts
+import type { LoadedSource } from "@0disoft/universal-config-engine-core";
+export declare function collectJsonLocations(sourceId: string, sourcePath: string, raw: string, maxLocationBytes: number): Pick<LoadedSource, "locations" | "issues">;
 
 ### limits.d.ts
 export declare function positiveSafeIntegerLimit(value: number | undefined, fallback: number): number;
