@@ -172,7 +172,12 @@ exact candidate without further runtime or dependency changes.
 - [x] Decide opt-in inspection/diff formats, compatibility and secret comparison.
 - [x] Add bounded value inspection and typed-path queries in core and CLI.
 - [x] Add complete-value, source-aware comparison in core and CLI.
-- [ ] Add bounded CI change policies, examples and consumer validation.
+- [x] Add bounded CI change policies, examples and consumer validation.
+
+Validated locally on Windows: workspace check (including legacy golden reports,
+API declarations, typechecking and resource/secret guards), packed JavaScript and
+strict TypeScript consumers, and installed CLI inspection/diff/policy cases. Hosted
+platform/runtime checks and publication wait for a separately authorized push.
 
 These are separate implementation units. Default diagnostic schema `0.2` and
 legacy command output remain unchanged. This local work does not authorize push

@@ -48,4 +48,50 @@ export function checkPackedCliFailures(directory) {
     }
   }
   process.stdout.write("Installed CLI failure paths passed (4 cases).\n");
+  checkPackedInspection(executable, directory);
+}
+
+function checkPackedInspection(executable, directory) {
+  const sentinel = "UCE_PACKED_INSPECTION_PRIVATE_SENTINEL";
+  const declaration = (port, value) => ({ sources: [{ id: "defaults", kind: "object", priority: 0,
+    value: { service: { port, password: value } } }] });
+  writeFileSync(join(directory, "before.json"), JSON.stringify(declaration(80, sentinel)));
+  writeFileSync(join(directory, "after.json"), JSON.stringify(declaration(443, sentinel + "changed")));
+  writeFileSync(join(directory, "policy.json"), JSON.stringify({ version: "change-policy-1", rules: [
+    { id: "stable-port", path: ["service", "port"], mode: "forbid-changes" }
+  ] }));
+  writeFileSync(join(directory, "invalid-policy.json"), JSON.stringify({ version: "unknown" }));
+  const scenarios = [
+    { args: ["explain", "--config", "before.json", "--values"], version: "inspection-1", exit: 0 },
+    { args: ["explain", "--config", "before.json", "--path", '["service","port"]'], version: "inspection-1", exit: 0 },
+    { args: ["explain", "--config", "before.json", "--path", '["missing"]'], version: "inspection-1", exit: 4 },
+    { args: ["diff", "--config", "before.json", "--against", "after.json"], version: "diff-1", exit: 0 },
+    { args: ["diff", "--config", "before.json", "--against", "after.json", "--detect-secret-changes"], version: "diff-1", exit: 0 },
+    { args: ["diff", "--config", "before.json", "--against", "after.json", "--policy", "policy.json"], version: "change-check-1", exit: 3 },
+    { args: ["diff", "--config", "before.json", "--against", "after.json", "--policy", "invalid-policy.json"], version: "change-check-1", exit: 4 }
+  ];
+  for (const scenario of scenarios) {
+    const execution = spawnSync(process.execPath, [executable, ...scenario.args, "--json"], {
+      cwd: directory, encoding: "utf8", maxBuffer: 256 * 1024, timeout: 30_000
+    });
+    assert(!execution.error && execution.signal === null, "Installed inspection command must terminate normally.");
+    assert.equal(execution.status, scenario.exit);
+    assert.equal(execution.stderr, "");
+    assert(!execution.stdout.includes(sentinel), "Installed value output exposed private input.");
+    const report = JSON.parse(execution.stdout);
+    assert.equal(report.schemaVersion, scenario.version);
+    if (scenario.version === "inspection-1" && scenario.exit === 0) {
+      assert(report.entries.some((entry) => JSON.stringify(entry.path) === '["service","port"]' && entry.value === 80));
+    }
+    if (scenario.version === "diff-1") {
+      assert(report.changes.some((change) => change.path.at(-1) === "port" && change.kinds.includes("value-changed")));
+      if (scenario.args.includes("--detect-secret-changes")) {
+        assert(report.changes.some((change) => change.path.at(-1) === "password" && change.kinds.includes("value-changed")));
+      } else assert.deepEqual(report.uncomparedSecretPaths, [["service", "password"]]);
+    }
+    if (scenario.version === "change-check-1") {
+      assert.equal(report.policy.violations[0].code, scenario.exit === 3 ? "change_forbidden" : "invalid_policy");
+    }
+  }
+  process.stdout.write("Installed CLI inspection/diff/policy passed (7 cases).\n");
 }

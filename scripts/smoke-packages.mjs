@@ -154,6 +154,7 @@ function smokeConsumerInstall(tarballs, consumerDir) {
   copyFileSync(join(root, "examples", "uce.json"), join(consumerDir, "uce.json"));
   copyFileSync(join(root, "examples", "basic-library.mjs"), join(consumerDir, "basic-library.mjs"));
   copyFileSync(join(root, "fixtures", "consumer", "validator-0.2.ts"), join(consumerDir, "validator-0.2.ts"));
+  copyFileSync(join(root, "fixtures", "consumer", "inspection-types.ts"), join(consumerDir, "inspection-types.ts"));
   copyFileSync(
     join(root, "fixtures", "consumer", "validator-1.0-types.ts"),
     join(consumerDir, "validator-1.0-types.ts")
@@ -216,6 +217,10 @@ function smokeConsumerInstall(tarballs, consumerDir) {
     }
   );
   execFileSync(process.execPath, [join(consumerDir, "dist", "validator-0.2.js")], {
+    cwd: consumerDir,
+    stdio: "inherit"
+  });
+  execFileSync(process.execPath, [join(consumerDir, "dist", "inspection-types.js")], {
     cwd: consumerDir,
     stdio: "inherit"
   });

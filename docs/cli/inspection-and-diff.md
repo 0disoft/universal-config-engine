@@ -3,6 +3,11 @@
 Status: Implemented, unreleased (ADR 0017). These commands are available in the
 development checkout, not the published `1.1.2` packages.
 
+The examples assume `uce` is installed from this checkout's built package. To try
+them directly from the repository, run `pnpm run build`, then replace `uce` with
+`node packages/cli/dist/main.js`. Validation/smoke commands clean build output, so
+build again before trying the examples after those commands.
+
 ## Inspect One Setting
 
 ```sh

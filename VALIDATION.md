@@ -50,6 +50,19 @@ builds dependencies once and runs `test:built` for all packages, plus the script
 guards. Smoke helper guards cover cleanup after both success and failure and
 preservation of unrelated release artifacts.
 
+## Inspection and Comparison
+
+Core regression suites cover value previews, nested/atomic-array secret policies,
+precise typed paths, source locations and coercion/validation history, full-value
+diff, source changes, secret-policy removal, query/entry/byte budgets and CI rules.
+CLI suites retain legacy golden output and check opt-in formats and failure exits.
+`pnpm run check` owns these suites and the public declaration snapshot.
+
+`pnpm run smoke:packages` builds local tarballs, installs them in an isolated
+consumer, and verifies JavaScript, strict TypeScript and the actual installed CLI.
+The shared installed-CLI helper exercises seven inspection/diff/policy scenarios
+alongside four legacy error cases. No additional hosted workflow or runner is added.
+
 ## Repository Shape
 
 library, cli-tool validation must stay repository-shape focused and must not imply generated application source code.
