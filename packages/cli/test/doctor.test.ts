@@ -11,6 +11,30 @@ async function invoke(cwd: string, args: string[]) {
 }
 
 describe("actionable configuration doctor", () => {
+  it.each([["--output", "json"], ["--output=json"]])("honors JSON output aliases for success and usage failures", async (...flags) => {
+    await withTempDir(async root => {
+      await writeFile(join(root, "uce.json"), JSON.stringify({ sources: [] }));
+      const healthy = await invoke(root, ["doctor", "--config", "uce.json", ...flags]);
+      expect(healthy.exitCode).toBe(0); expect(healthy.report.schemaVersion).toBe("doctor-1");
+      const invalid = await invoke(root, ["doctor", "--config", "uce.json", ...flags, "--values"]);
+      expect(invalid.exitCode).toBe(4); expect(invalid.report.fixes[0].code).toBe("check_usage");
+    });
+  });
+
+  it("uses the shared parser's last output choice", async () => {
+    await withTempDir(async root => {
+      await writeFile(join(root, "uce.json"), JSON.stringify({ sources: [] }));
+      for (const flags of [["--json", "--output", "human"], ["--output=json", "--output=human"]]) {
+        let output = "";
+        const result = await runCli(["doctor", "--config", "uce.json", ...flags], {
+          cwd: root, env: {}, stdout: text => { output += text; }, stderr() {}
+        });
+        expect(result.exitCode).toBe(0);
+        expect(output).toBe("Configuration doctor: ok\nNo configuration errors found.\n");
+      }
+    });
+  });
+
   it("uses the shared pipeline and omits secret values", async () => {
     await withTempDir(async root => {
       await writeFile(join(root, "uce.json"), JSON.stringify({ sources: [{ id: "base", kind: "object", priority: 0,

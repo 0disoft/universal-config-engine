@@ -25,8 +25,12 @@ uce doctor --discover . --profile production --json
 ```
 
 `doctor` uses the same source loading, coercion, declared validators, profile and
-workspace selection as `validate`. It performs real reads and validation but
-never initializes, edits or repairs files automatically. Source argv after `--`
+workspace selection as `validate`. Output follows the shared parser's choice:
+`--json`, `--output json` and
+`--output=json` select JSON; a later `--output human` selects human output.
+JSON aliases are retained for usage-error envelopes as well. The command performs
+real reads and validation. It never initializes, edits or repairs files
+automatically. Source argv after `--`
 is forwarded normally. Inspection/diff/policy flags are rejected. Exit categories
 match validation: 0 success, 1 schema validation failure, 2 source/declaration
 failure, 3 mapping/merge/coercion/resource

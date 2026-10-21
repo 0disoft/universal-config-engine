@@ -1,5 +1,5 @@
 import { buildDiagnosticReport, type ConfigIssue, type DiagnosticReport } from "@0disoft/universal-config-engine-core";
-import { parseInspectionArgs } from "./args.js";
+import { getCliUsageContext, parseInspectionArgs } from "./args.js";
 import { prepareDiscoveryArgs } from "./discovery.js";
 import { declarationFailure, executeDeclaration } from "./execution.js";
 import { exitCodeForResult } from "./exit-codes.js";
@@ -19,7 +19,7 @@ export interface DoctorReport {
 export async function runDoctorCli(args: readonly string[], runtime: CliRuntime, publicMode = false): Promise<CliResult> {
   const separator = args.indexOf("--");
   const options = separator < 0 ? args : args.slice(0, separator);
-  const json = options.includes("--json") || options.includes("--output=json");
+  let json = getCliUsageContext(["validate", ...args.slice(1)]).output === "json";
   let pipeline;
   try {
     let selected;
@@ -29,6 +29,7 @@ export async function runDoctorCli(args: readonly string[], runtime: CliRuntime,
         .some(flag => arg === flag || arg.startsWith(`${flag}=`)))) throw new Error("Invalid doctor options.");
       selected = await prepareDiscoveryArgs(["validate", ...args.slice(1)], runtime);
       parsed = parseInspectionArgs(selected.args);
+      json = parsed.output === "json";
     } catch {
       throw new PipelineDeclarationError([{ category: "usage", code: "cli_usage_error", severity: "error",
         message: "Use doctor with --config or --discover and optional --profile, --workspace and --json." }]);

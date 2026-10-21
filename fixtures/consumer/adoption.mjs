@@ -9,7 +9,7 @@ const env = { ...process.env, APP_PORT: "9443" };
 const invoke = args => JSON.parse(execFileSync(process.execPath, [cli, ...args], { cwd, env, encoding: "utf8", timeout: 30000 }));
 mkdirSync(join(cwd, "initialized"));
 assert.equal(invoke(["init", "--directory", "initialized", "--json"]).status, "created");
-assert.equal(invoke(["doctor", "--config", "initialized/uce.json", "--json"]).status, "ok");
+assert.equal(invoke(["doctor", "--config", "initialized/uce.json", "--output", "json"]).status, "ok");
 const baseArgs = ["--config", "adoption/uce.json", "--workspace", "adoption", "--profile", "production"];
 const inspected = invoke(["explain", ...baseArgs, "--values", "--json"]);
 assert(inspected.entries.some(entry => entry.path.join(".") === "server.port" && entry.value === 9443 && entry.source?.winningSourceId === "deployment-env"));

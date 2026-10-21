@@ -50,6 +50,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Reuse the shared CLI output choice for doctor, including split JSON aliases,
+  explicit human overrides and structured usage errors.
+
 - Copy and validate the bounded file watch selection before asynchronous I/O,
   preventing later caller mutations from changing paths or bypassing the 64-path cap.
 
