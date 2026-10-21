@@ -306,6 +306,11 @@ Source descriptor ids are resolution identities and must be unique. A duplicate 
 returns `source-load/duplicate_source_id` before any source value or source issue is
 merged, preventing ambiguous provenance and redaction-policy lookup.
 
+`maxKeyCount` also bounds the combined tree during merge. Writes account for
+replaced subtrees before allocation; overflow leaves a bounded partial result and
+skips later source values. A later replacement cannot rescue an oversized
+intermediate tree. `maxResolvedPaths` continues to cap only the public result.
+
 Node `loadConfigFileSource` (ADR 0018, unreleased) accepts an explicit
 `ConfigFileFormat`: `json`, `jsonc`, `yaml`, `toml` or `json5`. Additional parsers
 remain in the Node package and load on demand. New dialects reject unsafe keys,

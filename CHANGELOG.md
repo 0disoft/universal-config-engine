@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Enforce the combined key/index budget before merge writes, subtract replaced
+  subtrees and stop further source work when the intermediate tree would overflow.
 - Preflight CLI validator counts, compile only after successful resolution with
   sufficient remaining provenance, and bound compile diagnostics at generation.
 - Preserve displaced parent ownership, locations and secret-source history for

@@ -30,6 +30,14 @@ retained public result is capped, and the existing `maxKeyCount` bounds the inte
 index. Exceeding any retained-entry limit produces a stable `resource-limit` issue
 and makes the result fail.
 
+During merge, `maxKeyCount` bounds the live combined tree, not just each source.
+Each write projects added object keys and expanded array slots and subtracts the
+subtree it replaces before allocating a clone. An overflow preserves the bounded
+partial tree, emits `max_key_count_exceeded` and stops subsequent merge work,
+including reading later source values. A later source cannot rescue an oversized
+intermediate tree. Raising the budget is required for that workload. The internal
+ownership index stays complete; `maxResolvedPaths` still caps only public output.
+
 Validation owns provenance-budget accounting: incoming history and newly generated
 validator events share the original limit. The pipeline forwards that limit
 unchanged. `runValidators` returns only new events, stops before invoking an adapter

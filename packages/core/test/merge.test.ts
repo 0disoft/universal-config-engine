@@ -10,6 +10,30 @@ import { source } from "./helpers/source.js";
 import type { ConfigIssue } from "../src/index.js";
 
 describe("resolveConfig", () => {
+  it("stops aggregate key growth before writing or reading subsequent source values", () => {
+    let reads = 0;
+    const result = resolveConfig({ limits: { maxKeyCount: 1 }, sources: Array.from({ length: 64 }, (_, index) => ({
+      ...source(`s${index}`, index, {}), get value() { reads++; return { [`k${index}`]: index }; }
+    })) });
+    expect(result.ok).toBe(false);
+    expect(result.config).toEqual({ k0: 0 });
+    expect(result.resolvedPaths).toHaveLength(1);
+    expect(reads).toBe(2);
+    expect(result.issues).toEqual([expect.objectContaining({ code: "max_key_count_exceeded" })]);
+  });
+
+  it("counts array descendants and releases removed keys when shapes are replaced", () => {
+    const sources = [source("base", 0, { items: [{ x: 1 }, 2] }),
+      source("shape", 1, { items: { value: 3 } }), source("extra", 2, { a: 1, b: 2 })];
+    expect(resolveConfig({ sources, limits: { maxKeyCount: 4 } })).toMatchObject({
+      ok: true, config: { items: { value: 3 }, a: 1, b: 2 }
+    });
+    const overflow = resolveConfig({ sources: [sources[0]!, source("extra", 2, { other: 1 })], limits: { maxKeyCount: 4 } });
+    expect(overflow.ok).toBe(false);
+    expect(overflow.config).toEqual({ items: [{ x: 1 }, 2] });
+    expect(overflow.issues).toContainEqual(expect.objectContaining({ code: "max_key_count_exceeded" }));
+  });
+
   it.each(["old", [], {}])("preserves displaced parent history for every child replacing %j", (previous) => {
     for (const names of [["alpha", "beta"], ["beta", "alpha"]]) {
       const location = { sourceId: "vault", line: 2, column: 3 };

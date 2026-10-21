@@ -4,6 +4,7 @@ import { getConfigValueAtPath, pathToKey, setConfigValueAtPath } from "./path.js
 import { flattenConfigObject } from "./value.js";
 import { normalizeResourceLimits } from "./limits.js";
 import { sourcePriorityIssues } from "./source-priority.js";
+import { projectedMergeKeyCount } from "./merge-key-budget.js";
 import {
   createResolvedPathIndex,
   deleteResolvedPath,
@@ -80,7 +81,8 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     };
   }
 
-  for (const source of sources) {
+  const keyBudget = { count: 0, exceeded: false };
+  sourceLoop: for (const source of sources) {
     const sourceIssues = source.issues ?? [];
     const flattened = flattenSourceValue(source, limits);
     appendBoundedIssues(issues, sourceIssues, limits.maxDiagnostics);
@@ -120,8 +122,10 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
         policy,
         provenance,
         resolvedIndex,
-        displacedParents
+        displacedParents,
+        keyBudget
       });
+      if (keyBudget.exceeded) break sourceLoop;
     }
   }
 
@@ -251,6 +255,7 @@ function applyEntry(input: {
   readonly provenance: ProvenanceEvent[];
   readonly resolvedIndex: MutableResolvedPathIndex;
   readonly displacedParents: MutableResolvedPathIndex;
+  readonly keyBudget: { count: number; exceeded: boolean };
 }): void {
   if (input.entryPath.length === 0) {
     pushBoundedIssue(
@@ -302,6 +307,14 @@ function applyEntry(input: {
     );
   }
 
+  const nextKeyCount = projectedMergeKeyCount(input.config, input.entryPath, input.entryValue, input.keyBudget.count);
+  if (nextKeyCount > input.limits.maxKeyCount) {
+    input.keyBudget.exceeded = true;
+    pushBoundedIssue(input.issues, { category: "resource-limit", code: "max_key_count_exceeded", severity: "error",
+      sourceId: "core:resolved-config", message: `Combined config key/index count exceeds the maximum of ${input.limits.maxKeyCount}.`
+    }, input.limits);
+    return;
+  }
   try {
     setConfigValueAtPath(input.config, input.entryPath, input.entryValue);
   } catch {
@@ -319,6 +332,7 @@ function applyEntry(input: {
     );
     return;
   }
+  input.keyBudget.count = nextKeyCount;
 
   if (relatedResolved.length === 0 && existingValue === undefined) {
     const event: ProvenanceEvent = {

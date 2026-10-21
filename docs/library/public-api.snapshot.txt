@@ -209,6 +209,11 @@ export interface CreateMappedOverrideSourceInput {
 }
 export declare function createMappedOverrideSource(input: CreateMappedOverrideSourceInput): LoadedSource;
 
+### merge-key-budget.d.ts
+import type { ConfigPath, ConfigValue } from "./types.js";
+/** Count the projected tree before setConfigValueAtPath can allocate its copy. */
+export declare function projectedMergeKeyCount(config: Record<string, ConfigValue>, path: ConfigPath, value: ConfigValue, currentCount: number): number;
+
 ### merge.d.ts
 import type { ConfigResult, MergePolicy, ResolveConfigInput } from "./types.js";
 export declare const DEFAULT_MERGE_POLICY: MergePolicy;
