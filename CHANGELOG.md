@@ -27,6 +27,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   successful typed value, and resolved config/provenance remain unchanged.
 - Explicit named profile compilation with bounded declaration shape, preserved
   source priorities/identities and combined id/resource validation.
+- Bounded local declaration inheritance with cycle detection, unique-ancestor
+  ordering, workspace checks and retained per-declaration file source bases.
 
 ## 1.2.0 - 2026-10-21
 

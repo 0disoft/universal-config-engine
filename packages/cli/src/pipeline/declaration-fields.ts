@@ -14,7 +14,7 @@ export const RESOURCE_LIMIT_FIELDS = [
   "maxProvenanceEvents", "maxResolvedPaths", "maxReportBytes"
 ] as const;
 
-export const PIPELINE_DECLARATION_FIELDS = new Set(["sources", "validators", "coercionRules", "limits", "profiles"]);
+export const PIPELINE_DECLARATION_FIELDS = new Set(["sources", "validators", "coercionRules", "limits", "profiles", "extends"]);
 export const PROFILE_DECLARATION_FIELDS = new Set(["sources", "validators", "coercionRules", "limits"]);
 
 export const BASE_SOURCE_FIELDS = new Set(["id", "kind", "priority", "displayName", "redaction"]);

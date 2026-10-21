@@ -9,6 +9,7 @@ export async function resolveConfigRelativePath(input: {
   readonly sourceIndex: number;
   readonly sourceId: string;
   readonly targetPath: string;
+  readonly allowedRootPath?: string;
 }): Promise<
   | { readonly ok: true; readonly path: string; readonly allowedRootPath: string }
   | { readonly ok: false; readonly issue: ConfigIssue }
@@ -23,14 +24,18 @@ export async function resolveConfigRelativePath(input: {
       : resolve(configDirectory, input.targetPath);
 
   const canonicalTargetPath = await canonicalizeExistingPath(resolvedTargetPath);
-  if (!isInsideOrEqualPath(configDirectory, canonicalTargetPath)) {
+  const allowedRootPath = input.allowedRootPath === undefined ? configDirectory : await canonicalizeExistingPath(input.allowedRootPath);
+  if (!isInsideOrEqualPath(allowedRootPath, canonicalTargetPath)) {
+    if (input.allowedRootPath !== undefined) return { ok: false, issue: pipelineDeclarationIssue({
+      code: "pipeline_file_source_path_outside_workspace", path: ["sources", input.sourceIndex, "path"],
+      sourceId: input.sourceId, message: "File source paths must stay within the selected workspace." }) };
     return outsideConfigDirectoryResult(input);
   }
 
   return {
     ok: true,
     path: canonicalTargetPath,
-    allowedRootPath: configDirectory
+    allowedRootPath
   };
 }
 
@@ -61,7 +66,7 @@ export function resolveInputPath(inputPath: string, cwd: string): string {
   return isAbsolute(inputPath) ? inputPath : resolve(cwd, inputPath);
 }
 
-function isInsideOrEqualPath(rootPath: string, targetPath: string): boolean {
+export function isInsideOrEqualPath(rootPath: string, targetPath: string): boolean {
   const relativePath = relative(rootPath, targetPath);
   return (
     relativePath === "" ||

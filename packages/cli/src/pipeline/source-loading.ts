@@ -24,6 +24,8 @@ export async function loadDeclaredSources(input: {
   readonly cwd: string;
   readonly env: NodeJS.ProcessEnv;
   readonly argv: readonly string[];
+  readonly sourceConfigPaths?: ReadonlyMap<string, string>;
+  readonly workspacePath?: string;
 }): Promise<readonly LoadedSource[]> {
   const sources: LoadedSource[] = [];
 
@@ -41,8 +43,9 @@ export async function loadDeclaredSources(input: {
       case "dotenv-file":
       case "adapter": {
         const filePath = await resolveConfigRelativePath({
-          configPath: input.configPath, cwd: input.cwd, sourceIndex: index,
-          sourceId: descriptor.id, targetPath: source.path
+          configPath: input.sourceConfigPaths?.get(source.id) ?? input.configPath, cwd: input.cwd, sourceIndex: index,
+          sourceId: descriptor.id, targetPath: source.path,
+          ...(input.workspacePath === undefined ? {} : { allowedRootPath: input.workspacePath })
         });
         if (!filePath.ok) {
           sources.push(failedDeclaredSource(descriptor, filePath.issue));

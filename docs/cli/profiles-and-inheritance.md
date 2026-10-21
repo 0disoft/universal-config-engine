@@ -1,7 +1,7 @@
 # Profiles and Local Inheritance
 
-Status: Profile compilation implemented, unreleased (ADR 0018). File inheritance
-and CLI selection are separate following units. Published `1.2.0` is unchanged.
+Status: Profile compilation and file inheritance implemented, unreleased (ADR
+0018). CLI selection is a following unit. Published `1.2.0` is unchanged.
 
 Pipeline declarations may contain at most 64 named `profiles`. Each profile may
 add `sources`, `validators`, `coercionRules` and override individual `limits`.
@@ -35,3 +35,30 @@ before their entries are inspected. An unknown selection is
 
 The compiler does not load files or mutate the provided declaration. Use the
 existing declared-source loading and shared core pipeline to execute its result.
+
+## Local inheritance
+
+A declaration can declare `extends: ["base.json", "other.json"]`. Parents resolve
+relative to the declaring file, depth-first in list order, before that file's own
+entries. A shared ancestor contributes once. Cycles, duplicate source/validator
+ids and aggregate source limits fail before any config source is loaded. Source
+priorities are unchanged; child entries do not automatically win.
+
+At most eight parent references per file, sixteen unique declaration files,
+1 MiB per declaration and 4 MiB total are read. Each file must be a JSON pipeline
+declaration. The default boundary is the top declaration's canonical directory;
+parents and data files outside it are rejected, including symlink escapes.
+
+`loadPipelineDeclarationContext(path, cwd, { workspacePath, profile })` explicitly
+widens the boundary to a selected workspace and selects a profile. Matching profile
+pieces in each ancestor and child are included; the name must exist in at least
+one document. Parent limits are merged in order and child/profile limits override
+individual fields. All profiles are shape-checked even when not selected.
+
+The returned context includes `workspacePath`, ordered `declarationPaths` and
+`sourceConfigPaths` for inherited declarations. Pass these through to
+`loadDeclaredSources` along with `configPath: context.canonicalConfigPath`, `cwd`,
+`env` and `argv`. File sources retain their own declaration-relative bases. The
+plain `loadPipelineDeclaration` helper returns compiled absolute source paths;
+callers must still forward their explicit workspace to the source loader. These
+are local paths, not permission capabilities: opened-file checks run again.

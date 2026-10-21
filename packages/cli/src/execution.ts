@@ -12,7 +12,9 @@ export async function executeDeclaration(configPath: string, runtime: CliRuntime
   const context = await loadPipelineDeclarationContext(configPath, runtime.cwd, policy);
   const declaration = context.declaration;
   const sources = await loadDeclaredSources({ declaration, configPath: context.canonicalConfigPath,
-    cwd: runtime.cwd, env: runtime.env, argv });
+    cwd: runtime.cwd, env: runtime.env, argv,
+    ...(context.sourceConfigPaths === undefined ? {} : { sourceConfigPaths: context.sourceConfigPaths }),
+    ...(context.workspacePath === undefined ? {} : { workspacePath: context.workspacePath }) });
   const declared = validate ? createDeclaredValidators(declaration) : { validators: [], issues: [] };
   const pipeline = await runConfigPipeline({
     loaders: sources.map(toLoadedSourceAdapter), context: undefined,

@@ -26,6 +26,7 @@ export function normalizePipelineDeclaration(value: unknown): PipelineDeclaratio
 
   return {
     sources: value.sources.map((source) => normalizeSourceDeclaration(source)),
+    ...(Array.isArray(value.extends) ? { extends: value.extends.map(path => String(path)) } : {}),
     ...(Array.isArray(value.validators)
       ? { validators: value.validators.map((validator) => normalizeValidatorDeclaration(validator)) }
       : {}),

@@ -795,9 +795,14 @@ import type { PipelineDeclaration } from "./types.js";
 export interface LoadedPipelineDeclaration {
     readonly declaration: PipelineDeclaration;
     readonly canonicalConfigPath: string;
+    readonly workspacePath?: string;
+    readonly sourceConfigPaths?: ReadonlyMap<string, string>;
+    readonly declarationPaths?: readonly string[];
 }
 export interface PipelineDeclarationReadPolicy {
     readonly allowedRootPath?: string;
+    readonly workspacePath?: string;
+    readonly profile?: string;
 }
 export declare function loadPipelineDeclaration(configPath: string, cwd?: string, policy?: PipelineDeclarationReadPolicy): Promise<PipelineDeclaration>;
 export declare function loadPipelineDeclarationContext(configPath: string, cwd?: string, policy?: PipelineDeclarationReadPolicy): Promise<LoadedPipelineDeclaration>;
@@ -854,6 +859,13 @@ export declare function normalizePipelineDeclaration(value: unknown): PipelineDe
 import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
 export declare function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[];
 
+### pipeline/inheritance.d.ts
+import type { LoadedPipelineDeclaration, PipelineDeclarationReadPolicy } from "../pipeline.js";
+export interface ParsedPipelineDocument extends LoadedPipelineDeclaration {
+    readonly byteLength: number;
+}
+export declare function loadDeclarationInheritance(initial: ParsedPipelineDocument, policy: PipelineDeclarationReadPolicy, read: (path: string, workspace: string, maxBytes: number) => Promise<ParsedPipelineDocument>): Promise<LoadedPipelineDeclaration>;
+
 ### pipeline/profile-validation.d.ts
 import { type ConfigIssue } from "@0disoft/universal-config-engine-core";
 export declare function validateProfiles(value: unknown, validate: (value: unknown) => readonly ConfigIssue[]): readonly ConfigIssue[];
@@ -867,6 +879,8 @@ export declare function loadDeclaredSources(input: {
     readonly cwd: string;
     readonly env: NodeJS.ProcessEnv;
     readonly argv: readonly string[];
+    readonly sourceConfigPaths?: ReadonlyMap<string, string>;
+    readonly workspacePath?: string;
 }): Promise<readonly LoadedSource[]>;
 
 ### pipeline/source-paths.d.ts
@@ -877,6 +891,7 @@ export declare function resolveConfigRelativePath(input: {
     readonly sourceIndex: number;
     readonly sourceId: string;
     readonly targetPath: string;
+    readonly allowedRootPath?: string;
 }): Promise<{
     readonly ok: true;
     readonly path: string;
@@ -886,6 +901,7 @@ export declare function resolveConfigRelativePath(input: {
     readonly issue: ConfigIssue;
 }>;
 export declare function resolveInputPath(inputPath: string, cwd: string): string;
+export declare function isInsideOrEqualPath(rootPath: string, targetPath: string): boolean;
 
 ### profiles.d.ts
 import type { PipelineDeclaration } from "./types.js";
@@ -909,6 +925,7 @@ export interface PipelineDeclaration {
     readonly coercionRules?: readonly CoercionRule[];
     readonly limits?: Partial<ResourceLimitPolicy>;
     readonly profiles?: Readonly<Record<string, PipelineProfileDeclaration>>;
+    readonly extends?: readonly string[];
 }
 export interface PipelineProfileDeclaration {
     readonly sources?: readonly PipelineSourceDeclaration[];

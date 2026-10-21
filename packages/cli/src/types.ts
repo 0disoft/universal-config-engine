@@ -19,6 +19,7 @@ export interface PipelineDeclaration {
   readonly coercionRules?: readonly CoercionRule[];
   readonly limits?: Partial<ResourceLimitPolicy>;
   readonly profiles?: Readonly<Record<string, PipelineProfileDeclaration>>;
+  readonly extends?: readonly string[];
 }
 
 export interface PipelineProfileDeclaration {
