@@ -243,6 +243,13 @@ retains bounded locations and has opt-in trailing commas. YAML aliases/custom
 tags and TOML date/time objects are unsupported. The `json` branch delegates to
 the existing strict loader. See [the format contract](../adapters/official-files.md).
 
+Node `discoverPipelineDeclaration` selects the nearest existing declaration from
+the frozen `DEFAULT_PIPELINE_FILENAMES` inside an explicit workspace. It defaults
+to 32 directories and never exceeds 256, executes no config code and returns
+bounded source-load/resource issues instead of provider exceptions. It does not
+read config contents or replace opened-file root verification; see
+[workspace discovery](../cli/discovery.md).
+
 Node JSON and dotenv loaders accept `FileReadPolicy.allowedRootPath`. When set,
 they verify the canonical path and opened file identity before reading from the
 handle; see ADR 0012.

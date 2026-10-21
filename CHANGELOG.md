@@ -13,6 +13,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 - CLI `kind: "adapter"` file sources with explicit format, the existing declaration
   directory boundary and shared loader budgets. Legacy commands and envelopes are
   unchanged; inspection, diff and CI policies use the same declared sources.
+- Node workspace-bounded declaration discovery with deterministic filenames,
+  nearest-directory precedence and a capped upward search. Configuration code is
+  never executed and unsafe/broken candidates fail instead of being skipped.
 
 ## 1.2.0 - 2026-10-21
 
