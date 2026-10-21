@@ -7,6 +7,22 @@ function descriptor(kind: ConfigSourceDescriptor["kind"]): ConfigSourceDescripto
 }
 
 describe("override source dictionary keys", () => {
+  it("rejects ambiguous assignment names before inspecting argument values", () => {
+    const argv = Object.defineProperty(["--setting=a=b"], 0, {
+      get() { throw new Error("Argument values must not be inspected for invalid declarations."); }
+    });
+    const loaded = createArgvSource({ descriptor: descriptor("argv"), argv, mappings: [
+      { externalName: "--setting", sourceKind: "argv", targetPath: ["first"] },
+      { externalName: "--setting=a", sourceKind: "argv", targetPath: ["second"] }
+    ] });
+    expect(loaded.value).toEqual({});
+    expect(loaded.issues).toEqual([expect.objectContaining({ code: "argv_mapping_external_name_invalid", severity: "error" })]);
+    expect(resolveConfig({ sources: [loaded] }).ok).toBe(false);
+    const env = createProcessEnvSource({ descriptor: descriptor("process-env"), env: { "name=a": "b" },
+      mappings: [{ externalName: "name=a", sourceKind: "process-env", targetPath: ["value"] }] });
+    expect(env.value).toEqual({ value: "b" });
+  });
+
   it("preserves secret mapping policies through both public Node adapters", () => {
     const loaded = [
       createArgvSource({ descriptor: descriptor("argv"), argv: ["--endpoint=mapping input marker"],

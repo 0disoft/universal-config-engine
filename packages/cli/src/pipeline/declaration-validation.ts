@@ -466,13 +466,16 @@ function validateOverrideMappingDeclaration(
     )
   );
 
-  if (typeof mapping.externalName !== "string" || mapping.externalName.length === 0) {
+  if (typeof mapping.externalName !== "string" || mapping.externalName.length === 0 ||
+      (expectedSourceKind === "argv" && mapping.externalName.includes("="))) {
     issues.push(
       pipelineDeclarationIssue({
         code: "pipeline_override_mapping_external_name_invalid",
         path: fieldPath("externalName"),
         sourceId,
-        message: "Override mapping externalName must be a non-empty string."
+        message: expectedSourceKind === "argv"
+          ? "Argument mapping externalName must be a non-empty string without '='."
+          : "Override mapping externalName must be a non-empty string."
       })
     );
   }

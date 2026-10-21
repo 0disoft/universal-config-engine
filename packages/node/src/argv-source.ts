@@ -30,6 +30,12 @@ interface AssignmentPrefixNode {
 }
 
 export function createArgvSource(input: CreateArgvSourceInput): LoadedSource {
+  if (input.mappings.some(mapping => mapping.sourceKind === "argv" && mapping.externalName.includes("="))) {
+    return { descriptor: input.descriptor, value: {}, issues: [{
+      category: "mapping", code: "argv_mapping_external_name_invalid", severity: "error",
+      sourceId: input.descriptor.id, message: "Argument mapping externalName must not contain '='."
+    }] };
+  }
   const maxArgvEntries = positiveSafeIntegerLimit(input.maxArgvEntries, DEFAULT_MAX_ARGV_ENTRIES);
   if (input.argv.length > maxArgvEntries) {
     return {

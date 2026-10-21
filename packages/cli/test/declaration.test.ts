@@ -17,6 +17,21 @@ import { loadDeclaredSources, loadPipelineDeclaration, loadPipelineDeclarationCo
 import { withTempDir } from "./helpers/temp-directory.js";
 
 describe("loadPipelineDeclaration", () => {
+  it("rejects argv mapping names containing assignment separators", async () => {
+    await withTempDir(async dir => {
+      const configPath = join(dir, "uce.json");
+      await writeFile(configPath, JSON.stringify({ sources: [{ id: "argv", kind: "argv", priority: 0,
+        mappings: [
+          { externalName: "--setting", sourceKind: "argv", targetPath: ["first"] },
+          { externalName: "--setting=a", sourceKind: "argv", targetPath: ["second"] }
+        ] }] }));
+      await expect(loadPipelineDeclaration(configPath, dir)).rejects.toMatchObject({ issues: [
+        expect.objectContaining({ code: "pipeline_override_mapping_external_name_invalid",
+          path: ["sources", 0, "mappings", 1, "externalName"] })
+      ] });
+    });
+  });
+
   it.each(["constructor", "__proto__", "toString", "unsupported"])(
     "reports unsupported source kind %s without falling through to an internal exception", async (kind) => {
       await withTempDir(async dir => {

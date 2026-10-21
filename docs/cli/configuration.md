@@ -145,6 +145,11 @@ CLI argv source values are read only after the `--` separator. Example:
 uce explain --config uce.json -- --port 9000
 ```
 
+Argv mapping `externalName` must not contain `=`: that character separates an
+argument name from its value. The CLI rejects such declarations before loading
+sources; the Node adapter returns `argv_mapping_external_name_invalid` before
+reading argument values. Process environment mapping names are unchanged.
+
 An argv source argument may be provided at most once for each declared mapping.
 Duplicate forms such as `--port 9000 --port=8080` are mapping errors, not
 first-wins or last-wins overrides.
