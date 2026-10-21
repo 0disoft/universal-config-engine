@@ -5,6 +5,11 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+### Fixed
+
+- Bound diagnostic retention during resolution without first copying the complete
+  source issue array. Preserve issue order and source rejection for discarded errors.
+
 ## 1.1.2 - 2026-10-21
 
 - Promote `1.1.2-rc.1` with unchanged runtime, public declarations, dependencies

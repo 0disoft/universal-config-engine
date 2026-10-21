@@ -83,6 +83,12 @@ validated: a malformed tail rejects the source even when it cannot be retained.
 Validation remains linear in adapter output size; excess diagnostics do not cause
 unbounded additional copies before the cap is applied.
 
+`resolveConfig` appends source and structure diagnostics directly into the bounded
+issue list without first copying or concatenating the complete source issue array.
+Source issues still precede structure issues. Error detection also inspects the
+discarded source tail when needed, so an error beyond the retained prefix still
+rejects that source; the adapter's issue array is never mutated.
+
 Loader results are runtime-checked before becoming `LoadedSource` objects. Invalid
 issue arrays, issue entries, location arrays, or location entries reject that source
 with `source-load/invalid_loader_result`. Valid loader issue and location entries

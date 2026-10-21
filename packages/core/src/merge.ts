@@ -76,12 +76,13 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
   }
 
   for (const source of sources) {
-    const sourceIssues = [...(source.issues ?? [])];
+    const sourceIssues = source.issues ?? [];
     const flattened = flattenSourceValue(source, limits);
-    sourceIssues.push(...flattened.issues);
     appendBoundedIssues(issues, sourceIssues, limits.maxDiagnostics);
+    appendBoundedIssues(issues, flattened.issues, limits.maxDiagnostics);
 
-    if (sourceIssues.some((issue) => issue.severity === "error")) {
+    if (sourceIssues.some((issue) => issue.severity === "error") ||
+        flattened.issues.some((issue) => issue.severity === "error")) {
       const event: ProvenanceEvent = {
         path: [],
         action: "rejected",

@@ -7,8 +7,67 @@ import {
   setConfigValueAtPath
 } from "../src/index.js";
 import { source } from "./helpers/source.js";
+import type { ConfigIssue } from "../src/index.js";
 
 describe("resolveConfig", () => {
+  it("bounds issue reads when rejecting a source with an excessive diagnostic tail", () => {
+    const issue: ConfigIssue = {
+      category: "parse", code: "invalid", severity: "error", message: "Rejected input."
+    };
+    let reads = 0;
+    const issues = new Proxy(Array<ConfigIssue>(100_000).fill(issue), {
+      get(target, key, receiver) {
+        if (typeof key === "string" && /^(0|[1-9][0-9]*)$/.test(key)) reads++;
+        return Reflect.get(target, key, receiver);
+      }
+    });
+    const result = resolveConfig({
+      sources: [{ ...source("noisy", 0, { enabled: true }), issues }],
+      limits: { maxDiagnostics: 2 }
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.config).toEqual({});
+    expect(result.issues).toEqual([
+      issue, expect.objectContaining({ code: "max_diagnostics_exceeded", severity: "error" })
+    ]);
+    expect(result.provenance).toContainEqual(expect.objectContaining({ action: "rejected", sourceId: "noisy" }));
+    expect(reads).toBeLessThanOrEqual(4);
+    expect(issues).toHaveLength(100_000);
+  });
+
+  it("rejects a source whose error is beyond the retained diagnostic prefix", () => {
+    const warning: ConfigIssue = {
+      category: "parse", code: "notice", severity: "warning", message: "Input notice."
+    };
+    const result = resolveConfig({
+      sources: [{ ...source("tail-error", 0, { enabled: true }), issues: [
+        warning, warning, warning, { ...warning, code: "invalid", severity: "error" }
+      ] }],
+      limits: { maxDiagnostics: 2 }
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.config).toEqual({});
+    expect(result.issues).toHaveLength(2);
+    expect(result.provenance).toContainEqual(expect.objectContaining({ action: "rejected" }));
+  });
+
+  it("keeps source warnings before structure errors without mutating adapter issues", () => {
+    const warning: ConfigIssue = {
+      category: "parse", code: "notice", severity: "warning", message: "Input notice."
+    };
+    const issues = Object.freeze([warning]);
+    const result = resolveConfig({
+      sources: [{ ...source("invalid-value", 0, { port: NaN }), issues }],
+      limits: { maxDiagnostics: 2 }
+    });
+
+    expect(result.issues).toEqual([warning, expect.objectContaining({ code: "invalid_value" })]);
+    expect(result.config).toEqual({});
+    expect(issues).toEqual([warning]);
+  });
+
   it("accepts shared object references that do not form a cycle", () => {
     const shared = { enabled: true };
     const result = resolveConfig({
