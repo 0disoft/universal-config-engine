@@ -31,6 +31,32 @@ export declare function markDiagnosticsOverflow(issues: ConfigIssue[], maxDiagno
 export declare function isDiagnosticsOverflowMarker(issue: ConfigIssue): boolean;
 export declare function isDiagnosticsLimitReached(issues: readonly ConfigIssue[], maxDiagnostics: number): boolean;
 
+### diff.d.ts
+import { type BuildConfigInspectionOptions, type ConfigInspection, type ConfigInspectionEntry } from "./inspection.js";
+import type { ConfigPath, ConfigResult } from "./types.js";
+export type ConfigChangeKind = "added" | "removed" | "type-changed" | "value-changed" | "source-changed";
+export interface ConfigChange {
+    readonly path: ConfigPath;
+    readonly kinds: readonly ConfigChangeKind[];
+    readonly before?: ConfigInspectionEntry;
+    readonly after?: ConfigInspectionEntry;
+}
+export interface BuildConfigDiffOptions extends BuildConfigInspectionOptions {
+    /** Explicitly disclose secret-change metadata; never retains values or fingerprints. */
+    readonly detectSecretChanges?: boolean;
+}
+export interface ConfigDiff {
+    readonly schemaVersion: "diff-1";
+    readonly status: "ok" | "error";
+    readonly secretComparison: "skipped" | "detected";
+    readonly uncomparedSecretPaths: readonly ConfigPath[];
+    readonly changes: readonly ConfigChange[];
+    readonly before: ConfigInspection;
+    readonly after: ConfigInspection;
+    readonly error?: "input_failed" | "max_diff_entries_exceeded" | "max_report_bytes_exceeded";
+}
+export declare function buildConfigDiff(before: ConfigResult, after: ConfigResult, options?: BuildConfigDiffOptions): ConfigDiff;
+
 ### index.d.ts
 export { DEFAULT_MERGE_POLICY, DEFAULT_RESOURCE_LIMITS, resolveConfig } from "./merge.js";
 export { applyCoercionRules } from "./coercion.js";
@@ -40,6 +66,8 @@ export { combineConfigIssues, runConfigPipeline } from "./pipeline.js";
 export { DEFAULT_SECRET_NAME_PATTERNS, buildDiagnosticReport } from "./redaction.js";
 export { runValidators } from "./validation.js";
 export { buildConfigInspection } from "./inspection.js";
+export { buildConfigDiff } from "./diff.js";
+export type { BuildConfigDiffOptions, ConfigDiff, ConfigChange, ConfigChangeKind } from "./diff.js";
 export type { BuildConfigInspectionOptions, ConfigInspection, ConfigInspectionEntry, InspectedValueType } from "./inspection.js";
 export { cloneConfigValue, formatPath, getConfigValueAtPath, isPathPrefix, isUnsafePathSegment, pathToKey, pathsEqual, setConfigValueAtPath } from "./path.js";
 export { flattenConfigObject, isConfigValue, isPlainConfigObject } from "./value.js";
@@ -529,6 +557,8 @@ export interface ParsedCliArgs {
     readonly sourceArgv: readonly string[];
     readonly values?: boolean;
     readonly path?: ConfigPath;
+    readonly against?: string;
+    readonly detectSecretChanges?: boolean;
 }
 export interface CliUsageContext {
     readonly command?: CliCommand;
@@ -536,6 +566,20 @@ export interface CliUsageContext {
 }
 export declare function parseCliArgs(args: readonly string[]): ParsedCliArgs;
 export declare function getCliUsageContext(args: readonly string[]): CliUsageContext;
+
+### diff.d.ts
+import { type ConfigDiff } from "@0disoft/universal-config-engine-core";
+import type { ParsedCliArgs } from "./args.js";
+import type { CliResult, CliRuntime } from "./types.js";
+export declare function runDiffCli(parsed: ParsedCliArgs, runtime: CliRuntime): Promise<CliResult>;
+export declare function formatDiff(report: ConfigDiff, json: boolean): string;
+
+### execution.d.ts
+import { type ConfigResult, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
+import type { CliRuntime } from "./types.js";
+/** One pipeline implementation for legacy commands, inspection and both diff sides. */
+export declare function executeDeclaration(configPath: string, runtime: CliRuntime, argv: readonly string[], validate: boolean): Promise<RunConfigPipelineResult>;
+export declare function declarationFailure(error: unknown): ConfigResult;
 
 ### exit-codes.d.ts
 import type { ConfigIssue, ConfigResult } from "@0disoft/universal-config-engine-core";
@@ -670,7 +714,7 @@ export declare function runCli(args: readonly string[], runtime: CliRuntime): Pr
 import type { CoercionRule, ConfigSourceDescriptor, OverrideMapping, ResourceLimitPolicy } from "@0disoft/universal-config-engine-core";
 import type { Schema } from "ajv/dist/ajv.js";
 import type { UnmappedInputBehavior } from "@0disoft/universal-config-engine-node";
-export type CliCommand = "explain" | "validate";
+export type CliCommand = "explain" | "validate" | "diff";
 export type CliOutputMode = "human" | "json";
 export interface PipelineDeclaration {
     readonly sources: readonly PipelineSourceDeclaration[];

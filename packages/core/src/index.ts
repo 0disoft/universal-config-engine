@@ -24,6 +24,8 @@ export {
   runValidators
 } from "./validation.js";
 export { buildConfigInspection } from "./inspection.js";
+export { buildConfigDiff } from "./diff.js";
+export type { BuildConfigDiffOptions, ConfigDiff, ConfigChange, ConfigChangeKind } from "./diff.js";
 export type {
   BuildConfigInspectionOptions, ConfigInspection, ConfigInspectionEntry, InspectedValueType
 } from "./inspection.js";

@@ -1,4 +1,4 @@
-import { isPathPrefix, pathToKey } from "./path.js";
+import { pathToKey } from "./path.js";
 import type {
   ConfigIssue,
   ConfigPath,
@@ -33,6 +33,7 @@ interface RedactionContext {
   readonly secretSourcePaths: ReadonlySet<string>;
   readonly patternCache: Map<string, PatternMatcher>;
   readonly anySourceRedactionCache: Map<string, RedactionDecision>;
+  readonly pathPolicyCache: WeakMap<object, ReadonlySet<string>>;
 }
 
 interface PatternMatcher {
@@ -79,7 +80,8 @@ function createRedactionState(result: ConfigResult, options: BuildDiagnosticRepo
         .map((path) => pathToKey(path.path))
     ),
     patternCache: new Map(),
-    anySourceRedactionCache: new Map()
+    anySourceRedactionCache: new Map(),
+    pathPolicyCache: new WeakMap()
   };
   return { sourceById, redactionContext };
 }
@@ -252,7 +254,7 @@ function getPathRedaction(
   source: ConfigSourceDescriptor | undefined,
   redactionContext: RedactionContext
 ): RedactionDecision {
-  if (matchesAnyPath(path, source?.redaction) || matchesAnyPath(path, redactionContext.options)) {
+  if (matchesAnyPath(path, source?.redaction, redactionContext) || matchesAnyPath(path, redactionContext.options, redactionContext)) {
     return { redacted: true, reason: "secret-path" };
   }
 
@@ -272,9 +274,19 @@ function getPathRedaction(
 
 function matchesAnyPath(
   path: ConfigPath,
-  policy: Pick<RedactionPolicyInput, "secretPaths"> | Pick<BuildDiagnosticReportOptions, "secretPaths"> | undefined
+  policy: Pick<RedactionPolicyInput, "secretPaths"> | Pick<BuildDiagnosticReportOptions, "secretPaths"> | undefined,
+  context: RedactionContext
 ): boolean {
-  return policy?.secretPaths?.some((secretPath) => isPathPrefix(secretPath, path)) ?? false;
+  if (policy === undefined || policy.secretPaths === undefined || policy.secretPaths.length === 0) return false;
+  let keys = context.pathPolicyCache.get(policy);
+  if (keys === undefined) {
+    keys = new Set(policy.secretPaths.map(pathToKey));
+    context.pathPolicyCache.set(policy, keys);
+  }
+  for (let length = 0; length <= path.length; length += 1) {
+    if (keys.has(pathToKey(path.slice(0, length)))) return true;
+  }
+  return false;
 }
 
 function matchesNamePattern(

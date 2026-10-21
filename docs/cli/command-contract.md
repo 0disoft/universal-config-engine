@@ -50,7 +50,20 @@ Declared validators run before opt-in inspection; validation failure emits no
 values. Legacy `explain` and `validate` output is unchanged. Usage errors still
 use the existing `0.2` error envelope when `--json` is requested.
 
-## Exit-Code Taxonomy (Stable)
+## Comparison (ADR 0017)
+
+`uce diff --config before.json --against after.json [--json]` resolves and validates
+both declarations sequentially. Both declarations receive the same runtime env
+and argv after `--`; this is not an archived process-environment comparison.
+`--path '["server","port"]'` narrows the comparison. JSON uses `diff-1` and human
+output includes before/after previews, source ids and change kinds. Exit `0`
+means comparison succeeded, including when changes exist. Failed input retains
+the existing failure exit categories; entry/byte overflow exits `3`.
+`--detect-secret-changes` opts into disclosure of secret-change metadata. It never
+prints secret values or fingerprints. Without it, secret paths are explicitly
+listed as uncompared. Policies can turn a successful comparison into a CI failure.
+
+## Exit-Code Taxonomy
 
 - `0`: success.
 - `1`: validation failed.

@@ -171,7 +171,7 @@ exact candidate without further runtime or dependency changes.
 
 - [x] Decide opt-in inspection/diff formats, compatibility and secret comparison.
 - [x] Add bounded value inspection and typed-path queries in core and CLI.
-- [ ] Add complete-value, source-aware comparison in core and CLI.
+- [x] Add complete-value, source-aware comparison in core and CLI.
 - [ ] Add bounded CI change policies, examples and consumer validation.
 
 These are separate implementation units. Default diagnostic schema `0.2` and

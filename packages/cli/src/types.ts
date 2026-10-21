@@ -7,7 +7,7 @@ import type {
 import type { Schema } from "ajv/dist/ajv.js";
 import type { UnmappedInputBehavior } from "@0disoft/universal-config-engine-node";
 
-export type CliCommand = "explain" | "validate";
+export type CliCommand = "explain" | "validate" | "diff";
 
 export type CliOutputMode = "human" | "json";
 

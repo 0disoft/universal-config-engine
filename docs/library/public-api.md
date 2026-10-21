@@ -60,7 +60,23 @@ Filtered sanitized diagnostics retain ancestors and descendants of the query;
 root validation events remain available. This is an explanation of recorded
 decisions, not a historical store of overwritten values. Metadata is not public-safe.
 
-## Package Boundary Direction (Existing Packages)
+## Config Comparison
+
+`buildConfigDiff(before, after, options?)` returns opt-in `diff-1` output. Both
+arguments must be resolved results. It compares complete values, not truncated
+inspection previews, and emits `added`, `removed`, `type-changed`, `value-changed`
+and `source-changed` kinds. Container children are independent entries. Source
+identity includes winning priority, override history and retained source locations.
+Entries are deterministically sorted by serialized typed path. Both sides' secret
+policies apply to both outputs; metadata remains visible. Secrets are explicitly
+uncompared by default. `detectSecretChanges: true` compares opaque secret values
+in memory without retaining values, hashes or fingerprints. A missing selected
+path on just one side is an addition/removal; missing on both sides is an error.
+Failed input, combined entry overflow and combined JSON byte overflow discard
+value-bearing entries and changes. Fixed error envelopes may exceed impractically
+small byte limits. Neither inspection nor comparison stores historical raw values.
+
+## Package Boundary Direction
 
 Published package ownership is layered:
 

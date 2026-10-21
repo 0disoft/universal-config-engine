@@ -8,6 +8,8 @@ export interface ParsedCliArgs {
   readonly sourceArgv: readonly string[];
   readonly values?: boolean;
   readonly path?: ConfigPath;
+  readonly against?: string;
+  readonly detectSecretChanges?: boolean;
 }
 
 export interface CliUsageContext {
@@ -17,8 +19,8 @@ export interface CliUsageContext {
 
 export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
   const [commandCandidate, ...rest] = args;
-  if (commandCandidate !== "explain" && commandCandidate !== "validate") {
-    throw new Error("Expected command explain or validate.");
+  if (commandCandidate !== "explain" && commandCandidate !== "validate" && commandCandidate !== "diff") {
+    throw new Error("Expected command explain, validate or diff.");
   }
 
   const separatorIndex = rest.indexOf("--");
@@ -28,9 +30,19 @@ export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
   let output: CliOutputMode = "human";
   let values = false;
   let path: ConfigPath | undefined;
+  let against: string | undefined;
+  let detectSecretChanges = false;
 
   for (let index = 0; index < cliArgs.length; index += 1) {
     const arg = cliArgs[index];
+    if (arg === "--against" || arg?.startsWith("--against=") === true) {
+      against = arg === "--against" ? readValue(cliArgs, index++, arg) : arg.slice("--against=".length);
+      continue;
+    }
+    if (arg === "--detect-secret-changes") {
+      detectSecretChanges = true;
+      continue;
+    }
     if (arg === "--values") {
       values = true;
       continue;
@@ -38,7 +50,6 @@ export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
     if (arg === "--path" || arg?.startsWith("--path=") === true) {
       const raw = arg === "--path" ? readValue(cliArgs, index++, arg) : arg.slice("--path=".length);
       path = parseInspectionPath(raw);
-      values = true;
       continue;
     }
     if (arg === "--config" || arg === "-c") {
@@ -78,14 +89,19 @@ export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
   if (values && commandCandidate !== "explain") {
     throw new Error("Value inspection options require explain.");
   }
+  if (path !== undefined && commandCandidate === "validate") throw new Error("Path selection requires explain or diff.");
+  if (commandCandidate === "diff" && (against === undefined || against.length === 0)) throw new Error("Diff requires --against path.");
+  if (commandCandidate !== "diff" && (against !== undefined || detectSecretChanges)) throw new Error("Comparison options require diff.");
 
   return {
     command: commandCandidate,
     configPath,
     output,
     sourceArgv,
-    ...(values ? { values: true } : {}),
-    ...(path === undefined ? {} : { path })
+    ...(values || commandCandidate === "explain" && path !== undefined ? { values: true } : {}),
+    ...(path === undefined ? {} : { path }),
+    ...(against === undefined ? {} : { against }),
+    ...(detectSecretChanges ? { detectSecretChanges: true } : {})
   };
 }
 
@@ -102,7 +118,7 @@ function parseInspectionPath(raw: string): ConfigPath {
 export function getCliUsageContext(args: readonly string[]): CliUsageContext {
   const [commandCandidate, ...rest] = args;
   const command =
-    commandCandidate === "explain" || commandCandidate === "validate"
+    commandCandidate === "explain" || commandCandidate === "validate" || commandCandidate === "diff"
       ? commandCandidate
       : undefined;
   const separatorIndex = rest.indexOf("--");

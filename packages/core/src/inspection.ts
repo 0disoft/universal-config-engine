@@ -127,10 +127,13 @@ function pathsIntersect(left: ConfigPath, right: ConfigPath) {
 }
 
 function inspectionFailure(diagnostics: DiagnosticReport, path: ConfigPath, code: string, message: string): ConfigInspection {
-  return {
+  const failure: ConfigInspection = {
     schemaVersion: "inspection-1", status: "error", found: false, path: [...path], entries: [],
     diagnostics: { ...diagnostics, status: "error", issues: [{
       category: code.startsWith("max_") ? "resource-limit" : "usage", code, severity: "error", message
     }] }
   };
+  if (new TextEncoder().encode(JSON.stringify(failure)).byteLength <= diagnostics.limits.maxReportBytes) return failure;
+  // A fixed error envelope, like diagnostic report overflow, can exceed a tiny limit.
+  return { ...failure, path: [], diagnostics: { ...failure.diagnostics, sources: [], resolvedPaths: [], provenance: [] } };
 }
