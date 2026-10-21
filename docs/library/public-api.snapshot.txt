@@ -39,6 +39,8 @@ export { loadConfigSources } from "./loader.js";
 export { combineConfigIssues, runConfigPipeline } from "./pipeline.js";
 export { DEFAULT_SECRET_NAME_PATTERNS, buildDiagnosticReport } from "./redaction.js";
 export { runValidators } from "./validation.js";
+export { buildConfigInspection } from "./inspection.js";
+export type { BuildConfigInspectionOptions, ConfigInspection, ConfigInspectionEntry, InspectedValueType } from "./inspection.js";
 export { cloneConfigValue, formatPath, getConfigValueAtPath, isPathPrefix, isUnsafePathSegment, pathToKey, pathsEqual, setConfigValueAtPath } from "./path.js";
 export { flattenConfigObject, isConfigValue, isPlainConfigObject } from "./value.js";
 export type { CoercionRule, ConfigLoader, ConfigLoaderResult, ConfigIssue, ConfigIssueCategory, ConfigIssueSeverity, ConfigPath, ConfigPathSegment, ConfigResult, ConfigScalar, ConfigSourceDescriptor, ConfigValue, DiagnosticReport, DiagnosticReportResolvedPath, DiagnosticReportSource, LoadedSource, MergePolicy, OverrideMapping, ProvenanceAction, ProvenanceEvent, RedactionPolicyInput, ResolveConfigInput, ResolvedPath, ResourceLimitPolicy, SourceKind, SourceLocation, ValidatorAdapter, ValidatorInput, ValidatorIssue, ValidatorResult, ValueLocation } from "./types.js";
@@ -48,6 +50,35 @@ export type { RunConfigPipelineInput, RunConfigPipelineResult } from "./pipeline
 export type { BuildDiagnosticReportOptions } from "./redaction.js";
 export type { CreateMappedOverrideSourceInput } from "./mapping.js";
 export type { RunValidatorsInput, RunValidatorsResult } from "./validation.js";
+
+### inspection.d.ts
+import { type BuildDiagnosticReportOptions } from "./redaction.js";
+import type { ConfigPath, ConfigResult, ConfigScalar, ConfigValue, DiagnosticReport, DiagnosticReportResolvedPath } from "./types.js";
+export type InspectedValueType = "null" | "string" | "number" | "boolean" | "object" | "array";
+export interface ConfigInspectionEntry {
+    readonly path: ConfigPath;
+    readonly type: InspectedValueType;
+    readonly visibility: "visible" | "redacted" | "container";
+    readonly value?: ConfigScalar;
+    readonly truncated?: boolean;
+    readonly redactionReason?: string;
+    readonly source?: DiagnosticReportResolvedPath;
+}
+export interface BuildConfigInspectionOptions extends BuildDiagnosticReportOptions {
+    readonly path?: ConfigPath;
+    /** Preview characters only; diff always compares the complete original value. */
+    readonly maxValueLength?: number;
+}
+export interface ConfigInspection {
+    readonly schemaVersion: "inspection-1";
+    readonly status: "ok" | "error";
+    readonly found: boolean;
+    readonly path: ConfigPath;
+    readonly entries: readonly ConfigInspectionEntry[];
+    readonly diagnostics: DiagnosticReport;
+}
+export declare function buildConfigInspection(result: ConfigResult, options?: BuildConfigInspectionOptions): ConfigInspection;
+export declare function configValueType(value: ConfigValue): InspectedValueType;
 
 ### json-value.d.ts
 import type { ConfigValue } from "./types.js";
@@ -133,7 +164,13 @@ export interface BuildDiagnosticReportOptions {
     readonly secretSourceIds?: readonly string[];
     readonly secretNamePatterns?: readonly string[];
 }
+export interface RedactionDecision {
+    readonly redacted: boolean;
+    readonly reason?: string;
+}
 export declare function buildDiagnosticReport(result: ConfigResult, options?: BuildDiagnosticReportOptions): DiagnosticReport;
+/** Internal shared policy boundary for value-bearing opt-in reports. */
+export declare function createPathRedactor(result: ConfigResult, options?: BuildDiagnosticReportOptions): (path: ConfigPath) => RedactionDecision;
 
 ### resolved-path-index.d.ts
 import type { ConfigPath, SourceLocation } from "./types.js";
@@ -483,12 +520,15 @@ export declare function createProcessEnvSource(input: CreateProcessEnvSourceInpu
 ## @0disoft/universal-config-engine-cli
 
 ### args.d.ts
+import type { ConfigPath } from "@0disoft/universal-config-engine-core";
 import type { CliCommand, CliOutputMode } from "./types.js";
 export interface ParsedCliArgs {
     readonly command: CliCommand;
     readonly configPath: string;
     readonly output: CliOutputMode;
     readonly sourceArgv: readonly string[];
+    readonly values?: boolean;
+    readonly path?: ConfigPath;
 }
 export interface CliUsageContext {
     readonly command?: CliCommand;
@@ -518,6 +558,11 @@ export { runCli } from "./run.js";
 export { createDeclaredValidators } from "./validators.js";
 export type { ArgvSourceDeclaration, CliCommand, CliOutputMode, CliResult, CliRuntime, DotenvFileSourceDeclaration, JsonFileSourceDeclaration, ObjectSourceDeclaration, PipelineDeclaration, PipelineSourceDeclaration, ProcessEnvSourceDeclaration } from "./types.js";
 export type { CliJsonReport } from "./output.js";
+
+### inspection-output.d.ts
+import type { ConfigInspection } from "@0disoft/universal-config-engine-core";
+/** JSON encoding also neutralizes control characters in paths, source ids and values. */
+export declare function formatInspection(inspection: ConfigInspection, json: boolean): string;
 
 ### main.d.ts
 #!/usr/bin/env node

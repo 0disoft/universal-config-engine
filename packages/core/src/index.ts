@@ -23,6 +23,10 @@ export {
 export {
   runValidators
 } from "./validation.js";
+export { buildConfigInspection } from "./inspection.js";
+export type {
+  BuildConfigInspectionOptions, ConfigInspection, ConfigInspectionEntry, InspectedValueType
+} from "./inspection.js";
 export {
   cloneConfigValue,
   formatPath,

@@ -1,3 +1,4 @@
+import type { ConfigPath } from "@0disoft/universal-config-engine-core";
 import type { CliCommand, CliOutputMode } from "./types.js";
 
 export interface ParsedCliArgs {
@@ -5,6 +6,8 @@ export interface ParsedCliArgs {
   readonly configPath: string;
   readonly output: CliOutputMode;
   readonly sourceArgv: readonly string[];
+  readonly values?: boolean;
+  readonly path?: ConfigPath;
 }
 
 export interface CliUsageContext {
@@ -23,9 +26,21 @@ export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
   const sourceArgv = separatorIndex === -1 ? [] : rest.slice(separatorIndex + 1);
   let configPath: string | undefined;
   let output: CliOutputMode = "human";
+  let values = false;
+  let path: ConfigPath | undefined;
 
   for (let index = 0; index < cliArgs.length; index += 1) {
     const arg = cliArgs[index];
+    if (arg === "--values") {
+      values = true;
+      continue;
+    }
+    if (arg === "--path" || arg?.startsWith("--path=") === true) {
+      const raw = arg === "--path" ? readValue(cliArgs, index++, arg) : arg.slice("--path=".length);
+      path = parseInspectionPath(raw);
+      values = true;
+      continue;
+    }
     if (arg === "--config" || arg === "-c") {
       configPath = readValue(cliArgs, index, arg);
       index += 1;
@@ -60,13 +75,28 @@ export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
   if (configPath === undefined || configPath.length === 0) {
     throw new Error("Missing required --config path.");
   }
+  if (values && commandCandidate !== "explain") {
+    throw new Error("Value inspection options require explain.");
+  }
 
   return {
     command: commandCandidate,
     configPath,
     output,
-    sourceArgv
+    sourceArgv,
+    ...(values ? { values: true } : {}),
+    ...(path === undefined ? {} : { path })
   };
+}
+
+function parseInspectionPath(raw: string): ConfigPath {
+  let value: unknown;
+  try { value = JSON.parse(raw); } catch { throw new Error("Path must be a JSON array of strings and nonnegative safe integers."); }
+  if (!Array.isArray(value) || value.length > 256 || value.some((segment: unknown) =>
+    !(typeof segment === "string" || typeof segment === "number" && Number.isSafeInteger(segment) && segment >= 0))) {
+    throw new Error("Path must be a JSON array of strings and nonnegative safe integers.");
+  }
+  return value as ConfigPath;
 }
 
 export function getCliUsageContext(args: readonly string[]): CliUsageContext {

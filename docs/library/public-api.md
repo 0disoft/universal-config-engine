@@ -46,7 +46,21 @@ Repository Type: library
 - `ConfigIssue`: bounded issue taxonomy for CLI usage, load, parse, mapping,
   merge, coercion, validation, redaction, and resource-limit failures.
 
-## Package Boundary Direction
+## Safe Value Inspection
+
+`buildConfigInspection(result, options?)` is the opt-in `inspection-1` value
+surface (ADR 0017). `options.path` uses typed `ConfigPath` segments. Entries contain
+scalar previews (default 1024 UTF-16 code units), container markers, redaction and
+closest-source metadata. Arrays are expanded without serializing raw containers.
+Secret containers are opaque. A direct query inside an atomic secret array stays
+redacted. Failed resolutions expose no values. Missing/unsafe queries and entry or
+byte overflow return error reports with no entries. Inspection counts containers
+against `maxResolvedPaths`, so a result near its leaf limit can exceed this budget.
+Filtered sanitized diagnostics retain ancestors and descendants of the query;
+root validation events remain available. This is an explanation of recorded
+decisions, not a historical store of overwritten values. Metadata is not public-safe.
+
+## Package Boundary Direction (Existing Packages)
 
 Published package ownership is layered:
 

@@ -1,5 +1,6 @@
 import {
   buildDiagnosticReport,
+  buildConfigInspection,
   combineConfigIssues,
   type ConfigLoader,
   type ConfigIssue,
@@ -13,6 +14,7 @@ import {
   exitCodeForResult
 } from "./exit-codes.js";
 import { formatHumanReport, formatJsonReport } from "./output.js";
+import { formatInspection } from "./inspection-output.js";
 import {
   loadDeclaredSources,
   loadPipelineDeclarationContext,
@@ -47,7 +49,7 @@ export async function runCli(args: readonly string[], runtime: CliRuntime): Prom
       argv: parsed.sourceArgv
     });
     const declaredValidators =
-      parsed.command === "validate"
+      parsed.command === "validate" || parsed.values === true
         ? createDeclaredValidators(declaration)
         : { validators: [], issues: [] };
     const validators = declaredValidators.issues.some((issue) => issue.severity === "error")
@@ -64,6 +66,11 @@ export async function runCli(args: readonly string[], runtime: CliRuntime): Prom
     const report = declaredValidators.issues.length === 0
       ? pipeline.report
       : buildDiagnosticReport(finalResult);
+    if (parsed.values === true) {
+      const inspection = buildConfigInspection(finalResult, parsed.path === undefined ? {} : { path: parsed.path });
+      runtime.stdout(formatInspection(inspection, parsed.output === "json"));
+      return { exitCode: inspection.status === "ok" ? 0 : exitCodeForResult({ ...finalResult, ok: false, issues: inspection.diagnostics.issues }) };
+    }
     const output =
       parsed.output === "json"
         ? formatJsonReport(parsed.command, report)

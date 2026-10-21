@@ -167,12 +167,10 @@ exact candidate without further runtime or dependency changes.
   bounded-input failures on Windows and Linux. This complements the current packed
   success-path smoke and direct `runCli` tests.
 
-## Explicitly Deferred
-
 ## Explanation and Comparison Delivery (ADR 0017)
 
 - [x] Decide opt-in inspection/diff formats, compatibility and secret comparison.
-- [ ] Add bounded value inspection and typed-path queries in core and CLI.
+- [x] Add bounded value inspection and typed-path queries in core and CLI.
 - [ ] Add complete-value, source-aware comparison in core and CLI.
 - [ ] Add bounded CI change policies, examples and consumer validation.
 

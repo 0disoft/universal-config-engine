@@ -36,7 +36,21 @@ Candidate responsibilities:
 - report source-aware error paths;
 - emit redacted text and JSON reports.
 
-## Exit-Code Taxonomy
+## Opt-in Inspection
+
+### Opt-in inspection (ADR 0017)
+
+`uce explain --config pipeline.json --values [--json]` displays safe scalar values,
+source history and redaction markers using `inspection-1`. Containers are markers,
+never raw serialized config. `--path '["clients",0,"name"]'` implies `--values` and
+selects a typed path; `[]` selects root. JSON array paths support keys containing
+dots, slashes and empty strings. The CLI accepts at most 256 path segments; the
+pipeline's configured path limit also applies. A missing/unsafe path exits `4`.
+Declared validators run before opt-in inspection; validation failure emits no
+values. Legacy `explain` and `validate` output is unchanged. Usage errors still
+use the existing `0.2` error envelope when `--json` is requested.
+
+## Exit-Code Taxonomy (Stable)
 
 - `0`: success.
 - `1`: validation failed.

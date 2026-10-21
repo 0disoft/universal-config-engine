@@ -39,7 +39,7 @@ interface PatternMatcher {
   readonly rawLower: string;
 }
 
-interface RedactionDecision {
+export interface RedactionDecision {
   readonly redacted: boolean;
   readonly reason?: string;
 }
@@ -48,6 +48,20 @@ export function buildDiagnosticReport(
   result: ConfigResult,
   options: BuildDiagnosticReportOptions = {}
 ): DiagnosticReport {
+  const { sourceById, redactionContext } = createRedactionState(result, options);
+  return buildReport(result, sourceById, redactionContext);
+}
+
+/** Internal shared policy boundary for value-bearing opt-in reports. */
+export function createPathRedactor(
+  result: ConfigResult,
+  options: BuildDiagnosticReportOptions = {}
+): (path: ConfigPath) => RedactionDecision {
+  const { sourceById, redactionContext } = createRedactionState(result, options);
+  return (path) => getRedactionForAnySource(path, sourceById, redactionContext);
+}
+
+function createRedactionState(result: ConfigResult, options: BuildDiagnosticReportOptions) {
   const sourceById = new Map(result.sources.map((source) => [source.id, source]));
   const secretSourceIds = new Set([
     ...(options.secretSourceIds ?? []),
@@ -67,6 +81,14 @@ export function buildDiagnosticReport(
     patternCache: new Map(),
     anySourceRedactionCache: new Map()
   };
+  return { sourceById, redactionContext };
+}
+
+function buildReport(
+  result: ConfigResult,
+  sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
+  redactionContext: RedactionContext
+): DiagnosticReport {
   const sourceIdsWithErrors = new Set(
     result.issues
       .filter((issue) => issue.severity === "error" && issue.sourceId !== undefined)
