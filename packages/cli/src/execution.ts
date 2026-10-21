@@ -1,5 +1,5 @@
 import {
-  buildDiagnosticReport, combineConfigIssues, runConfigPipeline,
+  buildDiagnosticReport, combineConfigIssues, runConfigPipeline, runValidators,
   type ConfigLoader, type ConfigResult, type LoadedSource, type RunConfigPipelineResult
 } from "@0disoft/universal-config-engine-core";
 import { loadDeclaredSources, loadPipelineDeclarationContext, sourceLoadFailedIssues, type PipelineDeclarationReadPolicy } from "./pipeline.js";
@@ -15,16 +15,24 @@ export async function executeDeclaration(configPath: string, runtime: CliRuntime
     cwd: runtime.cwd, env: runtime.env, argv,
     ...(context.sourceConfigPaths === undefined ? {} : { sourceConfigPaths: context.sourceConfigPaths }),
     ...(context.workspacePath === undefined ? {} : { workspacePath: context.workspacePath }) });
-  const declared = validate ? createDeclaredValidators(declaration) : { validators: [], issues: [] };
   const pipeline = await runConfigPipeline({
     loaders: sources.map(toLoadedSourceAdapter), context: undefined,
-    validators: declared.issues.some((issue) => issue.severity === "error") ? [] : declared.validators,
     ...(declaration.coercionRules === undefined ? {} : { coercionRules: declaration.coercionRules }),
     ...(declaration.limits === undefined ? {} : { limits: declaration.limits })
   });
-  if (declared.issues.length === 0) return pipeline;
-  const issues = combineConfigIssues(pipeline.result.issues, declared.issues, pipeline.result.limits.maxDiagnostics);
-  const result = { ...pipeline.result, ok: !issues.some((issue) => issue.severity === "error"), issues };
+  if (!validate || !pipeline.result.ok || pipeline.report.status !== "ok") return pipeline;
+  const remaining = pipeline.result.limits.maxProvenanceEvents - pipeline.result.provenance.length;
+  const declared = (declaration.validators?.length ?? 0) > remaining
+    ? { validators: [], issues: [{ category: "resource-limit", code: "max_provenance_events_exceeded", severity: "error",
+        message: "Declared validators exceed the remaining provenance budget." }] as const }
+    : createDeclaredValidators(declaration);
+  const validation = declared.issues.length > 0 || declared.validators.length === 0
+    ? { issues: declared.issues, provenance: [] }
+    : await runValidators({ config: pipeline.result.config, provenance: pipeline.result.provenance,
+        validators: declared.validators, limits: pipeline.result.limits });
+  const issues = combineConfigIssues(pipeline.result.issues, validation.issues, pipeline.result.limits.maxDiagnostics);
+  const result = { ...pipeline.result, ok: !issues.some((issue) => issue.severity === "error"), issues,
+    provenance: [...pipeline.result.provenance, ...validation.provenance] };
   return { result, report: buildDiagnosticReport(result) };
 }
 

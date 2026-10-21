@@ -34,6 +34,10 @@ Validation owns provenance-budget accounting: incoming history and newly generat
 validator events share the original limit. The pipeline forwards that limit
 unchanged. `runValidators` returns only new events, stops before invoking an adapter
 whose event would exceed the budget, and reports the original configured maximum.
+CLI declarations reject excessive validator counts before inspecting entries or
+loading sources. Schema compilation starts only after successful resolution and
+reporting, with enough remaining event slots for all declared validators. Compile
+failure diagnostics are bounded as they are generated.
 
 Coercion receives the original limits and incoming provenance, creates only bounded
 diagnostics, and stops conversions before exhausting the remaining event slots.

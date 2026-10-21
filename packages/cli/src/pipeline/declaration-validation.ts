@@ -87,6 +87,13 @@ export function validatePipelineDeclaration(value: unknown): readonly ConfigIssu
       })
     );
   } else if (Array.isArray(value.validators)) {
+    const maximum = isRecord(value.limits) && isPositiveInteger(value.limits.maxProvenanceEvents)
+      ? value.limits.maxProvenanceEvents : DEFAULT_RESOURCE_LIMITS.maxProvenanceEvents;
+    if (value.validators.length > maximum) {
+      appendDeclarationIssues(issues, [{ category: "resource-limit", code: "max_provenance_events_exceeded", severity: "error",
+        path: ["validators"], message: "Declared validators exceed the provenance budget." }]);
+      return issues;
+    }
     for (const [index, validator] of value.validators.entries()) {
       if (!appendDeclarationIssues(issues, validateValidatorDeclaration(validator, index))) {
         return issues;

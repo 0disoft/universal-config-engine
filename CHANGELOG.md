@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Preflight CLI validator counts, compile only after successful resolution with
+  sufficient remaining provenance, and bound compile diagnostics at generation.
 - Preserve displaced parent ownership, locations and secret-source history for
   every replacement descendant, independent of sibling key order.
 - Reject prototype-named CLI source kinds with a precise `unsupported_source_kind`

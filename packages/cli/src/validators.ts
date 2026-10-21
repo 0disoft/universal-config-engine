@@ -3,6 +3,7 @@ import type {
   ValidatorAdapter
 } from "@0disoft/universal-config-engine-core";
 import { createAjvValidator } from "@0disoft/universal-config-engine-validator-ajv";
+import { combineConfigIssues, DEFAULT_RESOURCE_LIMITS } from "@0disoft/universal-config-engine-core";
 import type {
   PipelineDeclaration,
   AjvJsonSchemaValidatorDeclaration,
@@ -16,17 +17,28 @@ export interface CreateDeclaredValidatorsResult {
 
 export function createDeclaredValidators(declaration: PipelineDeclaration): CreateDeclaredValidatorsResult {
   const validators: ValidatorAdapter[] = [];
-  const issues: ConfigIssue[] = [];
+  let issues: readonly ConfigIssue[] = [];
+  const maxEvents = positiveLimit(declaration.limits?.maxProvenanceEvents, DEFAULT_RESOURCE_LIMITS.maxProvenanceEvents);
+  const maxDiagnostics = positiveLimit(declaration.limits?.maxDiagnostics, DEFAULT_RESOURCE_LIMITS.maxDiagnostics);
+  if ((declaration.validators?.length ?? 0) > maxEvents) return { validators, issues: [{
+    category: "resource-limit", code: "max_provenance_events_exceeded", severity: "error",
+    message: "Declared validators exceed the provenance budget."
+  }] };
+  function record(issue: ConfigIssue): boolean {
+    const overflow = issues.length >= maxDiagnostics;
+    issues = combineConfigIssues(issues, [issue], maxDiagnostics);
+    return !overflow;
+  }
 
   for (const validator of declaration.validators ?? []) {
     if (!isSupportedValidatorDeclaration(validator)) {
-      issues.push({
+      if (!record({
         category: "validation",
         code: "unsupported_validator_declaration",
         severity: "error",
         sourceId: validator.id,
         message: `Validator ${validator.id} must use kind json-schema-ajv.`
-      });
+      })) break;
       continue;
     }
 
@@ -38,13 +50,13 @@ export function createDeclaredValidators(declaration: PipelineDeclaration): Crea
         })
       );
     } catch {
-      issues.push({
+      if (!record({
         category: "validation",
         code: "validator_compile_failed",
         severity: "error",
         sourceId: validator.id,
         message: `Validator ${validator.id} failed to compile. Exception details were omitted from diagnostics.`
-      });
+      })) break;
     }
   }
 
@@ -52,6 +64,10 @@ export function createDeclaredValidators(declaration: PipelineDeclaration): Crea
     validators,
     issues
   };
+}
+
+function positiveLimit(value: number | undefined, fallback: number): number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : fallback;
 }
 
 function isSupportedValidatorDeclaration(
