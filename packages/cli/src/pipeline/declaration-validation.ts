@@ -131,7 +131,8 @@ export function validatePipelineDeclaration(value: unknown): readonly ConfigIssu
     }
   }
 
-  appendDeclarationIssues(issues, validateProfiles(value.profiles, validatePipelineDeclaration));
+  appendDeclarationIssues(issues, validateProfiles(value.profiles, validatePipelineDeclaration,
+    isRecord(value.limits) ? value.limits : {}));
   if (value.extends !== undefined && (!Array.isArray(value.extends) || value.extends.length > 8 ||
       !Array.from(value.extends).every(path => typeof path === "string" && path.length > 0 && path.length <= 4096))) {
     appendDeclarationIssues(issues, [pipelineDeclarationIssue({ code: "pipeline_extends_invalid", path: ["extends"],

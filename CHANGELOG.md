@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Inherit base declaration limits during profile preflight, retaining explicit
+  profile overrides, malformed-limit diagnostics and combined source checks.
 - Bound Zod issue conversion with optional `maxIssues` (default 200, cap 10,000),
   preserving failure and a truncation marker without copying the complete tail.
 - Enforce the combined key/index budget before merge writes, subtract replaced

@@ -32,6 +32,11 @@ unused profiles. Oversized profile maps and profile source arrays are rejected
 before their entries are inspected. An unknown selection is
 `usage/pipeline_profile_not_found` with no echoed input value.
 
+Profile preflight uses its declaring document's base limits, with explicitly
+provided profile fields taking precedence. A larger base `maxSources` need not
+be repeated in each profile; a stricter base limit also applies before profile
+entries are inspected. Selection still rechecks the combined base/profile count.
+
 The compiler does not load files or mutate the provided declaration. Use the
 existing declared-source loading and shared core pipeline to execute its result.
 

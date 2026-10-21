@@ -1020,7 +1020,7 @@ export declare function loadDeclarationInheritance(initial: ParsedPipelineDocume
 
 ### pipeline/profile-validation.d.ts
 import { type ConfigIssue } from "@0disoft/universal-config-engine-core";
-export declare function validateProfiles(value: unknown, validate: (value: unknown) => readonly ConfigIssue[]): readonly ConfigIssue[];
+export declare function validateProfiles(value: unknown, validate: (value: unknown) => readonly ConfigIssue[], baseLimits?: Readonly<Record<string, unknown>>): readonly ConfigIssue[];
 
 ### pipeline/source-loading.d.ts
 import type { LoadedSource } from "@0disoft/universal-config-engine-core";

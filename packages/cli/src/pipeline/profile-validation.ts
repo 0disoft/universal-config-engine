@@ -2,7 +2,8 @@ import { DEFAULT_RESOURCE_LIMITS, type ConfigIssue } from "@0disoft/universal-co
 import { isRecord, isProfileName, PROFILE_DECLARATION_FIELDS, profileToDeclaration } from "./declaration-fields.js";
 import { appendDeclarationIssues, pipelineDeclarationIssue } from "./declaration-diagnostics.js";
 
-export function validateProfiles(value: unknown, validate: (value: unknown) => readonly ConfigIssue[]): readonly ConfigIssue[] {
+export function validateProfiles(value: unknown, validate: (value: unknown) => readonly ConfigIssue[],
+  baseLimits: Readonly<Record<string, unknown>> = {}): readonly ConfigIssue[] {
   if (value === undefined) return [];
   if (!isRecord(value)) return [pipelineDeclarationIssue({ code: "pipeline_profiles_invalid", path: ["profiles"],
     message: "Profiles must be a named object." })];
@@ -25,15 +26,18 @@ export function validateProfiles(value: unknown, validate: (value: unknown) => r
     const unknown = Object.keys(profile).some(key => !PROFILE_DECLARATION_FIELDS.has(key));
     if (unknown && !appendDeclarationIssues(issues, [pipelineDeclarationIssue({ code: "pipeline_profile_unknown_field", path: ["profiles", name],
       message: "Profiles only support sources, validators, coercionRules and limits." })])) break;
-    const maximum = isRecord(profile.limits) && typeof profile.limits.maxSources === "number" &&
-      Number.isSafeInteger(profile.limits.maxSources) && profile.limits.maxSources > 0
-      ? profile.limits.maxSources : DEFAULT_RESOURCE_LIMITS.maxSources;
+    const limits = profile.limits === undefined ? baseLimits
+      : isRecord(profile.limits) ? { ...baseLimits, ...profile.limits } : profile.limits;
+    const maximum = isRecord(limits) && typeof limits.maxSources === "number" &&
+      Number.isSafeInteger(limits.maxSources) && limits.maxSources > 0
+      ? limits.maxSources : DEFAULT_RESOURCE_LIMITS.maxSources;
     if (Array.isArray(profile.sources) && profile.sources.length > maximum) {
       if (!appendDeclarationIssues(issues, [{ category: "resource-limit", code: "max_sources_exceeded", severity: "error",
         path: ["profiles", name, "sources"], message: "Profile source count exceeds its configured limit." }])) break;
       continue;
     }
-    const nested = validate(profileToDeclaration(profile)).map(issue => ({ ...issue, path: ["profiles", name, ...(issue.path ?? [])] }));
+    const nested = validate({ ...profileToDeclaration(profile), limits })
+      .map(issue => ({ ...issue, path: ["profiles", name, ...(issue.path ?? [])] }));
     if (!appendDeclarationIssues(issues, nested)) break;
   }
   return issues;
