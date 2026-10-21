@@ -58,7 +58,8 @@ of why each final value exists.
 
 ## Deferred Scope
 
-- Built-in YAML, TOML, INI, or JSON5 parser implementations.
+- Format parsing in core and built-in INI parsing. ADR 0018 authorizes first-party
+  JSONC/YAML/TOML/JSON5 loaders in the Node adapter, not new core parser dependencies.
 - Cloud secret manager integrations.
 - Encryption and secret rotation.
 - Remote config delivery.

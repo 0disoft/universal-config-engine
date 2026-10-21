@@ -185,6 +185,22 @@ verification, public-registry feature consumers and npm signature checks. Stable
 These are separate implementation units. Default diagnostic schema `0.2` and
 legacy command output remain unchanged. Publication was separately authorized.
 
+## Local Adoption Delivery (ADR 0018, Unreleased)
+
+- [ ] Official JSONC/YAML/TOML/JSON5 loaders and CLI source integration.
+- [ ] Bounded, explicit workspace discovery.
+- [ ] Standard Schema adapter and separate typed pipeline output.
+- [ ] Explicit profiles and safe workspace-local inheritance.
+- [ ] Serialized reload, last successful snapshots and disposable file watching.
+- [ ] Non-destructive `init` and actionable secret-safe `doctor`.
+- [ ] Public-share report projection with metadata pseudonyms.
+- [ ] Actual package consumers for Node, Bun, Deno and Workers.
+- [ ] Copyable adoption examples and reproducible comparison case.
+
+Follow the delivery order and validation boundaries in ADR 0018. Each completed
+unit is committed locally; this plan does not authorize publishing new changes.
+External adoption and competitive scores are not implementation completion gates.
+
 ## Explicitly Deferred Features
 
 - Remote config service.
