@@ -4,6 +4,25 @@ import type { ConfigIssue, ProvenanceEvent } from "../src/index.js";
 import { source } from "./helpers/source.js";
 
 describe("buildDiagnosticReport", () => {
+  it.each(["descriptor", "options"])("inherits %s secret-source ownership for atomic array descendants", (policy) => {
+    const vault = source("vault", 0, { users: [{ label: "array input" }] });
+    const resolved = resolveConfig({ sources: [
+      { ...vault, descriptor: { ...vault.descriptor, ...(policy === "descriptor" ? { redaction: { secretSource: true } } : {}) } },
+      source("override", 10, { users: [{ label: "replacement input" }], public: { label: "public input" } })
+    ] });
+    const issues: readonly ConfigIssue[] = [["users", 0, "label"], ["public", "label"]].map((path) => ({
+      category: "validation", severity: "warning", code: "field_warning", sourceId: "checker", path,
+      message: "Diagnostic input.", details: { input: "diagnostic input" }
+    }));
+    const provenance: readonly ProvenanceEvent[] = [{ path: ["users", 0, "label"],
+      action: "coerced", sourceId: "core:coercion", message: "Conversion input." }];
+    const report = buildDiagnosticReport({ ...resolved, issues, provenance }, policy === "options" ? { secretSourceIds: ["vault"] } : {});
+    expect(report.issues[0]?.message).toMatch(/^Diagnostic message redacted/);
+    expect(report.issues[0]?.details).toBeUndefined();
+    expect(report.provenance[0]?.message).toMatch(/^Provenance message redacted/);
+    expect(report.issues[1]).toEqual(issues[1]);
+  });
+
   it.each([
     { policy: { secretPaths: [["service"]] }, reason: "secret-path" },
     { policy: { secretNamePatterns: ["INTERNAL_VALUE"] }, reason: "secret-name" },

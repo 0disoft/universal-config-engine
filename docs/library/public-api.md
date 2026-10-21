@@ -492,8 +492,9 @@ migration review before running `pnpm run update:api-snapshot`.
 - Treat declared `secretPaths` as subtree roots. A path such as `["database"]`
   redacts diagnostics for `["database"]` and every descendant path below it.
 - Apply whole-source redaction (`secretSource` or `secretSourceIds`) to diagnostics
-  whose source or previous source is secret, or whose exact resolved path records
-  a secret winning or overridden source. An empty or unrelated secret source does
+  whose source or previous source is secret, or whose resolved path or atomic
+  ancestor records a secret winning or overridden source. This includes diagnostics
+  inside arrays, which retain ownership at the array path. An unrelated secret source does
   not mask public-path diagnostics. Explicit path/name policies still apply across
   sources. Resolved-path metadata and diagnostic messages use the same path
   redaction decision, retaining policies from overridden sources as well as the
