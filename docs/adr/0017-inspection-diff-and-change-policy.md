@@ -58,8 +58,8 @@ or additional CI workflows are introduced.
 All existing exports, commands and default JSON envelopes retain their contracts.
 New APIs, CLI options, command and report versions are additive opt-in surfaces.
 No validator-returned value replaces resolved config (ADR 0009 still applies).
-This feature set is intended for a future minor release; package versions are not
-bumped or published during local implementation.
+This feature set is prepared as minor release candidate `1.2.0-rc.1`. Stable
+promotion requires the published candidate and exact-commit release gates.
 
 Implement and commit sequentially: contract; inspection API and CLI; diff API and
 CLI; policy API and CLI. Cover nested secret values, query precision, complete-value

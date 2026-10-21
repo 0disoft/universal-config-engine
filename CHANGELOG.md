@@ -5,6 +5,19 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+## 1.2.0-rc.1 - 2026-10-21
+
+### Added
+
+- Opt-in safe scalar inspection and typed path explanations with retained source,
+  override, location, coercion and validation history (`inspection-1`).
+- Full-value configuration comparison, source changes and explicit in-memory
+  secret-change detection without exposing secret values (`diff-1`).
+- Bounded CI policies for forbidden changes, required paths and allowed winning
+  sources (`change-check-1`), shared by core APIs and the `uce diff` command.
+- Installed JavaScript, TypeScript and CLI consumer coverage for the new APIs,
+  nested secret policies, limits and legacy command compatibility.
+
 ### Fixed
 
 - Await Zod schema execution so asynchronous refinements and transforms complete

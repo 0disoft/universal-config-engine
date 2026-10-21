@@ -1,7 +1,7 @@
 # Inspect Values and Check Configuration Changes
 
-Status: Implemented, unreleased (ADR 0017). These commands are available in the
-development checkout, not the published `1.1.2` packages.
+Status: Release candidate `1.2.0-rc.1` (ADR 0017). Install that exact version or
+npm `next` to try these commands; npm `latest` remains stable `1.1.2`.
 
 The examples assume `uce` is installed from this checkout's built package. To try
 them directly from the repository, run `pnpm run build`, then replace `uce` with

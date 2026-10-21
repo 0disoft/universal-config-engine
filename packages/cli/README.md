@@ -49,11 +49,11 @@ report schema `0.2`.
 See the [command contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/cli/command-contract.md)
 and [pipeline configuration reference](https://github.com/0disoft/universal-config-engine/blob/main/docs/cli/configuration.md).
 
-## Unreleased Inspection and Comparison
+## Inspection and Comparison (1.2)
 
-The development checkout adds opt-in `explain --values`, typed `--path` queries,
+Version 1.2 adds opt-in `explain --values`, typed `--path` queries,
 `diff --config before.json --against after.json` and CI checks with `--policy`.
-These features are not part of published `1.1.2`. Legacy commands keep schema
+Install `1.2.0-rc.1` explicitly to try the release candidate. Legacy commands keep schema
 `0.2`; new output uses `inspection-1`, `diff-1` or `change-check-1`. Secret values
 remain hidden and secret comparisons require explicit opt-in. See the
 [inspection and diff guide](https://github.com/0disoft/universal-config-engine/blob/main/docs/cli/inspection-and-diff.md).

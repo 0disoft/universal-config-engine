@@ -1,6 +1,6 @@
 {
   "name": "@0disoft/universal-config-engine-core",
-  "version": "1.1.2",
+  "version": "1.2.0-rc.1",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
