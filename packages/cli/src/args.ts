@@ -126,6 +126,7 @@ export function parseInspectionArgs(args: readonly string[]): ParsedInspectionAr
 }
 
 function parseInspectionPath(raw: string): ConfigPath {
+  if (raw.length > 16 * 1024 || Buffer.byteLength(raw, "utf8") > 16 * 1024) throw new Error("Path exceeds the maximum of 16 KiB.");
   let value: unknown;
   try { value = JSON.parse(raw); } catch { throw new Error("Path must be a JSON array of strings and nonnegative safe integers."); }
   if (!Array.isArray(value) || value.length > 256 || value.some((segment: unknown) =>

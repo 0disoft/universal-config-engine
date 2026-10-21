@@ -88,24 +88,26 @@ function intersects(left: ConfigPath, right: ConfigPath) {
 
 function parsePolicy(value: unknown): ConfigChangePolicy | undefined {
   try {
-    if (!isRecord(value) || value.version !== "change-policy-1" || !Array.isArray(value.rules) || value.rules.length > 256 ||
+    if (!isRecord(value) || value.version !== "change-policy-1" ||
       !Object.hasOwn(value, "version") || !Object.hasOwn(value, "rules") ||
       Object.keys(value).some((key) => key !== "version" && key !== "rules")) return undefined;
+    const inputRules = boundedArray(value.rules, 256);
+    if (inputRules === undefined) return undefined;
     const ids = new Set<string>();
     const rules: ConfigChangeRule[] = [];
-    for (const rule of value.rules) {
+    for (const rule of inputRules) {
       if (!isRecord(rule) || !Object.hasOwn(rule, "id") || !Object.hasOwn(rule, "path") || !Object.hasOwn(rule, "mode")) return undefined;
       const { id, mode } = rule;
-      const path: unknown = Array.isArray(rule.path) ? [...rule.path] : undefined;
+      const path = boundedArray(rule.path, 256);
       if (!isIssueCode(id) || ids.has(id) || !isConfigPath(path) || path.length > 256 || path.some(isUnsafePathSegment) ||
         new TextEncoder().encode(JSON.stringify(path)).byteLength > 4096) return undefined;
       ids.add(id);
       const keys = mode === "allowed-sources" ? ["id", "path", "mode", "allowedSourceIds"] : ["id", "path", "mode"];
       if (Object.keys(rule).some((key) => !keys.includes(key))) return undefined;
       if (mode === "allowed-sources") {
-        if (!Object.hasOwn(rule, "allowedSourceIds") || !Array.isArray(rule.allowedSourceIds)) return undefined;
-        const allowedSourceIds: unknown[] = [...rule.allowedSourceIds];
-        if (allowedSourceIds.length === 0 || allowedSourceIds.length > 64 ||
+        if (!Object.hasOwn(rule, "allowedSourceIds")) return undefined;
+        const allowedSourceIds = boundedArray(rule.allowedSourceIds, 64);
+        if (allowedSourceIds === undefined || allowedSourceIds.length === 0 ||
           allowedSourceIds.some((sourceId) => typeof sourceId !== "string" || sourceId.length === 0 || sourceId.length > 1024)) return undefined;
         rules.push({ id, path, mode, allowedSourceIds: allowedSourceIds as string[] });
       } else if (mode === "forbid-changes" || mode === "require-path") rules.push({ id, path, mode });
@@ -113,4 +115,16 @@ function parsePolicy(value: unknown): ConfigChangePolicy | undefined {
     }
     return { version: "change-policy-1", rules };
   } catch { return undefined; }
+}
+
+function boundedArray(value: unknown, maxLength: number): unknown[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const length = value.length;
+  if (!Number.isSafeInteger(length) || length < 0 || length > maxLength) return undefined;
+  const copy: unknown[] = [];
+  for (let index = 0; index < length; index += 1) {
+    if (!Object.hasOwn(value, index)) return undefined;
+    copy.push(value[index]);
+  }
+  return copy;
 }

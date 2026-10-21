@@ -52,5 +52,6 @@ describe("opt-in CLI inspection", () => {
       expect(() => parseCliArgs(["explain", "--config", "uce.json", "--path", path])).toThrow();
     }
     expect(() => parseCliArgs(["validate", "--config", "uce.json", "--values"])).toThrow();
+    expect(() => parseCliArgs(["explain", "--config", "uce.json", "--path", JSON.stringify(["가".repeat(6000)])])).toThrow("16 KiB");
   });
 });

@@ -18,7 +18,7 @@ export async function loadChangePolicy(path: string, cwd: string): Promise<{ val
 
 export function formatChangeCheck(report: ConfigChangeCheck, json: boolean): string {
   if (json) return `${JSON.stringify({ command: "diff", ...report }, null, 2)}\n`;
-  const lines = [formatDiff(report.diff, false).trimEnd(), `policy: ${report.policy.status}`];
+  const lines = [formatDiff({ ...report.diff, status: report.status }, false).trimEnd(), `policy: ${report.policy.status}`];
   for (const violation of report.policy.violations) {
     lines.push(`violation: ${violation.code} rule=${JSON.stringify(violation.ruleId ?? null)} path=${JSON.stringify(violation.path ?? [])}`);
   }

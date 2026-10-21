@@ -36,7 +36,7 @@ export function buildConfigInspection(
 ): ConfigInspection {
   const path = options.path ?? [];
   let diagnostics = buildDiagnosticReport(result, options);
-  if (!isConfigPath(path) || path.length > result.limits.maxPathLength || path.some(isUnsafePathSegment)) {
+  if (!Array.isArray(path) || path.length > result.limits.maxPathLength || !isConfigPath(path) || path.some(isUnsafePathSegment)) {
     return inspectionFailure(diagnostics, [], "invalid_inspection_path", "Inspection requires a safe typed config path.");
   }
   diagnostics = {
@@ -90,14 +90,14 @@ export function buildConfigInspection(
     }
     entries.push(entry);
     if (!container || decision.redacted) continue;
-    const children = Array.isArray(item.value)
-      ? item.value.map((child, index) => ({ path: [...item.path, index], value: child, source }))
-      : Object.entries(item.value as Readonly<Record<string, ConfigValue>>)
-        .map(([key, child]) => ({ path: [...item.path, key], value: child, source }));
-    // Bound pending work as well as retained output before expanding large arrays.
-    if (pending.length + children.length + entries.length > result.limits.maxResolvedPaths) {
+    const keys = Array.isArray(item.value) ? undefined : Object.keys(item.value as object);
+    const childCount = Array.isArray(item.value) ? item.value.length : keys!.length;
+    if (pending.length + childCount + entries.length > result.limits.maxResolvedPaths) {
       return inspectionFailure(diagnostics, path, "max_inspection_entries_exceeded", "Inspection exceeded its entry budget.");
     }
+    const children = Array.isArray(item.value)
+      ? item.value.map((child, index) => ({ path: [...item.path, index], value: child, source }))
+      : keys!.map((key) => ({ path: [...item.path, key], value: (item.value as Readonly<Record<string, ConfigValue>>)[key]!, source }));
     for (const child of children.reverse()) pending.push(child);
   }
   const report = { ...base, entries };

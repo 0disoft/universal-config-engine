@@ -52,6 +52,16 @@ describe("config diff", () => {
     expect(buildConfigDiff(result({ password: { a: 1, b: 2 } }), result({ password: { b: 2, a: 1 } }), { detectSecretChanges: true }).changes).toEqual([]);
   });
 
+  it("keeps added paths private when a same-id source removes its whole-source policy", () => {
+    const input = source("file", 0, { removed: "removed private input" });
+    const before = resolveConfig({ sources: [{ ...input, descriptor: { ...input.descriptor, redaction: { secretSource: true } } }] });
+    const report = buildConfigDiff(before, result({ added: "added private input" }));
+    expect(report.status).toBe("ok");
+    expect(report.changes.find((change) => change.path[0] === "added")?.after?.visibility).toBe("redacted");
+    expect(JSON.stringify(report)).not.toContain("removed private input");
+    expect(JSON.stringify(report)).not.toContain("added private input");
+  });
+
   it("supports absent query sides, shape changes and fails closed on failed input and union limits", () => {
     expect(buildConfigDiff(result({}), result({ a: 1 }), { path: ["a"] }).changes[0]?.kinds).toEqual(["added"]);
     const before = result({ a: 1 });

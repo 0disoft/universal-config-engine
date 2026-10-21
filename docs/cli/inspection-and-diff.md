@@ -90,7 +90,8 @@ omit raw input/parser messages. File overflow and comparison/report limits exit
 `3`. Ordinary source and validation failures keep existing exit categories and
 cannot produce a passing policy, even with an empty rule list.
 
-Policy files are limited to 1 MiB. Core accepts up to 256 unique machine-identifier
+CLI path JSON is limited to 16 KiB before parsing. Policy files are limited to
+1 MiB. Core accepts up to 256 unique machine-identifier
 rules, 256 typed path segments, 4096 UTF-8 bytes per serialized path and 64 allowed
 source ids (1–1024 characters each). Unknown fields, duplicate ids and unsafe path
 segments are errors. Inspection counts containers against `maxResolvedPaths`;

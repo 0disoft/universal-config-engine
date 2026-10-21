@@ -45,7 +45,8 @@ source history and redaction markers using `inspection-1`. Containers are marker
 never raw serialized config. `--path '["clients",0,"name"]'` implies `--values` and
 selects a typed path; `[]` selects root. JSON array paths support keys containing
 dots, slashes and empty strings. The CLI accepts at most 256 path segments; the
-pipeline's configured path limit also applies. A missing/unsafe path exits `4`.
+pipeline's configured path limit also applies. Raw path JSON is bounded to 16 KiB
+before parsing. A missing/unsafe path exits `4`.
 Declared validators run before opt-in inspection; validation failure emits no
 values. Legacy `explain` and `validate` output is unchanged. Usage errors still
 use the existing `0.2` error envelope when `--json` is requested.

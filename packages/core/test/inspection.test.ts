@@ -1,8 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { buildConfigInspection, resolveConfig, type ConfigPath } from "../src/index.js";
+import { buildConfigInspection, resolveConfig, runConfigPipeline, type ConfigPath } from "../src/index.js";
 import { source } from "./helpers/source.js";
 
 describe("safe value inspection", () => {
+  it("connects a selected value to coercion, source locations and root validation events", async () => {
+    const input = source("file", 10, { port: "80" });
+    const pipeline = await runConfigPipeline({ loaders: [{ descriptor: input.descriptor, load: () => ({
+      value: input.value, locations: [{ path: ["port"], location: { sourceId: "file", sourcePath: "settings.json", line: 2, column: 3 } }]
+    }) }], context: undefined, coercionRules: [{ path: ["port"], from: "string", to: "number", onFailure: "issue" }],
+    validators: [{ id: "schema", validate: () => ({ ok: true, issues: [] }) }] });
+    const report = buildConfigInspection(pipeline.result, { path: ["port"] });
+    expect(report.entries[0]).toMatchObject({ value: 80, source: { winningLocation: { line: 2 } } });
+    expect(report.diagnostics.provenance.map((event) => event.action)).toEqual(expect.arrayContaining(["defined", "coerced", "validated"]));
+  });
   it("shows scalar values, typed array paths and source history without exposing nested secrets", () => {
     const result = resolveConfig({ sources: [
       source("defaults", 0, { port: 80, clients: [{ name: "visible", password: "private input" }], "a.b": { "": false } }),
@@ -47,5 +57,19 @@ describe("safe value inspection", () => {
     }
     expect(buildConfigInspection(result, { path: [NaN] as ConfigPath }).status).toBe("error");
     expect(buildConfigInspection(result, { path: ["missing"] }).diagnostics.issues[0]?.code).toBe("inspection_path_not_found");
+  });
+
+  it("checks path and expansion limits before reading discarded input", () => {
+    const result = resolveConfig({ sources: [source("file", 0, { items: [1, 2, 3] })] });
+    let pathReads = 0;
+    const path = new Array<string>(result.limits.maxPathLength + 1);
+    path[Symbol.iterator] = function* () { pathReads += 1; yield "items"; return undefined; };
+    expect(buildConfigInspection(result, { path }).status).toBe("error");
+    expect(pathReads).toBe(0);
+    let elementReads = 0;
+    const array = (result.config as { items: number[] }).items;
+    Object.defineProperty(array, 0, { get: () => { elementReads += 1; return 1; } });
+    expect(buildConfigInspection({ ...result, limits: { ...result.limits, maxResolvedPaths: 2 } }).status).toBe("error");
+    expect(elementReads).toBe(0);
   });
 });

@@ -82,10 +82,13 @@ export function buildConfigDiff(before: ConfigResult, after: ConfigResult, optio
 
 function sharedRedaction(before: ConfigResult, after: ConfigResult, options: BuildDiagnosticReportOptions): BuildDiagnosticReportOptions {
   const sources = [...before.sources, ...after.sources];
-  const paths = [before, after].flatMap((result) => buildDiagnosticReport(result, options).resolvedPaths
+  const combined = { ...options, secretSourceIds: [...new Set([
+    ...(options.secretSourceIds ?? []), ...sources.filter((source) => source.redaction?.secretSource === true).map((source) => source.id)
+  ])] };
+  const paths = [before, after].flatMap((result) => buildDiagnosticReport(result, combined).resolvedPaths
     .filter((entry) => entry.redacted).map((entry) => entry.path));
   return {
-    ...options,
+    ...combined,
     secretPaths: [...(options.secretPaths ?? []), ...sources.flatMap((source) => source.redaction?.secretPaths ?? []), ...paths],
     secretNamePatterns: [...(options.secretNamePatterns ?? []), ...sources.flatMap((source) => source.redaction?.secretNamePatterns ?? [])]
   };

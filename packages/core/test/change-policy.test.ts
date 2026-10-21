@@ -50,6 +50,11 @@ describe("CI change policies", () => {
       { version: "change-policy-1", rules: [], unknown: "private invalid input" }];
     for (const rules of invalid) expect(checkConfigChanges(input, input, rules).policy.violations[0]?.code).toBe("invalid_policy");
     expect(checkConfigChanges({ ...input, ok: false }, input, policy([])).policy.violations[0]?.code).toBe("comparison_failed");
+    let reads = 0;
+    const path = new Array<string>(257);
+    path[Symbol.iterator] = function* () { reads += 1; yield "port"; return undefined; };
+    expect(checkConfigChanges(input, input, policy([{ id: "too-long", path, mode: "require-path" }])).policy.status).toBe("error");
+    expect(reads).toBe(0);
   });
 
   it("enforces whole-config policies and wrapper byte budgets", () => {
