@@ -26,6 +26,11 @@ export {
 export { buildConfigInspection } from "./inspection.js";
 export { buildConfigDiff } from "./diff.js";
 export { checkConfigChanges } from "./change-policy.js";
+export { createStandardSchemaValidator } from "./standard-schema.js";
+export type {
+  StandardConfigSchema, StandardConfigSchemaResult, StandardConfigSchemaIssue,
+  StandardConfigSchemaOutput, CreateStandardSchemaValidatorInput
+} from "./standard-schema.js";
 export type { ConfigChangePolicy, ConfigChangeRule, ConfigChangeCheck, ConfigPolicyViolation } from "./change-policy.js";
 export type { BuildConfigDiffOptions, ConfigDiff, ConfigChange, ConfigChangeKind } from "./diff.js";
 export type {

@@ -155,6 +155,7 @@ function smokeConsumerInstall(tarballs, consumerDir) {
   copyFileSync(join(root, "examples", "basic-library.mjs"), join(consumerDir, "basic-library.mjs"));
   copyFileSync(join(root, "fixtures", "consumer", "validator-0.2.ts"), join(consumerDir, "validator-0.2.ts"));
   copyFileSync(join(root, "fixtures", "consumer", "inspection-types.ts"), join(consumerDir, "inspection-types.ts"));
+  copyFileSync(join(root, "fixtures", "consumer", "schema-types.ts"), join(consumerDir, "schema-types.ts"));
   copyFileSync(join(root, "fixtures", "consumer", "file-formats.mjs"), join(consumerDir, "file-formats.mjs"));
   copyFileSync(
     join(root, "fixtures", "consumer", "validator-1.0-types.ts"),
@@ -226,6 +227,7 @@ function smokeConsumerInstall(tarballs, consumerDir) {
     cwd: consumerDir,
     stdio: "inherit"
   });
+  execFileSync(process.execPath, [join(consumerDir, "dist", "schema-types.js")], { cwd: consumerDir, stdio: "inherit" });
 
   const output = runInstalledCli(consumerDir);
   const report = JSON.parse(output);

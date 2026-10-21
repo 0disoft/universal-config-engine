@@ -89,6 +89,15 @@ unknown fields, unsafe paths, duplicate ids and bounded rule/path/source-id limi
 are enforced at runtime. See `docs/cli/inspection-and-diff.md` for exact bounds,
 semantics and examples. The combined report obeys the smaller report-byte budget.
 
+## Standard Schema Validation (ADR 0018, Unreleased)
+
+`createStandardSchemaValidator` accepts a structural `StandardConfigSchema` v1
+provider and infers its output type without adding a core runtime dependency.
+It awaits each callback once, copies representable typed paths, bounds retained
+issues and omits provider prose. The adapter's typed/transformed `value` remains
+separate from pipeline config under ADR 0009. See
+[typed validation](typed-validation.md) for limits and failure behavior.
+
 ## Package Boundary Direction
 
 Published package ownership is layered:

@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "outDir": "dist"
   },
-  "include": ["validator-0.2.ts", "validator-1.0-types.ts", "inspection-types.ts"]
+  "include": ["validator-0.2.ts", "validator-1.0-types.ts", "inspection-types.ts", "schema-types.ts"]
 }

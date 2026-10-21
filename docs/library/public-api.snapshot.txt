@@ -105,6 +105,8 @@ export { runValidators } from "./validation.js";
 export { buildConfigInspection } from "./inspection.js";
 export { buildConfigDiff } from "./diff.js";
 export { checkConfigChanges } from "./change-policy.js";
+export { createStandardSchemaValidator } from "./standard-schema.js";
+export type { StandardConfigSchema, StandardConfigSchemaResult, StandardConfigSchemaIssue, StandardConfigSchemaOutput, CreateStandardSchemaValidatorInput } from "./standard-schema.js";
 export type { ConfigChangePolicy, ConfigChangeRule, ConfigChangeCheck, ConfigPolicyViolation } from "./change-policy.js";
 export type { BuildConfigDiffOptions, ConfigDiff, ConfigChange, ConfigChangeKind } from "./diff.js";
 export type { BuildConfigInspectionOptions, ConfigInspection, ConfigInspectionEntry, InspectedValueType } from "./inspection.js";
@@ -268,6 +270,41 @@ export declare function createResolvedPathIndex(): MutableResolvedPathIndex;
 export declare function setResolvedPath(index: MutableResolvedPathIndex, resolved: MutableResolvedPath): void;
 export declare function deleteResolvedPath(index: MutableResolvedPathIndex, key: string): void;
 export {};
+
+### standard-schema.d.ts
+import type { ValidatorAdapter } from "./types.js";
+/** Structural Standard Schema v1 compatibility; no provider/runtime dependency. */
+export interface StandardConfigSchema<TOutput = unknown> {
+    readonly "~standard": {
+        readonly version: 1;
+        readonly vendor: string;
+        readonly validate: (value: unknown) => StandardConfigSchemaResult<TOutput> | Promise<StandardConfigSchemaResult<TOutput>>;
+        readonly types?: {
+            readonly input: unknown;
+            readonly output: TOutput;
+        } | undefined;
+    };
+}
+export interface StandardConfigSchemaIssue {
+    readonly message: string;
+    readonly path?: readonly (PropertyKey | {
+        readonly key: PropertyKey;
+    })[] | undefined;
+}
+export type StandardConfigSchemaResult<TOutput> = {
+    readonly value: TOutput;
+    readonly issues?: undefined;
+} | {
+    readonly issues: readonly StandardConfigSchemaIssue[];
+};
+export type StandardConfigSchemaOutput<TSchema extends StandardConfigSchema> = TSchema extends StandardConfigSchema<infer TOutput> ? TOutput : never;
+export interface CreateStandardSchemaValidatorInput<TOutput = unknown> {
+    readonly schema: StandardConfigSchema<TOutput>;
+    readonly id?: string;
+    /** Defaults to maxDiagnostics (200), with a hard cap of 10,000. */
+    readonly maxIssues?: number;
+}
+export declare function createStandardSchemaValidator<TOutput>(input: CreateStandardSchemaValidatorInput<TOutput>): ValidatorAdapter<TOutput>;
 
 ### types.d.ts
 export type ConfigScalar = string | number | boolean | null;

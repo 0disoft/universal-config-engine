@@ -19,6 +19,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 - Opt-in CLI `explain`/`validate --discover <workspace>` and an opened-file root
   policy for declarations. Explicit config paths and legacy parser behavior remain
   unchanged; discovered files are rechecked when opened.
+- Core structural Standard Schema v1 interoperability with inferred adapter output,
+  awaited callbacks, bounded normalized issues and no provider prose or new runtime
+  dependency. Resolved pipeline values retain the existing ADR 0009 behavior.
 
 ## 1.2.0 - 2026-10-21
 
