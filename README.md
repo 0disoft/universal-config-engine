@@ -66,6 +66,15 @@ local files, build outputs, caches, and secret files under control.
 
 ## Install
 
+Unreleased local-adoption work (ADR 0018) adds official file dialects, bounded
+discovery, typed validation output, profiles/inheritance, disposable reload/watch,
+init/doctor and public-share reports. Published 1.2.0 already includes safe value
+inspection, config diff and CI change policies. Try the
+[copyable adoption example](examples/adoption/README.md) from this checkout; its
+new APIs are not yet available from the published 1.2.0 packages. Actual core
+artifact checks for additional runtimes are described in
+[portable runtimes](docs/library/portable-runtimes.md).
+
 For library usage:
 
 ```powershell

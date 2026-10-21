@@ -74,7 +74,11 @@ await withWorkspaceSmoke(root, async ({ packDir, consumerDir: consumerRoot }) =>
     runNpm(["install", "--ignore-scripts"], directory);
     checkPackedCliFailures(directory);
     cpSync(join(root, "fixtures", "consumer", "file-formats.mjs"), join(directory, "file-formats.mjs"));
+    cpSync(join(root, "fixtures", "consumer", "adoption.mjs"), join(directory, "adoption.mjs"));
+    cpSync(join(root, "examples", "adoption"), join(directory, "adoption"), { recursive: true });
+    cpSync(join(root, "examples", "comparison"), join(directory, "comparison"), { recursive: true });
     execFileSync(process.execPath, [join(directory, "file-formats.mjs")], { cwd: directory, stdio: "inherit" });
+    execFileSync(process.execPath, [join(directory, "adoption.mjs")], { cwd: directory, stdio: "inherit", timeout: 30000 });
     const output = runInstalledCli(directory);
     const report = JSON.parse(output);
     if (report.command !== "validate" || report.status !== "ok" || report.schemaVersion !== "0.2") {

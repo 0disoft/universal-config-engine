@@ -45,6 +45,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   usage/load failures and explicit rejection of value-bearing inspection modes.
 - Opt-in actual core tarball consumers for Node, Bun, Deno and workerd, sharing
   portable feature assertions and recording runtime versions/artifact digests.
+- Copyable adoption example covering profile/file precedence, typed validation,
+  reload/watch disposal, public diagnostics and an executable three-rule CI case.
 
 ## 1.2.0 - 2026-10-21
 

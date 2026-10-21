@@ -1,0 +1,13 @@
+{
+  "extends": ["common/base.json"],
+  "sources": [],
+  "profiles": {
+    "production": {
+      "sources": [
+        { "id": "production-toml", "kind": "adapter", "format": "toml", "path": "common/production.toml", "priority": 10 },
+        { "id": "deployment-env", "kind": "process-env", "priority": 20,
+          "mappings": [{ "externalName": "APP_PORT", "targetPath": ["server", "port"], "sourceKind": "process-env", "parseAs": "number" }] }
+      ]
+    }
+  }
+}

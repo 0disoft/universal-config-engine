@@ -111,6 +111,11 @@ of why each final value exists.
 
 ## Decision Index
 
+- Unreleased local adoption: official Node file adapters, bounded workspace
+  discovery/inheritance, explicit profiles, Standard Schema and separate typed
+  output, reload/watch lifecycle, init/doctor and public-share projection follow
+  ADR 0018. Runtime checks are scoped per package; no hosted service is added.
+
 - Implementation language and package ecosystem: TypeScript, ESM, pnpm workspace;
   see `docs/adr/0003-implementation-language-and-package-strategy.md`.
 - Runtime compatibility floor: Node.js `>=24`; see

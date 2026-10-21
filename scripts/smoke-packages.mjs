@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { checkPackedCliFailures } from "./check-packed-cli-failures.mjs";
@@ -157,6 +157,9 @@ function smokeConsumerInstall(tarballs, consumerDir) {
   copyFileSync(join(root, "fixtures", "consumer", "inspection-types.ts"), join(consumerDir, "inspection-types.ts"));
   copyFileSync(join(root, "fixtures", "consumer", "schema-types.ts"), join(consumerDir, "schema-types.ts"));
   copyFileSync(join(root, "fixtures", "consumer", "file-formats.mjs"), join(consumerDir, "file-formats.mjs"));
+  copyFileSync(join(root, "fixtures", "consumer", "adoption.mjs"), join(consumerDir, "adoption.mjs"));
+  cpSync(join(root, "examples", "adoption"), join(consumerDir, "adoption"), { recursive: true });
+  cpSync(join(root, "examples", "comparison"), join(consumerDir, "comparison"), { recursive: true });
   copyFileSync(
     join(root, "fixtures", "consumer", "validator-1.0-types.ts"),
     join(consumerDir, "validator-1.0-types.ts")
@@ -193,6 +196,7 @@ function smokeConsumerInstall(tarballs, consumerDir) {
 
   runNpm(["install", "--ignore-scripts"], consumerDir);
   execFileSync(process.execPath, [join(consumerDir, "file-formats.mjs")], { cwd: consumerDir, stdio: "inherit" });
+  execFileSync(process.execPath, [join(consumerDir, "adoption.mjs")], { cwd: consumerDir, stdio: "inherit", timeout: 30000 });
   checkPackedCliFailures(consumerDir);
   assertInstalledPackageReadmes(tarballs, consumerDir);
   const basicLibraryOutput = execFileSync(process.execPath, [join(consumerDir, "basic-library.mjs")], {

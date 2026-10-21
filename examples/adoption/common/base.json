@@ -1,0 +1,14 @@
+{
+  "sources": [
+    { "id": "defaults", "kind": "object", "priority": 0, "value": { "server": { "port": 3000, "enabled": true } } },
+    { "id": "workspace-yaml", "kind": "adapter", "format": "yaml", "path": "settings.yaml", "priority": 5 }
+  ],
+  "validators": [{
+    "id": "server-schema", "kind": "json-schema-ajv",
+    "schema": { "type": "object", "required": ["server"], "properties": {
+      "server": { "type": "object", "required": ["port", "enabled"], "properties": {
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }, "enabled": { "type": "boolean" }
+      } }
+    } }
+  }]
+}
