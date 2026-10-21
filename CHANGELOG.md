@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Watch both in-workspace file links and canonical targets; recheck boundaries
+  and rebind target watches before loading after link replacement.
 - Default Ajv validation to first-error execution and bound converted diagnostics
   with `maxIssues`; complete-error collection remains explicitly configurable.
 - Return policy failure exit code 3 from ordinary CLI validation/explanation when

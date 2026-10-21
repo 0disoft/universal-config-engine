@@ -34,6 +34,11 @@ Relative paths use the workspace. Parent directories and existing targets are
 canonicalized and checked inside that boundary. Actual file loaders must still
 enforce the workspace when opening each file, including after replacement.
 
+In-workspace file symlinks watch both the link and the canonical target. Before
+each load, target boundaries are rechecked and directory watches are rebound;
+retargeting outside the workspace rejects the refresh without calling `load`.
+Selections are deduplicated and use at most two directory handles per input path.
+
 Watching starts before the initial refresh. Parent directories are watched with
 basename filtering so atomic file replacement keeps working. A null filename
 requests a refresh; events are debounced (default 25 ms, configurable 0–1000 ms)

@@ -25,50 +25,88 @@ export async function watchConfigFiles(input: WatchConfigFilesInput): Promise<Wa
     if (typeof path !== "string" || path.length === 0 || path.length > 4096) return { ok: false, code: "watch_input_invalid" };
     paths.push(path);
   }
-  const groups = new Map<string, Set<string>>();
+  let root: string;
+  let groups: Map<string, Set<string>>;
   try {
-    const root = await realpath(input.workspacePath);
+    root = await realpath(input.workspacePath);
     if (!(await stat(root)).isDirectory()) return { ok: false, code: "watch_setup_failed" };
-    for (const path of paths) {
-      const absolute = resolve(root, path);
-      const directory = await realpath(dirname(absolute));
-      if (!inside(root, directory)) return { ok: false, code: "watch_path_outside_workspace" };
-      try {
-        if (!inside(root, await realpath(absolute))) return { ok: false, code: "watch_path_outside_workspace" };
-      } catch (error) {
-        if (error === null || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") throw error;
-      }
-      const names = groups.get(directory) ?? new Set<string>();
-      names.add(basename(absolute)); groups.set(directory, names);
-    }
+    const selected = await resolveWatchGroups(root, paths);
+    if (selected === undefined) return { ok: false, code: "watch_path_outside_workspace" };
+    groups = selected;
   } catch { return { ok: false, code: "watch_setup_failed" }; }
-  const state = createReloadState(input);
-  const handles: FSWatcher[] = [];
+  const handles = new Map<string, { handle: FSWatcher; filter: { names: Set<string> } }>();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
   let watchFailed = false;
+  const state = createReloadState({ ...input, async load() {
+    // Refresh is serialized by the reload state, including watch rebinding.
+    const selected = await resolveWatchGroups(root, paths);
+    if (closed) throw new Error("Watcher is closed.");
+    if (selected === undefined) throw new Error("Watch target left the workspace.");
+    try { reconcile(selected); }
+    catch (error) { watchFailed = true; state.watchFailed(); close(); throw error; }
+    return input.load();
+  } });
   function close() {
     if (closed) return;
     closed = true;
     if (timer !== undefined) clearTimeout(timer);
-    for (const handle of handles) handle.close();
+    for (const { handle } of handles.values()) handle.close();
+    handles.clear();
     state.controller.close();
   }
-  try {
-    for (const [directory, names] of groups) {
+  function reconcile(selected: Map<string, Set<string>>) {
+    // Release stale targets first so rebinding keeps the same handle bound.
+    for (const [directory, { handle }] of handles) {
+      if (!selected.has(directory)) { handles.delete(directory); handle.close(); }
+    }
+    for (const [directory, names] of selected) {
+      if (closed) throw new Error("Watcher is closed.");
+      const existing = handles.get(directory);
+      if (existing !== undefined) { existing.filter.names = names; continue; }
+      const filter = { names };
       const handle = watch(directory, { persistent: false }, (_event, filename) => {
-        if (closed || filename !== null && !names.has(filename)) return;
+        if (closed || filename !== null && !filter.names.has(filename)) return;
         if (timer !== undefined) clearTimeout(timer);
         timer = setTimeout(() => { timer = undefined; if (!closed) void state.controller.refresh(); }, delay);
       });
-      handles.push(handle);
-      handle.on("error", () => { watchFailed = true; state.watchFailed(); close(); });
+      handles.set(directory, { handle, filter });
+      handle.on("error", () => {
+        if (handles.get(directory)?.handle !== handle) return;
+        watchFailed = true; state.watchFailed(); close();
+      });
     }
+  }
+  try {
+    reconcile(groups);
     // Install watches before the first load so a change during loading is queued.
     const initial = await state.controller.refresh();
     if (watchFailed) return { ok: false, code: "watch_setup_failed" };
     return { ok: true, watcher: { ...state.controller, close }, initial };
   } catch { close(); return { ok: false, code: "watch_setup_failed" }; }
+}
+
+/** At most two parent-directory selections per bounded input path. */
+async function resolveWatchGroups(root: string, paths: readonly string[]): Promise<Map<string, Set<string>> | undefined> {
+  const groups = new Map<string, Set<string>>();
+  function add(directory: string, name: string) {
+    const names = groups.get(directory) ?? new Set<string>();
+    names.add(name); groups.set(directory, names);
+  }
+  for (const path of paths) {
+    const absolute = resolve(root, path);
+    const directory = await realpath(dirname(absolute));
+    if (!inside(root, directory)) return undefined;
+    add(directory, basename(absolute));
+    try {
+      const target = await realpath(absolute);
+      if (!inside(root, target)) return undefined;
+      add(dirname(target), basename(target));
+    } catch (error) {
+      if (error === null || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") throw error;
+    }
+  }
+  return groups;
 }
 
 function inside(root: string, target: string): boolean {
