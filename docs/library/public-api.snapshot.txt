@@ -121,6 +121,8 @@ export type { RunConfigPipelineInput, RunConfigPipelineResult } from "./pipeline
 export type { BuildDiagnosticReportOptions } from "./redaction.js";
 export type { CreateMappedOverrideSourceInput } from "./mapping.js";
 export type { RunValidatorsInput, RunValidatorsResult } from "./validation.js";
+export { buildPublicDiagnosticReport } from "./public-report.js";
+export type { PublicDiagnosticReport } from "./public-report.js";
 
 ### inspection.d.ts
 import { type BuildDiagnosticReportOptions } from "./redaction.js";
@@ -228,6 +230,39 @@ export declare function runConfigPipeline<TContext = undefined>(input: RunConfig
 /** Internal shared validation stage; public facades retain separate result shapes. */
 export declare function applyPipelineValidators(result: ConfigResult, validators: readonly ValidatorAdapter[]): Promise<ConfigResult>;
 export declare function combineConfigIssues(existing: readonly ConfigIssue[], next: readonly ConfigIssue[], declaredMaxDiagnostics: number): readonly ConfigIssue[];
+
+### public-report.d.ts
+import type { ConfigIssueCategory, DiagnosticReport, ProvenanceAction, SourceKind } from "./types.js";
+export interface PublicDiagnosticReport {
+    readonly schemaVersion: "public-diagnostic-1";
+    readonly status: "ok" | "error";
+    readonly sources: readonly {
+        readonly id: string;
+        readonly kind: SourceKind | "other";
+        readonly status: "loaded" | "failed";
+    }[];
+    readonly resolvedPaths: readonly {
+        readonly path: string;
+        readonly winningSource: string;
+        readonly overriddenSources: readonly string[];
+        readonly redacted: boolean;
+    }[];
+    readonly issues: readonly {
+        readonly category: ConfigIssueCategory | "other";
+        readonly severity: "error" | "warning";
+        readonly source?: string;
+        readonly path?: string;
+    }[];
+    readonly provenance: readonly {
+        readonly action: ProvenanceAction | "other";
+        readonly source: string;
+        readonly previousSource?: string;
+        readonly path: string;
+    }[];
+    readonly truncated?: true;
+}
+/** Allowlist projection: never retain arbitrary strings, values, names, paths or prose. */
+export declare function buildPublicDiagnosticReport(report: DiagnosticReport): PublicDiagnosticReport;
 
 ### redaction.d.ts
 import type { ConfigPath, ConfigResult, DiagnosticReport } from "./types.js";

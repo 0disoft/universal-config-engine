@@ -39,6 +39,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   and sanitized `init-1` output, preserving existing files and symlinks.
 - Shared-pipeline `uce doctor` with bounded sanitized diagnostics and finite,
   actionable advice for workspace, profile, syntax, validation and budget failures.
+- Separate `public-diagnostic-1` report projection with ordinal source/path aliases,
+  enum allowlists and no values, original names, locations, codes or prose.
 
 ## 1.2.0 - 2026-10-21
 

@@ -48,6 +48,11 @@ Repository Type: library
 
 ## Safe Value Inspection
 
+`buildPublicDiagnosticReport(report)` projects bounded diagnostics to the separate
+`public-diagnostic-1` allowlist, replacing source/path identities with per-report
+aliases and omitting values, names, locations, codes and prose. See
+[public sharing](public-sharing.md) for retained metadata and disclosure limits.
+
 Node `createConfigReloader` serializes explicitly requested pipeline refreshes,
 coalesces queued work, owns immutable last-good snapshots and suppresses late
 publication after close. Failure/event data excludes values and provider prose.

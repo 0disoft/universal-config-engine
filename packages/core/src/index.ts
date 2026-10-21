@@ -108,3 +108,5 @@ export type {
   RunValidatorsInput,
   RunValidatorsResult
 } from "./validation.js";
+export { buildPublicDiagnosticReport } from "./public-report.js";
+export type { PublicDiagnosticReport } from "./public-report.js";
