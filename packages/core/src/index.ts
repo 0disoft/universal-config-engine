@@ -25,6 +25,8 @@ export {
 } from "./validation.js";
 export { buildConfigInspection } from "./inspection.js";
 export { buildConfigDiff } from "./diff.js";
+export { checkConfigChanges } from "./change-policy.js";
+export type { ConfigChangePolicy, ConfigChangeRule, ConfigChangeCheck, ConfigPolicyViolation } from "./change-policy.js";
 export type { BuildConfigDiffOptions, ConfigDiff, ConfigChange, ConfigChangeKind } from "./diff.js";
 export type {
   BuildConfigInspectionOptions, ConfigInspection, ConfigInspectionEntry, InspectedValueType

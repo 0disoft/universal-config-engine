@@ -104,11 +104,12 @@ function sourceIdentity(entry: ConfigInspectionEntry, result: ConfigResult): str
   const source = entry.source;
   if (source === undefined) return "";
   return JSON.stringify([source.winningSourceId, result.sources.find((candidate) => candidate.id === source.winningSourceId)?.priority,
-    source.overriddenSourceIds, source.winningLocation, source.overriddenLocations]);
+    source.overriddenSourceIds.map((id) => [id, result.sources.find((candidate) => candidate.id === id)?.priority]),
+    source.winningLocation, source.overriddenLocations]);
 }
 
 /** Iterative and order-insensitive for objects; arrays retain positional semantics. */
-function configValuesEqual(left: ConfigValue, right: ConfigValue): boolean {
+export function configValuesEqual(left: ConfigValue, right: ConfigValue): boolean {
   const pending: [ConfigValue, ConfigValue][] = [[left, right]];
   while (pending.length > 0) {
     const [a, b] = pending.pop()!;
@@ -126,7 +127,8 @@ function configValuesEqual(left: ConfigValue, right: ConfigValue): boolean {
   return true;
 }
 
-function diffFailure(base: ConfigDiff, error: NonNullable<ConfigDiff["error"]>, maxBytes: number): ConfigDiff {
+/** Internal shared failure envelope for comparison and policy byte budgets. */
+export function diffFailure(base: ConfigDiff, error: NonNullable<ConfigDiff["error"]>, maxBytes: number): ConfigDiff {
   // Drop both value-bearing sides on failure; keep their sanitized diagnostics.
   const failure: ConfigDiff = { ...base, status: "error", error, changes: [], uncomparedSecretPaths: [],
     before: { ...base.before, entries: [] }, after: { ...base.after, entries: [] } };

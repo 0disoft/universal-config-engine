@@ -76,6 +76,19 @@ Failed input, combined entry overflow and combined JSON byte overflow discard
 value-bearing entries and changes. Fixed error envelopes may exceed impractically
 small byte limits. Neither inspection nor comparison stores historical raw values.
 
+## CI Change Policies
+
+`checkConfigChanges(before, after, policy, options?)` returns `change-check-1`
+containing a whole-config `diff-1` and structured policy violations. Policy schema
+`change-policy-1` supports `forbid-changes`, `require-path` and `allowed-sources`
+rules. Malformed policies and incomplete comparisons fail closed. Secret-value
+uncertainty cannot pass a forbid rule. Required-path checks use actual config,
+including null and opaque secret containers, without retaining values. Policies
+never narrow comparison to a query. Inputs are normalized into owned rule data;
+unknown fields, unsafe paths, duplicate ids and bounded rule/path/source-id limits
+are enforced at runtime. See `docs/cli/inspection-and-diff.md` for exact bounds,
+semantics and examples. The combined report obeys the smaller report-byte budget.
+
 ## Package Boundary Direction
 
 Published package ownership is layered:

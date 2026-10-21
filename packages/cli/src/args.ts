@@ -1,8 +1,8 @@
 import type { ConfigPath } from "@0disoft/universal-config-engine-core";
-import type { CliCommand, CliOutputMode } from "./types.js";
+import type { CliCommand, CliExecutionCommand, CliOutputMode } from "./types.js";
 
-export interface ParsedCliArgs {
-  readonly command: CliCommand;
+export interface ParsedInspectionArgs {
+  readonly command: CliExecutionCommand;
   readonly configPath: string;
   readonly output: CliOutputMode;
   readonly sourceArgv: readonly string[];
@@ -10,14 +10,26 @@ export interface ParsedCliArgs {
   readonly path?: ConfigPath;
   readonly against?: string;
   readonly detectSecretChanges?: boolean;
+  readonly policy?: string;
+}
+
+export interface ParsedCliArgs extends Omit<ParsedInspectionArgs, "command"> {
+  readonly command: CliCommand;
 }
 
 export interface CliUsageContext {
-  readonly command?: CliCommand;
+  readonly command?: CliExecutionCommand;
   readonly output: CliOutputMode;
 }
 
 export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
+  const parsed = parseInspectionArgs(args);
+  if (parsed.command === "diff") throw new Error("Expected command explain or validate.");
+  return { ...parsed, command: parsed.command };
+}
+
+/** Extended installed-command parser; legacy parseCliArgs keeps its command union. */
+export function parseInspectionArgs(args: readonly string[]): ParsedInspectionArgs {
   const [commandCandidate, ...rest] = args;
   if (commandCandidate !== "explain" && commandCandidate !== "validate" && commandCandidate !== "diff") {
     throw new Error("Expected command explain, validate or diff.");
@@ -32,9 +44,15 @@ export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
   let path: ConfigPath | undefined;
   let against: string | undefined;
   let detectSecretChanges = false;
+  let policy: string | undefined;
 
   for (let index = 0; index < cliArgs.length; index += 1) {
     const arg = cliArgs[index];
+    if (arg === "--policy" || arg?.startsWith("--policy=") === true) {
+      policy = arg === "--policy" ? readValue(cliArgs, index++, arg) : arg.slice("--policy=".length);
+      if (policy.length === 0) throw new Error("Policy requires a file path.");
+      continue;
+    }
     if (arg === "--against" || arg?.startsWith("--against=") === true) {
       against = arg === "--against" ? readValue(cliArgs, index++, arg) : arg.slice("--against=".length);
       continue;
@@ -91,7 +109,8 @@ export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
   }
   if (path !== undefined && commandCandidate === "validate") throw new Error("Path selection requires explain or diff.");
   if (commandCandidate === "diff" && (against === undefined || against.length === 0)) throw new Error("Diff requires --against path.");
-  if (commandCandidate !== "diff" && (against !== undefined || detectSecretChanges)) throw new Error("Comparison options require diff.");
+  if (commandCandidate !== "diff" && (against !== undefined || detectSecretChanges || policy !== undefined)) throw new Error("Comparison options require diff.");
+  if (policy !== undefined && path !== undefined) throw new Error("Policy checks require a complete comparison; omit --path.");
 
   return {
     command: commandCandidate,
@@ -101,7 +120,8 @@ export function parseCliArgs(args: readonly string[]): ParsedCliArgs {
     ...(values || commandCandidate === "explain" && path !== undefined ? { values: true } : {}),
     ...(path === undefined ? {} : { path }),
     ...(against === undefined ? {} : { against }),
-    ...(detectSecretChanges ? { detectSecretChanges: true } : {})
+    ...(detectSecretChanges ? { detectSecretChanges: true } : {}),
+    ...(policy === undefined ? {} : { policy })
   };
 }
 

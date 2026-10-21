@@ -2,6 +2,8 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseCliArgs, runCli } from "../src/index.js";
+import { parseInspectionArgs } from "../src/args.js";
+import type { CliCommand } from "../src/index.js";
 import { withTempDir } from "./helpers/temp-directory.js";
 
 describe("CLI diff", () => {
@@ -40,8 +42,11 @@ describe("CLI diff", () => {
   });
 
   it("rejects incomplete diff arguments and comparison flags on legacy commands", () => {
-    expect(() => parseCliArgs(["diff", "--config", "before.json"])).toThrow();
+    expect(() => parseInspectionArgs(["diff", "--config", "before.json"])).toThrow();
     expect(() => parseCliArgs(["explain", "--config", "before.json", "--against", "after.json"])).toThrow();
     expect(() => parseCliArgs(["validate", "--config", "before.json", "--detect-secret-changes"])).toThrow();
+    const legacyCommands: Record<CliCommand, true> = { explain: true, validate: true };
+    expect(legacyCommands.explain).toBe(true);
+    expect(() => parseCliArgs(["diff", "--config", "before.json", "--against", "after.json"])).toThrow();
   });
 });

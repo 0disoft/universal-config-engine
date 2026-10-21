@@ -3,7 +3,7 @@ import {
   buildConfigInspection,
   type ConfigIssue
 } from "@0disoft/universal-config-engine-core";
-import { getCliUsageContext, parseCliArgs } from "./args.js";
+import { getCliUsageContext, parseInspectionArgs } from "./args.js";
 import {
   EXIT_USAGE_ERROR,
   exitCodeForResult
@@ -17,12 +17,14 @@ import type { CliResult, CliRuntime } from "./types.js";
 export async function runCli(args: readonly string[], runtime: CliRuntime): Promise<CliResult> {
   let parsed;
   try {
-    parsed = parseCliArgs(args);
+    parsed = parseInspectionArgs(args);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid CLI arguments.";
     const usageContext = getCliUsageContext(args);
     if (usageContext.output === "json" && usageContext.command !== undefined) {
-      runtime.stdout(formatJsonReport(usageContext.command, buildUsageErrorReport(message)));
+      const report = buildUsageErrorReport(message);
+      runtime.stdout(usageContext.command === "diff" ? `${JSON.stringify({ command: "diff", ...report }, null, 2)}\n`
+        : formatJsonReport(usageContext.command, report));
     } else {
       runtime.stderr(`${message}\n`);
     }

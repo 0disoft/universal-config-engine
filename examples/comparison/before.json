@@ -1,0 +1,6 @@
+{
+  "sources": [
+    { "id": "defaults", "kind": "object", "priority": 0,
+      "value": { "service": { "port": 3000, "enabled": true } } }
+  ]
+}

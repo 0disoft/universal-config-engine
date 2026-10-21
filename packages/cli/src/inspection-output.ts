@@ -3,13 +3,14 @@ import type { ConfigInspection } from "@0disoft/universal-config-engine-core";
 /** JSON encoding also neutralizes control characters in paths, source ids and values. */
 export function formatInspection(inspection: ConfigInspection, json: boolean): string {
   if (json) return `${JSON.stringify({ command: "explain", ...inspection }, null, 2)}\n`;
+  const priorities = new Map(inspection.diagnostics.sources.map((source) => [source.id, source.priority]));
   const lines = [`command: explain`, `status: ${inspection.status}`, `path: ${JSON.stringify(inspection.path)}`];
   for (const entry of inspection.entries) {
     const value = entry.visibility === "redacted" ? "<redacted>" : entry.visibility === "container"
       ? `<${entry.type}>` : `${JSON.stringify(entry.value)}${entry.truncated ? " <truncated>" : ""}`;
     lines.push(`${JSON.stringify(entry.path)} = ${value}`);
     if (entry.source !== undefined) {
-      lines.push(`  source: ${JSON.stringify(entry.source.winningSourceId)} overridden: ${JSON.stringify(entry.source.overriddenSourceIds)}`);
+      lines.push(`  source: ${JSON.stringify(entry.source.winningSourceId)} priority=${priorities.get(entry.source.winningSourceId)} overridden: ${JSON.stringify(entry.source.overriddenSourceIds)}`);
       if (entry.source.winningLocation !== undefined) lines.push(`  location: ${JSON.stringify(entry.source.winningLocation)}`);
     }
   }

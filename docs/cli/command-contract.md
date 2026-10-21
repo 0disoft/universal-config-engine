@@ -63,6 +63,17 @@ the existing failure exit categories; entry/byte overflow exits `3`.
 prints secret values or fingerprints. Without it, secret paths are explicitly
 listed as uncompared. Policies can turn a successful comparison into a CI failure.
 
+## CI Change Policies
+
+`uce diff --config before.json --against after.json --policy policy.json [--json]`
+uses `change-check-1` and runs whole-config policy evaluation. It rejects `--path`
+to prevent narrowed comparisons from bypassing rules. Policy violations and
+indeterminate secret comparisons exit `3`; malformed policy schema exits `4`.
+Policy-file read/JSON errors exit `2`; policy-file overflow exits `3`. Source and
+validation failures retain their ordinary categories. Policy JSON is bounded to
+1 MiB, normalized by core and never executed. See
+`docs/cli/inspection-and-diff.md` for examples and schema limits.
+
 ## Exit-Code Taxonomy
 
 - `0`: success.
@@ -108,5 +119,5 @@ listed as uncompared. Policies can turn a successful comparison into a CI failur
 
 ## Deferred
 
-- Full resolved config printing is not supported in the `0.x` CLI. A future ADR
-  must define redaction, output-size, and compatibility rules before adding it.
+- Raw unredacted config printing remains unsupported. ADR 0017 adds opt-in bounded
+  safe value inspection and comparison without changing default report `0.2`.

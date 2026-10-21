@@ -1,0 +1,9 @@
+{
+  "version": "change-policy-1",
+  "rules": [
+    { "id": "stable-port", "path": ["service", "port"], "mode": "forbid-changes" },
+    { "id": "required-enabled", "path": ["service", "enabled"], "mode": "require-path" },
+    { "id": "defaults-only", "path": ["service", "port"], "mode": "allowed-sources",
+      "allowedSourceIds": ["defaults"] }
+  ]
+}
