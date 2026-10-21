@@ -22,6 +22,9 @@ Repository Type: library
 - `combineConfigIssues`: core-owned issue combination that preserves the declared
   diagnostic cap and counts `max_diagnostics_exceeded` within that cap.
 - `OverrideMapping`: explicit env var or CLI flag mapping into config paths.
+  `secret: true` contributes an owned target path to source redaction metadata in
+  core and Node helpers as well as CLI declarations, including absent/invalid input.
+  Existing source redaction policies are preserved; unrelated source kinds do not contribute paths.
 - `MergePolicy`: deterministic object merge and conflict handling.
 - `CoercionPolicy`: opt-in type conversion rules.
 - `applyCoercionRules`: immutable coercion stage that returns a cloned `config`

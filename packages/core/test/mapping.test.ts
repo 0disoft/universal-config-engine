@@ -1,5 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { applyCoercionRules, buildDiagnosticReport, createMappedOverrideSource, resolveConfig, type OverrideMapping } from "../src/index.js";
+import { applyCoercionRules, buildConfigInspection, buildDiagnosticReport, createMappedOverrideSource, resolveConfig, type OverrideMapping } from "../src/index.js";
+
+describe("mapping redaction", () => {
+  it("owns and combines secret paths even for absent or invalid mapped input", () => {
+    const path = ["endpoint"];
+    const descriptor = { id: "env", kind: "process-env" as const, priority: 1, displayName: "env",
+      redaction: { secretPaths: [["existing"]], secretNamePatterns: ["private"] } };
+    const mappings: OverrideMapping[] = [
+      { externalName: "APP_ENDPOINT", sourceKind: "process-env", targetPath: path, secret: true, parseAs: "boolean" },
+      { externalName: "--other", sourceKind: "argv", targetPath: ["public"], secret: true }
+    ];
+    const absent = createMappedOverrideSource({ descriptor, mappings, values: {} });
+    const invalid = createMappedOverrideSource({ descriptor, mappings, values: { APP_ENDPOINT: "invalid" } });
+    path[0] = "reused";
+    expect(absent.descriptor.redaction).toEqual({ secretPaths: [["existing"], ["endpoint"]], secretNamePatterns: ["private"] });
+    expect(descriptor.redaction.secretPaths).toEqual([["existing"]]);
+    const report = buildDiagnosticReport(resolveConfig({ sources: [invalid] }));
+    expect(report.issues[0]?.message).toContain("redacted");
+  });
+
+  it("hides mapped values whose names do not match built-in patterns", () => {
+    const mapped = createMappedOverrideSource({
+      descriptor: { id: "env", kind: "process-env", priority: 1, displayName: "env" },
+      mappings: [{ externalName: "APP_ENDPOINT", sourceKind: "process-env", targetPath: ["endpoint"], secret: true }],
+      values: { APP_ENDPOINT: "mapping input marker" }
+    });
+    const inspection = buildConfigInspection(resolveConfig({ sources: [mapped] }));
+    expect(inspection.status).toBe("ok");
+    expect(inspection.entries.find(entry => entry.path[0] === "endpoint")).toMatchObject({ visibility: "redacted" });
+    expect(JSON.stringify(inspection)).not.toContain("mapping input marker");
+  });
+});
 
 describe("mapping input ownership", () => {
   const descriptor = { id: "argv", kind: "argv" as const, priority: 1, displayName: "argv" };

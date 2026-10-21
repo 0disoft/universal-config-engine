@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveConfig, type ConfigSourceDescriptor } from "@0disoft/universal-config-engine-core";
+import { buildConfigInspection, resolveConfig, type ConfigSourceDescriptor } from "@0disoft/universal-config-engine-core";
 import { createArgvSource, createProcessEnvSource, parseSimpleDotenv } from "../src/index.js";
 
 function descriptor(kind: ConfigSourceDescriptor["kind"]): ConfigSourceDescriptor {
@@ -7,6 +7,20 @@ function descriptor(kind: ConfigSourceDescriptor["kind"]): ConfigSourceDescripto
 }
 
 describe("override source dictionary keys", () => {
+  it("preserves secret mapping policies through both public Node adapters", () => {
+    const loaded = [
+      createArgvSource({ descriptor: descriptor("argv"), argv: ["--endpoint=mapping input marker"],
+        mappings: [{ externalName: "--endpoint", sourceKind: "argv", targetPath: ["endpoint"], secret: true }] }),
+      createProcessEnvSource({ descriptor: descriptor("process-env"), env: { APP_ENDPOINT: "mapping input marker" },
+        mappings: [{ externalName: "APP_ENDPOINT", sourceKind: "process-env", targetPath: ["endpoint"], secret: true }] })
+    ];
+    for (const source of loaded) {
+      const inspection = buildConfigInspection(resolveConfig({ sources: [source] }));
+      expect(inspection.status).toBe("ok");
+      expect(inspection.entries.find(entry => entry.path[0] === "endpoint")?.visibility).toBe("redacted");
+      expect(JSON.stringify(inspection)).not.toContain("mapping input marker");
+    }
+  });
   it.each([
     { argv: ["--token"], code: "argv_missing_value" },
     { argv: ["--token=one", "--token=two"], code: "argv_duplicate_argument" }

@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Honor secret override mappings in core and Node helpers, preserving declared
+  source policies and masking inspection values outside the CLI.
 - Preflight CLI source counts before entry inspection or source I/O, sharing
   budget checks with direct source loading and rejecting unsafe integer limits.
 - Watch both in-workspace file links and canonical targets; recheck boundaries

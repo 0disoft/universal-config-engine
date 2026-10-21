@@ -1,4 +1,4 @@
-import { isUnsafePathSegment, setConfigValueAtPath } from "./path.js";
+import { isUnsafePathSegment, pathToKey, setConfigValueAtPath } from "./path.js";
 import { parseJsonConfigValue } from "./json-value.js";
 import type {
   ConfigIssue,
@@ -101,10 +101,19 @@ export function createMappedOverrideSource(input: CreateMappedOverrideSourceInpu
   }
 
   return {
-    descriptor: input.descriptor,
+    descriptor: withSecretMappings(input.descriptor, input.mappings),
     value,
     issues
   };
+}
+
+function withSecretMappings(descriptor: ConfigSourceDescriptor, mappings: readonly OverrideMapping[]): ConfigSourceDescriptor {
+  const paths = mappings.filter(mapping => mapping.sourceKind === descriptor.kind && mapping.secret === true)
+    .map(mapping => mapping.targetPath);
+  if (paths.length === 0) return descriptor;
+  const secretPaths = new Map([...(descriptor.redaction?.secretPaths ?? []), ...paths]
+    .map(path => [pathToKey(path), [...path]]));
+  return { ...descriptor, redaction: { ...descriptor.redaction, secretPaths: [...secretPaths.values()] } };
 }
 
 function createMappingPathNode(): MappingPathNode {
