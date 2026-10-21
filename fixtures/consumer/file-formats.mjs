@@ -39,4 +39,17 @@ assert.equal((await discoverPipelineDeclaration({ workspacePath: workspace })).o
 const selected = JSON.parse(execFileSync(process.execPath, [join(packageRoot, manifest.bin.uce),
   "validate", "--discover", workspace, "--json"], { encoding: "utf8", timeout: 30000 }));
 assert.equal(selected.status, "ok");
-console.log("Installed Node/CLI file formats and workspace discovery passed (4 dialects).");
+mkdirSync(join(workspace, "service"));
+writeFileSync(join(workspace, "base.json"), JSON.stringify({ sources: [], profiles: { production: {
+  sources: [{ id: "production", kind: "adapter", format: "yaml", priority: 10, path: "prod.yaml" }]
+} } }));
+writeFileSync(join(workspace, "prod.yaml"), "port: 443\npassword: UCE_PROFILE_PRIVATE\n");
+writeFileSync(join(workspace, "service/uce.json"), JSON.stringify({ sources: [], extends: ["../base.json"] }));
+const profiledText = execFileSync(process.execPath, [join(packageRoot, manifest.bin.uce), "explain",
+  "--config", join(workspace, "service/uce.json"), "--workspace", workspace, "--profile", "production", "--values", "--json"],
+  { encoding: "utf8", timeout: 30000 });
+const profiled = JSON.parse(profiledText);
+assert.equal(profiled.status, "ok");
+assert(profiled.entries.some(entry => entry.path[0] === "port" && entry.value === 443));
+assert(!profiledText.includes("UCE_PROFILE_PRIVATE"));
+console.log("Installed Node/CLI formats, discovery, profiles and inheritance passed.");

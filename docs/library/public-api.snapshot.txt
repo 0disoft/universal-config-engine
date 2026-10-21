@@ -727,7 +727,8 @@ export declare function formatDiff(report: ConfigDiff, json: boolean): string;
 ### diff.d.ts
 import type { ParsedInspectionArgs } from "./args.js";
 import type { CliResult, CliRuntime } from "./types.js";
-export declare function runDiffCli(parsed: ParsedInspectionArgs, runtime: CliRuntime): Promise<CliResult>;
+import type { PipelineDeclarationReadPolicy } from "./pipeline.js";
+export declare function runDiffCli(parsed: ParsedInspectionArgs, runtime: CliRuntime, readPolicy?: PipelineDeclarationReadPolicy): Promise<CliResult>;
 
 ### discovery.d.ts
 import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
@@ -735,6 +736,7 @@ import type { CliRuntime } from "./types.js";
 export interface PreparedDiscoveryArgs {
     readonly args: readonly string[];
     readonly workspacePath?: string;
+    readonly profile?: string;
     readonly issues?: readonly ConfigIssue[];
 }
 /** Keep filesystem selection outside the exported synchronous legacy parser. */

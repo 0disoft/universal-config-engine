@@ -190,7 +190,7 @@ legacy command output remain unchanged. Publication was separately authorized.
 - [x] Official JSONC/YAML/TOML/JSON5 loaders and CLI source integration.
 - [x] Bounded, explicit workspace discovery.
 - [x] Standard Schema adapter and separate typed pipeline output.
-- [ ] Explicit profiles and safe workspace-local inheritance.
+- [x] Explicit profiles and safe workspace-local inheritance.
 - [ ] Serialized reload, last successful snapshots and disposable file watching.
 - [ ] Non-destructive `init` and actionable secret-safe `doctor`.
 - [ ] Public-share report projection with metadata pseudonyms.

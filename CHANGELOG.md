@@ -29,6 +29,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   source priorities/identities and combined id/resource validation.
 - Bounded local declaration inheritance with cycle detection, unique-ancestor
   ordering, workspace checks and retained per-declaration file source bases.
+- CLI `--profile` and explicit `--workspace` selection for inspection, validation
+  and both comparison inputs, without changing the synchronous legacy parser.
 
 ## 1.2.0 - 2026-10-21
 

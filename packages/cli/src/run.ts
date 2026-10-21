@@ -35,11 +35,14 @@ export async function runCli(args: readonly string[], runtime: CliRuntime): Prom
     return { exitCode: EXIT_USAGE_ERROR };
   }
 
-  if (parsed.command === "diff") return runDiffCli(parsed, runtime);
+  const readPolicy = { ...(selection.workspacePath === undefined ? {} : {
+    allowedRootPath: selection.workspacePath, workspacePath: selection.workspacePath }),
+    ...(selection.profile === undefined ? {} : { profile: selection.profile }) };
+  if (parsed.command === "diff") return runDiffCli(parsed, runtime, readPolicy);
   try {
     if (selection.issues !== undefined) throw new PipelineDeclarationError(selection.issues);
     const { result: finalResult, report } = await executeDeclaration(parsed.configPath, runtime, parsed.sourceArgv, parsed.command === "validate" || parsed.values === true,
-      selection.workspacePath === undefined ? {} : { allowedRootPath: selection.workspacePath });
+      readPolicy);
     if (parsed.values === true) {
       const inspection = buildConfigInspection(finalResult, parsed.path === undefined ? {} : { path: parsed.path });
       runtime.stdout(formatInspection(inspection, parsed.output === "json"));

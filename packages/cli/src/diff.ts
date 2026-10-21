@@ -5,12 +5,13 @@ import { exitCodeForIssues } from "./exit-codes.js";
 import { declarationFailure, executeDeclaration } from "./execution.js";
 import type { CliResult, CliRuntime } from "./types.js";
 import { loadChangePolicy, formatChangeCheck } from "./change-policy.js";
+import type { PipelineDeclarationReadPolicy } from "./pipeline.js";
 
-export async function runDiffCli(parsed: ParsedInspectionArgs, runtime: CliRuntime): Promise<CliResult> {
+export async function runDiffCli(parsed: ParsedInspectionArgs, runtime: CliRuntime, readPolicy: PipelineDeclarationReadPolicy = {}): Promise<CliResult> {
   const policy = parsed.policy === undefined ? undefined : await loadChangePolicy(parsed.policy, runtime.cwd);
   async function load(path: string) {
     if (policy !== undefined && policy.issues.length > 0) return { ...declarationFailure(undefined), issues: policy.issues };
-    try { return (await executeDeclaration(path, runtime, parsed.sourceArgv, true)).result; }
+    try { return (await executeDeclaration(path, runtime, parsed.sourceArgv, true, readPolicy)).result; }
     catch (error) { return declarationFailure(error); }
   }
   // Deliberately sequential: declarations can use stateful application adapters.
