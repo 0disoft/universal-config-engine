@@ -93,6 +93,38 @@ describe("config leaf resource limits", () => {
 });
 
 describe("flattenConfigObject array validation", () => {
+  it("counts scalar array slots and accepts the exact key/index budget", () => {
+    const value = { items: [1, 2, 3] };
+    expect(flattenConfigObject("input", value, { ...DEFAULT_RESOURCE_LIMITS, maxKeyCount: 4 })).toMatchObject({
+      entries: [{ path: ["items"], value: value.items }], issues: []
+    });
+    const failed = resolveConfig({ sources: [source("input", 0, value)], limits: { maxKeyCount: 3 } });
+    expect(failed.ok).toBe(false);
+    expect(failed.config).toEqual({});
+    expect(failed.issues).toEqual([expect.objectContaining({ code: "max_key_count_exceeded" })]);
+  });
+
+  it("rejects exponential shared arrays before cloning or exhausting traversal work", () => {
+    let reads = 0;
+    const leaf = Object.defineProperty([0], 0, { get() {
+      if (++reads > 64) throw new Error("Expanded traversal was not bounded.");
+      return 0;
+    } });
+    let tree: unknown[] = leaf;
+    for (let depth = 0; depth < 20; depth++) tree = [tree, tree];
+    const input = { tree };
+    const limits = { ...DEFAULT_RESOURCE_LIMITS, maxKeyCount: 64 };
+    const flattened = flattenConfigObject("input", input, limits);
+    expect(flattened.entries).toEqual([]);
+    expect(flattened.issues).toEqual([expect.objectContaining({ code: "max_key_count_exceeded" })]);
+    reads = 0;
+    const result = resolveConfig({ sources: [source("input", 0, input)], limits });
+    expect(result.ok).toBe(false);
+    expect(result.config).toEqual({});
+    expect(result.issues).toEqual([expect.objectContaining({ code: "max_key_count_exceeded" })]);
+    expect(reads).toBeLessThanOrEqual(64);
+  });
+
   const cyclic: unknown[] = [];
   cyclic.push(cyclic);
 

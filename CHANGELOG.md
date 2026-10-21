@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Count array indexes and repeated references against `maxKeyCount`, stopping
+  oversized/shared-array expansion before merge allocation. Large arrays may need
+  an explicitly increased key/index budget.
 - Preserve existing object fields and descendant provenance when a higher-priority
   source contributes an empty object under the deep-merge policy.
 - Honor secret override mappings in core and Node helpers, preserving declared

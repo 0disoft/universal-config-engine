@@ -49,6 +49,9 @@ Repository Type: library
 - `RedactedDiagnostic`: secret-safe errors and explain output.
 - `ResourceLimitPolicy`: bounds for source count, source size, object depth, key
   count, path length, diagnostics, provenance, resolved paths, and report bytes.
+  `maxKeyCount` counts expanded object keys and array indexes, including repeated
+  references. Exhaustion stops structural traversal before merge clones arrays.
+  Large scalar arrays now need an explicitly larger budget just like wide objects.
 - `ConfigIssue`: bounded issue taxonomy for CLI usage, load, parse, mapping,
   merge, coercion, validation, redaction, and resource-limit failures.
 

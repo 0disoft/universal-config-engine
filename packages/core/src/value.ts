@@ -176,14 +176,16 @@ function walk(
     }
     const [key, child] = next.value;
     path.push(key);
+    // Count every expanded slot, including repeated references and array indexes,
+    // before merge can clone an atomic array into an exponentially larger tree.
+    state.keyCount += 1;
+    if (state.keyCount > limits.maxKeyCount) {
+      issue("resource-limit", "max_key_count_exceeded", `Config key/index count exceeds the maximum of ${limits.maxKeyCount}.`);
+      path.pop();
+      while (stack.length > 0) leave(false);
+      break;
+    }
     if (!frame.array) {
-      state.keyCount += 1;
-      if (state.keyCount > limits.maxKeyCount) {
-        issue("resource-limit", "max_key_count_exceeded", `Config key count exceeds the maximum of ${limits.maxKeyCount}.`);
-        path.pop();
-        leave(false);
-        continue;
-      }
       if (isUnsafePathSegment(key)) {
         issue("merge", "unsafe_key", `Unsafe config path segment ${key} is rejected.`);
         path.pop();

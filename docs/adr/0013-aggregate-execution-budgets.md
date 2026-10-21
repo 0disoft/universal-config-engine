@@ -35,6 +35,12 @@ validator events share the original limit. The pipeline forwards that limit
 unchanged. `runValidators` returns only new events, stops before invoking an adapter
 whose event would exceed the budget, and reports the original configured maximum.
 
+The existing `maxKeyCount` is an expanded key/index budget: array elements and each
+occurrence of shared acyclic references count alongside object keys. Exhaustion
+stops traversal immediately and rejects the source before atomic arrays are cloned.
+This bounds both dense arrays and compact reference graphs whose tree expansion
+would be exponential, without adding fields to the frozen diagnostic schema.
+
 `buildDiagnosticReport` performs redaction first and then measures the compact UTF-8
 JSON representation. An oversized report is replaced with a fixed-shape error report
 containing `resource-limit/max_report_bytes_exceeded`; raw or partially truncated
