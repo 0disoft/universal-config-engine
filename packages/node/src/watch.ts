@@ -36,6 +36,7 @@ export async function watchConfigFiles(input: WatchConfigFilesInput): Promise<Wa
   } catch { return { ok: false, code: "watch_setup_failed" }; }
   const handles = new Map<string, { handle: FSWatcher; filter: { names: Set<string> } }>();
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let maxWaitTimer: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
   let watchFailed = false;
   const state = createReloadState({ ...input, async load() {
@@ -50,10 +51,20 @@ export async function watchConfigFiles(input: WatchConfigFilesInput): Promise<Wa
   function close() {
     if (closed) return;
     closed = true;
-    if (timer !== undefined) clearTimeout(timer);
+    clearTimers();
     for (const { handle } of handles.values()) handle.close();
     handles.clear();
     state.controller.close();
+  }
+  function clearTimers() {
+    if (timer !== undefined) clearTimeout(timer);
+    if (maxWaitTimer !== undefined) clearTimeout(maxWaitTimer);
+    timer = undefined;
+    maxWaitTimer = undefined;
+  }
+  function flush() {
+    clearTimers();
+    if (!closed) void state.controller.refresh();
   }
   function reconcile(selected: Map<string, Set<string>>) {
     // Release stale targets first so rebinding keeps the same handle bound.
@@ -68,7 +79,10 @@ export async function watchConfigFiles(input: WatchConfigFilesInput): Promise<Wa
       const handle = watch(directory, { persistent: false }, (_event, filename) => {
         if (closed || filename !== null && !filter.names.has(filename)) return;
         if (timer !== undefined) clearTimeout(timer);
-        timer = setTimeout(() => { timer = undefined; if (!closed) void state.controller.refresh(); }, delay);
+        timer = setTimeout(flush, delay);
+        // Continuous writes must not postpone refresh indefinitely. Both timers
+        // feed the reload state's single active / single queued refresh boundary.
+        if (maxWaitTimer === undefined) maxWaitTimer = setTimeout(flush, 1000);
       });
       handles.set(directory, { handle, filter });
       handle.on("error", () => {

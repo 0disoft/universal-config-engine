@@ -42,14 +42,18 @@ Selections are deduplicated and use at most two directory handles per input path
 Watching starts before the initial refresh. Parent directories are watched with
 basename filtering so atomic file replacement keeps working. A null filename
 requests a refresh; events are debounced (default 25 ms, configurable 0–1000 ms)
-and use the same coalescing queue. File changes made during a load queue a refresh.
+with a maximum wait of 1000 ms from the first pending event. Continuous writes
+therefore request periodic refreshes even without a quiet interval; an active load
+may delay execution through the existing single queued refresh. Closing cancels
+both the debounce and maximum-wait timers.
+File changes made during a load queue a refresh through the same coalescing queue.
 No recursive directory scanning or automatic dependency discovery occurs. Supply
 the declaration, inherited declarations and actual file sources; recreate the
 watcher if that dependency set changes. Environment/argv updates require manual
 refresh. Filesystem watching is best effort and is not a transactional filesystem
 snapshot; callers needing transactions must provide that in `load`.
 
-`close()` clears the timer and closes all handles. A watch error emits
+`close()` clears both timers and closes all handles. A watch error emits
 `rejected/watch_failed` and closes the watcher; recreate it after fixing the
 filesystem problem. A failed initial load still returns a watcher so a later
 file correction can recover. Watch handles are non-persistent and do not keep an
