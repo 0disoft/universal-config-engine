@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Preserve existing object fields and descendant provenance when a higher-priority
+  source contributes an empty object under the deep-merge policy.
 - Honor secret override mappings in core and Node helpers, preserving declared
   source policies and masking inspection values outside the CLI.
 - Preflight CLI source counts before entry inspection or source I/O, sharing

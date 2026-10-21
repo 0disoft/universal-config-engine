@@ -257,6 +257,10 @@ function applyEntry(input: {
   const pathKey = pathToKey(input.entryPath);
   const existingResolved = input.resolvedIndex.byPath.get(pathKey);
   const existingValue = getConfigValueAtPath(input.config, input.entryPath);
+  // An empty object contributes no fields to an existing non-empty object.
+  // Keep descendant ownership and locations; there was no overlapping write.
+  if (isNonArrayObject(input.entryValue) && Object.keys(input.entryValue).length === 0 &&
+      isNonArrayObject(existingValue) && Object.keys(existingValue).length > 0) return;
   const relatedResolved = findRelatedResolvedPaths(input.resolvedIndex, input.entryPath);
 
   if (
@@ -366,6 +370,10 @@ function applyEntry(input: {
     ...(input.entryLocation === undefined ? {} : { winningLocation: input.entryLocation }),
     overriddenLocations
   });
+}
+
+function isNonArrayObject(value: ConfigValue | undefined): value is { readonly [key: string]: ConfigValue } {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function createLocationIndex(

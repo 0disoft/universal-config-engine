@@ -26,6 +26,9 @@ Repository Type: library
   core and Node helpers as well as CLI declarations, including absent/invalid input.
   Existing source redaction policies are preserved; unrelated source kinds do not contribute paths.
 - `MergePolicy`: deterministic object merge and conflict handling.
+  Empty objects contribute no fields when merged into non-empty objects; existing
+  descendants, source ownership and locations remain intact. They still create a
+  missing object or replace a scalar, array or null with an empty object.
 - `CoercionPolicy`: opt-in type conversion rules.
 - `applyCoercionRules`: immutable coercion stage that returns a cloned `config`
   together with issues and provenance; caller input is never modified.

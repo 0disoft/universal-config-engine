@@ -10,6 +10,32 @@ import { source } from "./helpers/source.js";
 import type { ConfigIssue } from "../src/index.js";
 
 describe("resolveConfig", () => {
+  it.each([0, 10])("deep merges an empty object without removing descendants or their ownership (priority %i)", (priority) => {
+    const location = { sourceId: "defaults", line: 2, column: 3 };
+    const result = resolveConfig({ sources: [
+      { ...source("defaults", 0, { server: { port: 8080, host: "localhost" } }),
+        locations: [{ path: ["server", "port"], location }] },
+      source("empty", priority, { server: {} }),
+      source("override", 20, { server: { host: "example.invalid" } })
+    ] });
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({ server: { port: 8080, host: "example.invalid" } });
+    expect(result.resolvedPaths).toContainEqual(expect.objectContaining({
+      path: ["server", "port"], winningSourceId: "defaults", winningLocation: location, overriddenSourceIds: []
+    }));
+    expect(result.resolvedPaths).toContainEqual(expect.objectContaining({
+      path: ["server", "host"], winningSourceId: "override", overriddenSourceIds: ["defaults"]
+    }));
+    expect(result.provenance.some(event => event.sourceId === "empty")).toBe(false);
+  });
+
+  it.each([null, [], 42, false, {}])("can still replace %j with an explicit empty object", (previous) => {
+    const result = resolveConfig({ sources: [source("base", 0, { server: previous }), source("empty", 1, { server: {} })] });
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({ server: {} });
+    expect(result.resolvedPaths).toEqual([expect.objectContaining({ path: ["server"], winningSourceId: "empty" })]);
+  });
+
   it("bounds issue reads when rejecting a source with an excessive diagnostic tail", () => {
     const issue: ConfigIssue = {
       category: "parse", code: "invalid", severity: "error", message: "Rejected input."
