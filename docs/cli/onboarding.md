@@ -16,3 +16,26 @@ contains only command, status and a stable code, with no filesystem error prose.
 
 Initialization is dispatched by `runCli` separately from the legacy synchronous
 parser and `CliCommand` union, which retain their existing contracts.
+
+## Configuration diagnosis
+
+```sh
+uce doctor --config uce.json --json
+uce doctor --discover . --profile production --json
+```
+
+`doctor` uses the same source loading, coercion, declared validators, profile and
+workspace selection as `validate`. It performs real reads and validation but
+never initializes, edits or repairs files automatically. Source argv after `--`
+is forwarded normally. Inspection/diff/policy flags are rejected. Exit categories
+match validation: 0 success, 1 schema validation failure, 2 source/declaration
+failure, 3 mapping/merge/coercion/resource
+failure, 4 usage/profile selection failure (redaction failure retains exit 5).
+
+`doctor-1` JSON adds fixed, actionable `fixes` to the existing sanitized
+`diagnostics` report. Advice comes from a finite code/category mapping, never
+exception/provider prose. Human output prints status and advice only. A healthy
+result means this selected declaration and validation passed, not that application
+connectivity or every unused profile was executed. Diagnostic metadata still
+contains source ids, config paths and filenames and is not suitable for public
+sharing without the separate public-share projection.

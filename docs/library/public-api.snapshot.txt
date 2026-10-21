@@ -801,6 +801,22 @@ export interface PreparedDiscoveryArgs {
 /** Keep filesystem selection outside the exported synchronous legacy parser. */
 export declare function prepareDiscoveryArgs(args: readonly string[], runtime: CliRuntime): Promise<PreparedDiscoveryArgs>;
 
+### doctor.d.ts
+import { type DiagnosticReport } from "@0disoft/universal-config-engine-core";
+import type { CliResult, CliRuntime } from "./types.js";
+export interface DoctorFix {
+    readonly code: string;
+    readonly action: string;
+}
+export interface DoctorReport {
+    readonly schemaVersion: "doctor-1";
+    readonly command: "doctor";
+    readonly status: "ok" | "error";
+    readonly diagnostics: DiagnosticReport;
+    readonly fixes: readonly DoctorFix[];
+}
+export declare function runDoctorCli(args: readonly string[], runtime: CliRuntime): Promise<CliResult>;
+
 ### execution.d.ts
 import { type ConfigResult, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
 import { type PipelineDeclarationReadPolicy } from "./pipeline.js";
@@ -832,6 +848,11 @@ export type { ArgvSourceDeclaration, CliCommand, CliOutputMode, CliResult, CliRu
 export type { CliJsonReport } from "./output.js";
 export { selectPipelineProfile } from "./profiles.js";
 export type { PipelineProfileDeclaration } from "./types.js";
+
+### init.d.ts
+import type { CliResult, CliRuntime } from "./types.js";
+/** Deliberately separate from the stable explain/validate parser and envelopes. */
+export declare function runInitCli(args: readonly string[], runtime: CliRuntime): Promise<CliResult>;
 
 ### inspection-output.d.ts
 import type { ConfigInspection } from "@0disoft/universal-config-engine-core";

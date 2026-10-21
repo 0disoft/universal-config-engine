@@ -37,6 +37,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   basename filtering, atomic replacement support and debounced refreshes.
 - Non-destructive `uce init` with exclusive creation, a minimal usable declaration
   and sanitized `init-1` output, preserving existing files and symlinks.
+- Shared-pipeline `uce doctor` with bounded sanitized diagnostics and finite,
+  actionable advice for workspace, profile, syntax, validation and budget failures.
 
 ## 1.2.0 - 2026-10-21
 

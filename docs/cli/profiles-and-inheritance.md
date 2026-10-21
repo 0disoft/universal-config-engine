@@ -74,7 +74,8 @@ uce diff --config before.json --against after.json --workspace . --profile produ
 validate and diff. Diff applies the same selection to both declarations; each must
 declare the selected profile. `--discover` supplies its own workspace and cannot
 be combined with `--workspace` or `--config`. Values after `--` remain source argv.
-Unknown profiles exit 4, declaration/read failures exit 2, validation failures exit
-3. Omitting selection retains the base declaration even if `NODE_ENV` is set.
+Unknown profiles exit 4, declaration/read failures exit 2, schema validation
+failures exit 1 and mapping/merge/coercion/resource failures exit 3. Omitting
+selection retains the base declaration even if `NODE_ENV` is set.
 The exported synchronous `parseCliArgs` legacy contract remains unchanged;
 `runCli` performs opt-in file selection before running the shared pipeline.

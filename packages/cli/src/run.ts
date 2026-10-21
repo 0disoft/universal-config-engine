@@ -16,9 +16,11 @@ import { prepareDiscoveryArgs } from "./discovery.js";
 import { PipelineDeclarationError } from "./pipeline.js";
 import type { CliResult, CliRuntime } from "./types.js";
 import { runInitCli } from "./init.js";
+import { runDoctorCli } from "./doctor.js";
 
 export async function runCli(args: readonly string[], runtime: CliRuntime): Promise<CliResult> {
   if (args[0] === "init") return runInitCli(args, runtime);
+  if (args[0] === "doctor") return runDoctorCli(args, runtime);
   let parsed;
   let selection;
   try {

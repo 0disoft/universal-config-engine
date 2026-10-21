@@ -192,7 +192,7 @@ legacy command output remain unchanged. Publication was separately authorized.
 - [x] Standard Schema adapter and separate typed pipeline output.
 - [x] Explicit profiles and safe workspace-local inheritance.
 - [x] Serialized reload, last successful snapshots and disposable file watching.
-- [ ] Non-destructive `init` and actionable secret-safe `doctor`.
+- [x] Non-destructive `init` and actionable secret-safe `doctor`.
 - [ ] Public-share report projection with metadata pseudonyms.
 - [ ] Actual package consumers for Node, Bun, Deno and Workers.
 - [ ] Copyable adoption examples and reproducible comparison case.
