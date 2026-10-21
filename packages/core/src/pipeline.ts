@@ -60,7 +60,8 @@ export async function runConfigPipeline<TContext = undefined>(
   };
 }
 
-async function applyPipelineValidators(
+/** Internal shared validation stage; public facades retain separate result shapes. */
+export async function applyPipelineValidators(
   result: ConfigResult,
   validators: readonly ValidatorAdapter[]
 ): Promise<ConfigResult> {

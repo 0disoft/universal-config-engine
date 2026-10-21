@@ -98,6 +98,12 @@ issues and omits provider prose. The adapter's typed/transformed `value` remains
 separate from pipeline config under ADR 0009. See
 [typed validation](typed-validation.md) for limits and failure behavior.
 
+`runValidatedConfigPipeline` adds a separate discriminated `ok`/`value` result
+using a typed `outputValidator`. It runs only after the ordinary pipeline succeeds,
+shares aggregate validation budgets and returns no typed value on failure. The
+original resolved config, report schema and ADR 0009 validator behavior remain
+unchanged. The typed value is application data and may contain secrets.
+
 ## Package Boundary Direction
 
 Published package ownership is layered:

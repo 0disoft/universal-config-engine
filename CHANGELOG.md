@@ -22,6 +22,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 - Core structural Standard Schema v1 interoperability with inferred adapter output,
   awaited callbacks, bounded normalized issues and no provider prose or new runtime
   dependency. Resolved pipeline values retain the existing ADR 0009 behavior.
+- Separate `runValidatedConfigPipeline` facade with inferred validated/transformed
+  output, frozen validation inputs and shared budgets. Failed input exposes no
+  successful typed value, and resolved config/provenance remain unchanged.
 
 ## 1.2.0 - 2026-10-21
 

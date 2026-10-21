@@ -106,6 +106,8 @@ export { buildConfigInspection } from "./inspection.js";
 export { buildConfigDiff } from "./diff.js";
 export { checkConfigChanges } from "./change-policy.js";
 export { createStandardSchemaValidator } from "./standard-schema.js";
+export { runValidatedConfigPipeline } from "./typed-pipeline.js";
+export type { RunValidatedConfigPipelineInput, RunValidatedConfigPipelineResult } from "./typed-pipeline.js";
 export type { StandardConfigSchema, StandardConfigSchemaResult, StandardConfigSchemaIssue, StandardConfigSchemaOutput, CreateStandardSchemaValidatorInput } from "./standard-schema.js";
 export type { ConfigChangePolicy, ConfigChangeRule, ConfigChangeCheck, ConfigPolicyViolation } from "./change-policy.js";
 export type { BuildConfigDiffOptions, ConfigDiff, ConfigChange, ConfigChangeKind } from "./diff.js";
@@ -223,6 +225,8 @@ export interface RunConfigPipelineResult {
     readonly report: DiagnosticReport;
 }
 export declare function runConfigPipeline<TContext = undefined>(input: RunConfigPipelineInput<TContext>): Promise<RunConfigPipelineResult>;
+/** Internal shared validation stage; public facades retain separate result shapes. */
+export declare function applyPipelineValidators(result: ConfigResult, validators: readonly ValidatorAdapter[]): Promise<ConfigResult>;
 export declare function combineConfigIssues(existing: readonly ConfigIssue[], next: readonly ConfigIssue[], declaredMaxDiagnostics: number): readonly ConfigIssue[];
 
 ### redaction.d.ts
@@ -305,6 +309,22 @@ export interface CreateStandardSchemaValidatorInput<TOutput = unknown> {
     readonly maxIssues?: number;
 }
 export declare function createStandardSchemaValidator<TOutput>(input: CreateStandardSchemaValidatorInput<TOutput>): ValidatorAdapter<TOutput>;
+
+### typed-pipeline.d.ts
+import { type RunConfigPipelineInput, type RunConfigPipelineResult } from "./pipeline.js";
+import type { ValidatorAdapter } from "./types.js";
+export interface RunValidatedConfigPipelineInput<TOutput, TContext = undefined> extends RunConfigPipelineInput<TContext> {
+    readonly outputValidator: ValidatorAdapter<TOutput>;
+}
+export type RunValidatedConfigPipelineResult<TOutput> = RunConfigPipelineResult & ({
+    readonly ok: true;
+    readonly value: TOutput;
+} | {
+    readonly ok: false;
+    readonly value?: never;
+});
+/** Return schema output separately; resolved config and its provenance stay unchanged. */
+export declare function runValidatedConfigPipeline<TOutput, TContext = undefined>(input: RunValidatedConfigPipelineInput<TOutput, TContext>): Promise<RunValidatedConfigPipelineResult<TOutput>>;
 
 ### types.d.ts
 export type ConfigScalar = string | number | boolean | null;

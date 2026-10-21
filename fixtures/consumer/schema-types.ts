@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  createStandardSchemaValidator, runConfigPipeline,
+  createStandardSchemaValidator, runConfigPipeline, runValidatedConfigPipeline,
   type StandardConfigSchemaOutput, type ValidatorAdapter
 } from "@0disoft/universal-config-engine-core";
 
@@ -17,4 +17,13 @@ const pipeline = await runConfigPipeline({ context: undefined, validators: [vali
 }] });
 if (!pipeline.result.ok || (pipeline.result.config as { port: string }).port !== "443") {
   throw new Error("Installed Standard Schema must preserve resolved input.");
+}
+const typed = await runValidatedConfigPipeline({ context: undefined, outputValidator: validator, loaders: [{
+  descriptor: { id: "defaults", kind: "object", priority: 0, displayName: "defaults" },
+  load: () => ({ value: { port: "443" } })
+}] });
+if (!typed.ok) throw new Error("Installed typed pipeline failed.");
+const inferredPort: number = typed.value.port;
+if (inferredPort !== 443 || (typed.result.config as { port: string }).port !== "443") {
+  throw new Error("Installed typed output must remain separate from resolved config.");
 }

@@ -1,7 +1,7 @@
 # Standard Schema and Typed Validation
 
-Status: Standard Schema adapter implemented, unreleased (ADR 0018). These exports
-are not in published `1.2.0`. The separate typed pipeline facade is the next unit.
+Status: Implemented, unreleased (ADR 0018). These exports are not in published
+`1.2.0`. Existing pipeline behavior is unchanged.
 
 Core exports `createStandardSchemaValidator` and a minimal structural
 `StandardConfigSchema<TOutput>` compatible with
@@ -44,3 +44,44 @@ are application data, never a safe log/report format.
 Tests cover async completion, provider rejection, typed paths, raw-prose omission,
 bounded retention and malformed outputs. An isolated packed TypeScript consumer
 checks actual Zod 4 inference and execution while preserving resolved input values.
+
+## A Separate Typed Pipeline
+
+```ts
+import { runValidatedConfigPipeline } from "@0disoft/universal-config-engine-core";
+
+const loaded = await runValidatedConfigPipeline({
+  context: undefined,
+  loaders: [{
+    descriptor: { id: "defaults", kind: "object", priority: 0, displayName: "defaults" },
+    load: () => ({ value: { port: "443" } })
+  }],
+  outputValidator: validator
+});
+if (loaded.ok) {
+  const port: number = loaded.value.port;
+  // loaded.result.config remains { port: "443" }; reports describe that input.
+}
+```
+
+`runValidatedConfigPipeline` first runs the ordinary load/resolve/validate pipeline.
+Only after it and its report succeed does the distinct `outputValidator` run once,
+using core's frozen validation snapshot and aggregate provenance/diagnostic budgets.
+It accepts Standard Schema, Zod or any typed `ValidatorAdapter<TOutput>`; the
+successful `value` is inferred as `TOutput`. Earlier validators never receive that
+output. The report remains schema `0.2` and never includes the typed value.
+
+Check the facade's top-level `ok` before accessing `value`. On any failure that
+property is absent, including provider rejection, malformed/contradictory output,
+budget exhaustion and report overflow. A successful undefined output retains an
+own `value` property; a success flag with no own output is `typed_output_missing`.
+The nested `result` remains the ordinary resolution/validation result; its config
+is not a cast to the schema's output type. Report overflow can therefore make the
+facade fail even when the nested resolution succeeded.
+
+Use a distinct output validator id and do not also register it in `validators`.
+Conflicts fail before loading with `usage/typed_validator_id_conflict`. A validator
+count that cannot leave room for the output stage is rejected before scanning its
+entries. The typed output may contain application secrets, custom transformed
+objects or non-JSON values; it is not a diagnostic/export format and must not be
+logged as though redacted.
