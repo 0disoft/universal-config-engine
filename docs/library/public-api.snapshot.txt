@@ -975,6 +975,8 @@ export declare function normalizePipelineDeclaration(value: unknown): PipelineDe
 ### pipeline/declaration-validation.d.ts
 import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
 export declare function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[];
+/** Shared preflight for declaration validation and direct source loading. */
+export declare function validateSourceBudget(count: number, limits: unknown): readonly ConfigIssue[];
 
 ### pipeline/inheritance.d.ts
 import type { LoadedPipelineDeclaration, PipelineDeclarationReadPolicy } from "../pipeline.js";

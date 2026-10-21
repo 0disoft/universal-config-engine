@@ -47,7 +47,7 @@ export function isRecord(value: unknown): value is Readonly<Record<string, unkno
 }
 
 export function isPositiveInteger(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value) && value > 0;
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 
 export function isProfileName(value: unknown): value is string {

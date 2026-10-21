@@ -96,8 +96,10 @@ independent of declaration-provided limits. The final retained diagnostic is
 
 Pipeline `limits` may also declare `maxSources`, `maxProvenanceEvents`,
 `maxResolvedPaths`, and `maxReportBytes`. Their defaults are 64, 20,000, 10,000,
-and 4 MiB. `maxReportBytes` must be at least 1024. Source count is checked before
-declared files or process inputs are loaded; other aggregate overflows produce a
+and 4 MiB. Limits must be positive safe integers; `maxReportBytes` must be at least
+1024. Source count is checked before entry inspection and duplicate-id indexing;
+invalid limits and counts reject file reads or process-input mapping. Direct calls to
+`loadDeclaredSources` share the same preflight. Other aggregate overflows produce a
 bounded `resource-limit` failure instead of an unbounded report.
 
 Source `displayName` values must be omitted or non-empty strings. Override mapping

@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Preflight CLI source counts before entry inspection or source I/O, sharing
+  budget checks with direct source loading and rejecting unsafe integer limits.
 - Watch both in-workspace file links and canonical targets; recheck boundaries
   and rebind target watches before loading after link replacement.
 - Default Ajv validation to first-error execution and bound converted diagnostics

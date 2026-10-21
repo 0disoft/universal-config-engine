@@ -53,6 +53,12 @@ export function validatePipelineDeclaration(value: unknown): readonly ConfigIssu
     return issues;
   }
 
+  const budgetIssues = validateSourceBudget(value.sources.length, value.limits);
+  if (budgetIssues.some(issue => issue.category === "resource-limit")) {
+    appendDeclarationIssues(issues, budgetIssues);
+    return issues;
+  }
+
   for (const [index, source] of value.sources.entries()) {
     if (!appendDeclarationIssues(issues, validateSourceDeclaration(source, index))) {
       return issues;
@@ -70,24 +76,7 @@ export function validatePipelineDeclaration(value: unknown): readonly ConfigIssu
     return issues;
   }
 
-  if (value.limits !== undefined) {
-    if (!appendDeclarationIssues(issues, validateResourceLimitsDeclaration(value.limits))) {
-      return issues;
-    }
-  }
-
-  const declaredMaxSources = isRecord(value.limits) && isPositiveInteger(value.limits.maxSources)
-    ? value.limits.maxSources
-    : DEFAULT_RESOURCE_LIMITS.maxSources;
-  if (value.sources.length > declaredMaxSources) {
-    appendDeclarationIssues(issues, [{
-      category: "resource-limit",
-      code: "max_sources_exceeded",
-      severity: "error",
-      path: ["sources"],
-      message: `Source count exceeded the maximum of ${declaredMaxSources}.`
-    }]);
-  }
+  if (!appendDeclarationIssues(issues, budgetIssues)) return issues;
 
   if (value.validators !== undefined && !Array.isArray(value.validators)) {
     issues.push(
@@ -141,6 +130,17 @@ export function validatePipelineDeclaration(value: unknown): readonly ConfigIssu
     appendDeclarationIssues(issues, [pipelineDeclarationIssue({ code: "pipeline_extends_invalid", path: ["extends"],
       message: "extends must contain at most eight non-empty file paths of at most 4096 characters." })]);
   }
+  return issues;
+}
+
+/** Shared preflight for declaration validation and direct source loading. */
+export function validateSourceBudget(count: number, limits: unknown): readonly ConfigIssue[] {
+  const issues: ConfigIssue[] = [];
+  if (limits !== undefined) appendDeclarationIssues(issues, validateResourceLimitsDeclaration(limits));
+  const maximum = isRecord(limits) && isPositiveInteger(limits.maxSources)
+    ? limits.maxSources : DEFAULT_RESOURCE_LIMITS.maxSources;
+  if (count > maximum) appendDeclarationIssues(issues, [{ category: "resource-limit", code: "max_sources_exceeded", severity: "error",
+    path: ["sources"], message: `Source count exceeded the maximum of ${maximum}.` }]);
   return issues;
 }
 
@@ -405,7 +405,7 @@ function validateResourceLimitsDeclaration(limits: unknown): readonly ConfigIssu
         pipelineDeclarationIssue({
           code: "pipeline_limit_value_invalid",
           path: [...path, field],
-          message: `Pipeline limits.${field} must be a positive integer when provided.`
+        message: `Pipeline limits.${field} must be a positive safe integer when provided.`
         })
       );
     }

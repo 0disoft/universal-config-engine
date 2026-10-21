@@ -17,6 +17,8 @@ import type {
 import { pathsEqual } from "@0disoft/universal-config-engine-core";
 import type { PipelineDeclaration, PipelineSourceDeclaration } from "../types.js";
 import { resolveConfigRelativePath } from "./source-paths.js";
+import { PipelineDeclarationError } from "./declaration-diagnostics.js";
+import { validateSourceBudget } from "./declaration-validation.js";
 
 export async function loadDeclaredSources(input: {
   readonly declaration: PipelineDeclaration;
@@ -27,6 +29,8 @@ export async function loadDeclaredSources(input: {
   readonly sourceConfigPaths?: ReadonlyMap<string, string>;
   readonly workspacePath?: string;
 }): Promise<readonly LoadedSource[]> {
+  const budgetIssues = validateSourceBudget(input.declaration.sources.length, input.declaration.limits);
+  if (budgetIssues.length > 0) throw new PipelineDeclarationError(budgetIssues);
   const sources: LoadedSource[] = [];
 
   for (const [index, source] of input.declaration.sources.entries()) {
