@@ -41,6 +41,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   actionable advice for workspace, profile, syntax, validation and budget failures.
 - Separate `public-diagnostic-1` report projection with ordinal source/path aliases,
   enum allowlists and no values, original names, locations, codes or prose.
+- CLI `--public` for explain, validate and doctor, including private-input-safe
+  usage/load failures and explicit rejection of value-bearing inspection modes.
 
 ## 1.2.0 - 2026-10-21
 

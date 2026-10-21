@@ -5,6 +5,7 @@ import { declarationFailure, executeDeclaration } from "./execution.js";
 import { exitCodeForResult } from "./exit-codes.js";
 import { PipelineDeclarationError } from "./pipeline.js";
 import type { CliResult, CliRuntime } from "./types.js";
+import { formatPublicReport } from "./public-output.js";
 
 export interface DoctorFix { readonly code: string; readonly action: string }
 export interface DoctorReport {
@@ -15,7 +16,7 @@ export interface DoctorReport {
   readonly fixes: readonly DoctorFix[];
 }
 
-export async function runDoctorCli(args: readonly string[], runtime: CliRuntime): Promise<CliResult> {
+export async function runDoctorCli(args: readonly string[], runtime: CliRuntime, publicMode = false): Promise<CliResult> {
   const separator = args.indexOf("--");
   const options = separator < 0 ? args : args.slice(0, separator);
   const json = options.includes("--json") || options.includes("--output=json");
@@ -42,6 +43,11 @@ export async function runDoctorCli(args: readonly string[], runtime: CliRuntime)
     pipeline = { result, report: buildDiagnosticReport(result) };
   }
   const fixes = new Map<string, DoctorFix>();
+  if (publicMode) {
+    const projected = formatPublicReport(pipeline.report);
+    runtime.stdout(projected.output);
+    return { exitCode: !pipeline.result.ok ? exitCodeForResult(pipeline.result) : projected.status === "ok" ? 0 : 3 };
+  }
   for (const issue of pipeline.report.issues) {
     const fix = fixForIssue(issue); fixes.set(fix.code, fix);
   }

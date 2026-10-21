@@ -850,7 +850,7 @@ export interface DoctorReport {
     readonly diagnostics: DiagnosticReport;
     readonly fixes: readonly DoctorFix[];
 }
-export declare function runDoctorCli(args: readonly string[], runtime: CliRuntime): Promise<CliResult>;
+export declare function runDoctorCli(args: readonly string[], runtime: CliRuntime, publicMode?: boolean): Promise<CliResult>;
 
 ### execution.d.ts
 import { type ConfigResult, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
@@ -1024,6 +1024,13 @@ export declare function isInsideOrEqualPath(rootPath: string, targetPath: string
 import type { PipelineDeclaration } from "./types.js";
 /** Compile one explicitly selected profile without reading process environment. */
 export declare function selectPipelineProfile(declaration: PipelineDeclaration, profile?: string): PipelineDeclaration;
+
+### public-output.d.ts
+import { type DiagnosticReport } from "@0disoft/universal-config-engine-core";
+export declare function formatPublicReport(report: DiagnosticReport): {
+    output: string;
+    status: "error" | "ok";
+};
 
 ### run.d.ts
 import type { CliResult, CliRuntime } from "./types.js";

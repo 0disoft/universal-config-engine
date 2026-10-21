@@ -27,3 +27,13 @@ and override relationships remain visible and can reveal application structure.
 It is a defined metadata projection, not a claim of statistical anonymization.
 Review that remaining information before sharing. Never attach raw config or
 private alias maps to a public report.
+
+## CLI
+
+`uce explain|validate|doctor --config uce.json --public` emits this JSON projection
+even without `--json`. Discovery, profiles and workspace policies still apply.
+`--public` is single-use and cannot be combined with value/path inspection, diff
+or init. Usage and loading failures also use the public envelope, including when
+invalid arguments contain private strings. Existing exit categories are retained;
+projection overflow exits 3. Doctor fixes are omitted from this compact projection;
+use private `doctor-1` output locally to investigate the aliased failure.
