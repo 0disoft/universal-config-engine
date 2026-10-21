@@ -57,7 +57,11 @@ export function createReloadState(input: CreateConfigReloaderInput) {
     try {
       next = freezeSnapshot(loaded);
       if (snapshot !== undefined) {
-        const diff = buildConfigDiff(snapshot.result, next.result);
+        // Reports also contain reportOptions-only policies, absent from result.
+        // Retain either side's redaction even when the caller removes a policy.
+        const secretPaths = [snapshot, next].flatMap(item => item.report.resolvedPaths
+          .filter(entry => entry.redacted).map(entry => entry.path));
+        const diff = buildConfigDiff(snapshot.result, next.result, { secretPaths });
         if (diff.status === "ok") changedPathCount = diff.changes.filter(change =>
           change.before?.visibility !== "redacted" && change.after?.visibility !== "redacted").length;
       }

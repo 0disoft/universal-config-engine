@@ -7,6 +7,25 @@ const pipeline = (port = 80) => runConfigPipeline({ context: undefined, loaders:
 }] });
 
 describe("serialized config reload", () => {
+  it.each(["path", "name", "source"])("retains report-only %s redaction on either side of a reload", async policy => {
+    const events: ConfigReloadEvent[] = [];
+    let step = 0;
+    const reloader = createConfigReloader({ load: () => runConfigPipeline({ context: undefined, loaders: [
+      { descriptor: { id: "sensitive", kind: "object", displayName: "settings", priority: 0 }, load: () => ({ value: { pin: step } }) },
+      { descriptor: { id: "public", kind: "object", displayName: "public", priority: 1 }, load: () => ({ value: { port: 80 + step } }) }
+    ], ...(step === 1 ? {} : { reportOptions: policy === "path" ? { secretPaths: [["pin"]] }
+      : policy === "name" ? { secretNamePatterns: ["pin"] } : { secretSourceIds: ["sensitive"] } }) }),
+      onChange: event => { events.push(event); } });
+    try {
+      await reloader.refresh();
+      for (step = 1; step <= 2; step++) {
+        expect(await reloader.refresh()).toMatchObject({ ok: true });
+        // pin and port both change, but only port may contribute to this count.
+        expect(events.at(-1)).toMatchObject({ status: "updated", changedPathCount: 1 });
+      }
+    } finally { reloader.close(); }
+  });
+
   it("queues a refresh requested synchronously from inside the initial loader", async () => {
     const first = await pipeline(80);
     const second = await pipeline(443);

@@ -17,6 +17,8 @@ only `load_failed`, `validation_failed` or `snapshot_failed`, never exceptions.
 Observer failures are contained. Updated events expose revision and, when a safe
 comparison fits its budget, a public-path change count. Secret-only changes are
 not counted; no value, fingerprint or diagnostic prose is emitted by these events.
+Comparison retains redacted paths from both reports, including policies supplied
+only through pipeline `reportOptions` and policies removed on the next refresh.
 
 `close()` is idempotent, resolves queued work as `closed`, prevents late snapshots
 or notifications and retains the last good snapshot for reading. It cannot cancel
