@@ -12,6 +12,10 @@ Repository Type: cli-tool
 
 ## Commands
 
+Unreleased local onboarding adds `uce init` and `uce doctor` (ADR 0018), with
+separate opt-in envelopes; see [onboarding](onboarding.md). Profile/workspace
+selection is documented in [profiles and inheritance](profiles-and-inheritance.md).
+
 ### `uce explain --config <pipeline.json>`
 
 Explain how a config resolves without printing secret values.

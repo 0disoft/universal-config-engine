@@ -35,6 +35,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   last-successful snapshots, sanitized events and explicit close semantics.
 - Disposable, bounded Node file watching with workspace checks, parent-directory
   basename filtering, atomic replacement support and debounced refreshes.
+- Non-destructive `uce init` with exclusive creation, a minimal usable declaration
+  and sanitized `init-1` output, preserving existing files and symlinks.
 
 ## 1.2.0 - 2026-10-21
 
