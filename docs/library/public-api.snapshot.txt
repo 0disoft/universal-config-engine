@@ -646,6 +646,8 @@ export { loadConfigFileSource } from "./config-file-loader.js";
 export type { ConfigFileFormat, LoadConfigFileSourceInput } from "./config-file-loader.js";
 export { DEFAULT_PIPELINE_FILENAMES, discoverPipelineDeclaration } from "./discovery.js";
 export type { DiscoverPipelineInput, DiscoverPipelineResult } from "./discovery.js";
+export { createConfigReloader } from "./reload.js";
+export type { ReloadFailure, ConfigReloadOutcome, ConfigReloadEvent, CreateConfigReloaderInput, ConfigReloader } from "./reload.js";
 
 ### input-policy.d.ts
 import type { ConfigIssueSeverity } from "@0disoft/universal-config-engine-core";
@@ -683,6 +685,43 @@ export interface CreateProcessEnvSourceInput {
     readonly unmappedPrefix?: string;
 }
 export declare function createProcessEnvSource(input: CreateProcessEnvSourceInput): LoadedSource;
+
+### reload.d.ts
+import { type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
+export type ReloadFailure = "load_failed" | "validation_failed" | "snapshot_failed" | "closed";
+export type ConfigReloadOutcome = {
+    readonly ok: true;
+    readonly revision: number;
+    readonly snapshot: RunConfigPipelineResult;
+} | {
+    readonly ok: false;
+    readonly revision: number;
+    readonly reason: ReloadFailure;
+};
+export interface ConfigReloadEvent {
+    readonly status: "updated" | "rejected";
+    readonly revision: number;
+    readonly reason?: ReloadFailure | "watch_failed";
+    /** Counts public changes only; absent when comparison cannot fit its budget. */
+    readonly changedPathCount?: number;
+}
+export interface CreateConfigReloaderInput {
+    readonly load: () => Promise<RunConfigPipelineResult>;
+    readonly onChange?: (event: ConfigReloadEvent) => void | Promise<void>;
+}
+export interface ConfigReloader {
+    /** An active refresh and at most one queued refresh; bursts share that queue. */
+    refresh(): Promise<ConfigReloadOutcome>;
+    getSnapshot(): RunConfigPipelineResult | undefined;
+    close(): void;
+}
+/** No automatic work starts until refresh is explicitly called. */
+export declare function createConfigReloader(input: CreateConfigReloaderInput): ConfigReloader;
+/** Internal notification boundary shared with the filesystem watcher. */
+export declare function createReloadState(input: CreateConfigReloaderInput): {
+    controller: ConfigReloader;
+    watchFailed: () => void;
+};
 
 ## @0disoft/universal-config-engine-cli
 

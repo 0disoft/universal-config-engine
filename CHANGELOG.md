@@ -31,6 +31,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   ordering, workspace checks and retained per-declaration file source bases.
 - CLI `--profile` and explicit `--workspace` selection for inspection, validation
   and both comparison inputs, without changing the synchronous legacy parser.
+- Node serialized configuration reload with coalesced requests, immutable
+  last-successful snapshots, sanitized events and explicit close semantics.
 
 ## 1.2.0 - 2026-10-21
 

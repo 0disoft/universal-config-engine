@@ -39,3 +39,5 @@ export { loadConfigFileSource } from "./config-file-loader.js";
 export type { ConfigFileFormat, LoadConfigFileSourceInput } from "./config-file-loader.js";
 export { DEFAULT_PIPELINE_FILENAMES, discoverPipelineDeclaration } from "./discovery.js";
 export type { DiscoverPipelineInput, DiscoverPipelineResult } from "./discovery.js";
+export { createConfigReloader } from "./reload.js";
+export type { ReloadFailure, ConfigReloadOutcome, ConfigReloadEvent, CreateConfigReloaderInput, ConfigReloader } from "./reload.js";

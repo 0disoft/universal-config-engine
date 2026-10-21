@@ -48,6 +48,11 @@ Repository Type: library
 
 ## Safe Value Inspection
 
+Node `createConfigReloader` serializes explicitly requested pipeline refreshes,
+coalesces queued work, owns immutable last-good snapshots and suppresses late
+publication after close. Failure/event data excludes values and provider prose.
+See [reload lifecycle](../adapters/reload.md); snapshots themselves contain secrets.
+
 `buildConfigInspection(result, options?)` is the opt-in `inspection-1` value
 surface (ADR 0017). `options.path` uses typed `ConfigPath` segments. Entries contain
 scalar previews (default 1024 UTF-16 code units), container markers, redaction and
