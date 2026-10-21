@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Ajv } from "ajv/dist/ajv.js";
 import {
   buildDiagnosticReport,
@@ -11,6 +11,19 @@ import {
 } from "../src/index.js";
 
 describe("createAjvValidator", () => {
+  it("silences default schema logging while preserving an explicit application logger", () => {
+    const schema = { type: "object", properties: { review_field: { minimum: 0 } } };
+    const consoleWarning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const validator = createAjvValidator({ schema });
+      expect(validator.validate({ config: {}, provenance: [] })).toMatchObject({ ok: true });
+      expect(consoleWarning).not.toHaveBeenCalled();
+      const warning = vi.fn();
+      createAjvValidator({ schema, options: { logger: { log() {}, warn: warning, error() {} } } });
+      expect(warning).toHaveBeenCalled();
+    } finally { consoleWarning.mockRestore(); }
+  });
+
   it("stops default validation at the first failing item", async () => {
     let reads = 0;
     const items = Array.from({ length: 300 }, () => "invalid");

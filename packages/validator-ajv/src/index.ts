@@ -26,7 +26,7 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
   const id = input.id ?? "ajv";
   // Ajv's inline first-error required check misses the empty property name;
   // its loop form preserves that supported path without collecting all errors.
-  const ajv = input.ajv ?? new Ajv({ allErrors: false, loopRequired: 1, ...(input.options ?? {}) });
+  const ajv = input.ajv ?? new Ajv({ allErrors: false, loopRequired: 1, logger: false, ...(input.options ?? {}) });
   const maximum = typeof input.maxIssues === "number" && Number.isSafeInteger(input.maxIssues) && input.maxIssues > 0
     ? Math.min(input.maxIssues, 10_000) : DEFAULT_RESOURCE_LIMITS.maxDiagnostics;
   const validate = ajv.compile(input.schema);

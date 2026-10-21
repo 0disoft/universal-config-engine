@@ -37,3 +37,7 @@ or init. Usage and loading failures also use the public envelope, including when
 invalid arguments contain private strings. Existing exit categories are retained;
 projection overflow exits 3. Doctor fixes are omitted from this compact projection;
 use private `doctor-1` output locally to investigate the aliased failure.
+
+The default Ajv adapter disables provider logging so schema compilation warnings
+cannot bypass the CLI projection through the process console. Library callers
+may explicitly supply their own Ajv instance or logger; they own that output.
