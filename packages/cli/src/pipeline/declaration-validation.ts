@@ -1,5 +1,6 @@
 import type { ConfigPath, ConfigIssue } from "@0disoft/universal-config-engine-core";
 import { DEFAULT_RESOURCE_LIMITS } from "@0disoft/universal-config-engine-core";
+import { validateProfiles } from "./profile-validation.js";
 import { pipelineDeclarationIssue, appendDeclarationIssues } from "./declaration-diagnostics.js";
 import {
   SUPPORTED_SOURCE_KINDS,
@@ -134,6 +135,7 @@ export function validatePipelineDeclaration(value: unknown): readonly ConfigIssu
     }
   }
 
+  appendDeclarationIssues(issues, validateProfiles(value.profiles, validatePipelineDeclaration));
   return issues;
 }
 

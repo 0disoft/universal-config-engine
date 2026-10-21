@@ -104,6 +104,11 @@ shares aggregate validation budgets and returns no typed value on failure. The
 original resolved config, report schema and ADR 0009 validator behavior remain
 unchanged. The typed value is application data and may contain secrets.
 
+CLI `selectPipelineProfile` compiles a named profile into the base declaration
+without process-environment inference. It preserves ids/priorities, combines
+declared stages and limits, and rejects malformed profiles or aggregate collisions.
+See [profiles and inheritance](../cli/profiles-and-inheritance.md).
+
 ## Package Boundary Direction
 
 Published package ownership is layered:

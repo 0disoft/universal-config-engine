@@ -12,7 +12,7 @@ import type {
   PipelineSourceDeclaration
 } from "../types.js";
 import { PipelineDeclarationError, pipelineDeclarationIssue } from "./declaration-diagnostics.js";
-import { isRecord, isPositiveInteger } from "./declaration-fields.js";
+import { isRecord, isPositiveInteger, profileToDeclaration } from "./declaration-fields.js";
 
 export function normalizePipelineDeclaration(value: unknown): PipelineDeclaration {
   if (!isRecord(value) || !Array.isArray(value.sources)) {
@@ -32,7 +32,11 @@ export function normalizePipelineDeclaration(value: unknown): PipelineDeclaratio
     ...(Array.isArray(value.coercionRules)
       ? { coercionRules: value.coercionRules.map((rule) => normalizeCoercionRuleDeclaration(rule)) }
       : {}),
-    ...(isRecord(value.limits) ? { limits: normalizeResourceLimitsDeclaration(value.limits) } : {})
+    ...(isRecord(value.limits) ? { limits: normalizeResourceLimitsDeclaration(value.limits) } : {}),
+    ...(isRecord(value.profiles) ? { profiles: Object.fromEntries(Object.entries(value.profiles).map(([name, profile]) => {
+      if (!isRecord(profile)) throw new Error("Invalid profile reached normalization.");
+      return [name, normalizePipelineDeclaration(profileToDeclaration(profile))];
+    })) } : {})
   };
 }
 

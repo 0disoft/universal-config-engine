@@ -14,7 +14,8 @@ export const RESOURCE_LIMIT_FIELDS = [
   "maxProvenanceEvents", "maxResolvedPaths", "maxReportBytes"
 ] as const;
 
-export const PIPELINE_DECLARATION_FIELDS = new Set(["sources", "validators", "coercionRules", "limits"]);
+export const PIPELINE_DECLARATION_FIELDS = new Set(["sources", "validators", "coercionRules", "limits", "profiles"]);
+export const PROFILE_DECLARATION_FIELDS = new Set(["sources", "validators", "coercionRules", "limits"]);
 
 export const BASE_SOURCE_FIELDS = new Set(["id", "kind", "priority", "displayName", "redaction"]);
 
@@ -47,6 +48,19 @@ export function isRecord(value: unknown): value is Readonly<Record<string, unkno
 
 export function isPositiveInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+export function isProfileName(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value) &&
+    value !== "constructor" && value !== "prototype";
+}
+
+/** Profiles cannot introduce nested profiles or inheritance. */
+export function profileToDeclaration(value: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
+  return { sources: value.sources === undefined ? [] : value.sources,
+    ...(value.validators === undefined ? {} : { validators: value.validators }),
+    ...(value.coercionRules === undefined ? {} : { coercionRules: value.coercionRules }),
+    ...(value.limits === undefined ? {} : { limits: value.limits }) };
 }
 
 export function isConfigPath(value: unknown): value is ConfigPath {

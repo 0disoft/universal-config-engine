@@ -44,3 +44,5 @@ export type {
 export type {
   CliJsonReport
 } from "./output.js";
+export { selectPipelineProfile } from "./profiles.js";
+export type { PipelineProfileDeclaration } from "./types.js";

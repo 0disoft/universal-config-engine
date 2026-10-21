@@ -18,6 +18,14 @@ export interface PipelineDeclaration {
   readonly validators?: readonly PipelineValidatorDeclaration[];
   readonly coercionRules?: readonly CoercionRule[];
   readonly limits?: Partial<ResourceLimitPolicy>;
+  readonly profiles?: Readonly<Record<string, PipelineProfileDeclaration>>;
+}
+
+export interface PipelineProfileDeclaration {
+  readonly sources?: readonly PipelineSourceDeclaration[];
+  readonly validators?: readonly PipelineValidatorDeclaration[];
+  readonly coercionRules?: readonly CoercionRule[];
+  readonly limits?: Partial<ResourceLimitPolicy>;
 }
 
 export type PipelineSourceDeclaration =

@@ -25,6 +25,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 - Separate `runValidatedConfigPipeline` facade with inferred validated/transformed
   output, frozen validation inputs and shared budgets. Failed input exposes no
   successful typed value, and resolved config/provenance remain unchanged.
+- Explicit named profile compilation with bounded declaration shape, preserved
+  source priorities/identities and combined id/resource validation.
 
 ## 1.2.0 - 2026-10-21
 
