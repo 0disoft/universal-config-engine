@@ -347,7 +347,15 @@ function applyEntry(input: {
   for (const { key } of relatedResolved) {
     deleteResolvedPath(input.resolvedIndex, key);
   }
-  const previousSourceId = overriddenSourceIds[0];
+  // History is oldest-first; the previous winner must come from current owners.
+  // A parent replacement can overlap several owners: select the highest priority,
+  // retaining traversal order for ties rather than inventing a historical owner.
+  const previousWinner = existingResolved ?? relatedResolved.reduce<MutableResolvedPath | undefined>(
+    (winner, { resolved }) => winner === undefined || resolved.winningPriority > winner.winningPriority ? resolved : winner,
+    undefined
+  );
+  const previousSourceId = previousWinner?.winningSourceId === input.descriptor.id
+    ? undefined : previousWinner?.winningSourceId;
   const event: ProvenanceEvent = {
     path: input.entryPath,
     action: "overridden",

@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Attribute override provenance to the immediately previous winner instead of the
+  oldest historical source, preserving complete oldest-first override history.
 - Cap file-watch debounce postponement at one second so continuous changes still
   request serialized refreshes; close cancels both pending timers.
 - Deduplicate and bound normalized loader locations by path length, unique path

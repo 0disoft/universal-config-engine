@@ -10,6 +10,36 @@ import { source } from "./helpers/source.js";
 import type { ConfigIssue } from "../src/index.js";
 
 describe("resolveConfig", () => {
+  it("records the immediately previous winner while retaining oldest-first override history", () => {
+    const ids = ["defaults", "file", "env", "cli"];
+    const result = resolveConfig({ sources: ids.map((id, priority) => source(id, priority, { port: 80 + priority })) });
+    expect(result.ok).toBe(true);
+    expect(result.provenance.filter(event => event.action === "overridden").map(event =>
+      [event.sourceId, event.previousSourceId, event.message])).toEqual([
+      ["file", "defaults", "Source file overrode source defaults."],
+      ["env", "file", "Source env overrode source file."],
+      ["cli", "env", "Source cli overrode source env."]
+    ]);
+    expect(result.resolvedPaths[0]?.overriddenSourceIds).toEqual(["defaults", "file", "env"]);
+  });
+
+  it("uses the current overlapping winner for parent and child shape replacements", () => {
+    const result = resolveConfig({ sources: [
+      source("defaults", 0, { server: { host: "localhost", port: 80 } }),
+      source("site", 1, { server: { port: 81 } }),
+      source("env", 2, { server: "disabled" }),
+      source("cli", 3, { server: { port: 82 } })
+    ] });
+    expect(result.ok).toBe(true);
+    expect(result.provenance).toContainEqual(expect.objectContaining({
+      path: ["server"], sourceId: "env", previousSourceId: "site"
+    }));
+    expect(result.provenance).toContainEqual(expect.objectContaining({
+      path: ["server", "port"], sourceId: "cli", previousSourceId: "env"
+    }));
+    expect(result.resolvedPaths[0]?.overriddenSourceIds).toEqual(["defaults", "site", "env"]);
+  });
+
   it.each([NaN, Infinity, -Infinity])("rejects priority %s before inspecting values or applying precedence", (priority) => {
     let reads = 0;
     const bad = { ...source("bad", priority, {}), get value() { reads++; throw new Error("Must not load invalid metadata."); } };

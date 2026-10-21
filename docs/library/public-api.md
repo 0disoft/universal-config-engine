@@ -463,6 +463,11 @@ migration review before running `pnpm run update:api-snapshot`.
   returns at most `maxDiagnostics` issues, including the marker.
 - Generate provenance during resolution rather than reconstructing it from the final
   object.
+- Override events identify the immediately previous winning source, independently
+  of the oldest-first `overriddenSourceIds` history. When a parent replacement
+  overlaps several current owners, `previousSourceId` identifies the owner with
+  the highest priority (first retained traversal entry for a tie). The complete
+  set remains in override history; a same-source replacement omits `previousSourceId`.
 - Preserve adapter-provided source locations on winning and overridden resolved
   paths. Node file loaders report canonical opened paths; the CLI emits
   declaration-relative paths. See ADR 0014.
