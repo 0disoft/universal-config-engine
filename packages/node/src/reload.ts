@@ -1,4 +1,4 @@
-import { buildConfigDiff, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
+import { buildConfigDiff, cloneConfigValue, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
 
 export type ReloadFailure = "load_failed" | "validation_failed" | "snapshot_failed" | "closed";
 export type ConfigReloadOutcome =
@@ -111,7 +111,12 @@ export function createReloadState(input: CreateConfigReloaderInput) {
 }
 
 function freezeSnapshot(value: RunConfigPipelineResult): RunConfigPipelineResult {
-  const copy = structuredClone(value);
+  // Native structuredClone can exhaust its call stack on a config that core
+  // successfully validated with an explicitly increased depth budget.
+  const metadata = structuredClone({ ...value, result: { ...value.result, config: null } });
+  const copy: RunConfigPipelineResult = { ...metadata, result: {
+    ...metadata.result, config: cloneConfigValue(value.result.config)
+  } };
   const pending: object[] = [copy];
   const seen = new Set<object>();
   while (pending.length > 0) {

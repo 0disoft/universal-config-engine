@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runConfigPipeline } from "@0disoft/universal-config-engine-core";
+import { getConfigValueAtPath, runConfigPipeline, type ConfigValue } from "@0disoft/universal-config-engine-core";
 import { createConfigReloader, type ConfigReloadEvent } from "../src/index.js";
 
 const pipeline = (port = 80) => runConfigPipeline({ context: undefined, loaders: [{
@@ -7,6 +7,30 @@ const pipeline = (port = 80) => runConfigPipeline({ context: undefined, loaders:
 }] });
 
 describe("serialized config reload", () => {
+  it("publishes an owned frozen snapshot at an explicitly increased config depth", async () => {
+    const depth = 2500;
+    let value: ConfigValue = { leaf: 1 };
+    for (let index = 0; index < depth; index++) value = { next: value };
+    const original = await runConfigPipeline({ context: undefined, limits: {
+      maxDepth: 3000, maxPathLength: 3000, maxKeyCount: 4000, maxReportBytes: 1024 * 1024
+    }, loaders: [{ descriptor: { id: "deep", kind: "object", priority: 0, displayName: "deep" },
+      load: () => ({ value }) }] });
+    expect(original.result.ok).toBe(true);
+    const reloader = createConfigReloader({ load: async () => original });
+    try {
+      expect(await reloader.refresh()).toMatchObject({ ok: true, revision: 1 });
+      const path = Array.from({ length: depth }, () => "next");
+      const snapshot = reloader.getSnapshot()!;
+      const frozenLeaf = getConfigValueAtPath(snapshot.result.config, path);
+      const originalLeaf = getConfigValueAtPath(original.result.config, path) as Record<string, ConfigValue>;
+      originalLeaf.leaf = 2;
+      expect(frozenLeaf).toEqual({ leaf: 1 });
+      expect(Object.isFrozen(frozenLeaf)).toBe(true);
+      expect(Object.isFrozen(snapshot.result.config)).toBe(true);
+      expect(snapshot.result.config).not.toBe(original.result.config);
+    } finally { reloader.close(); }
+  });
+
   it.each(["path", "name", "source"])("retains report-only %s redaction on either side of a reload", async policy => {
     const events: ConfigReloadEvent[] = [];
     let step = 0;

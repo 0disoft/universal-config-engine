@@ -11,6 +11,8 @@ refresh request made inside `load` joins the single queue rather than overlappin
 the active load. Such a request must not be awaited by that active callback.
 
 A successful result and report are cloned and deeply frozen before publication.
+Configuration cloning and freezing are iterative, preserving core's support for
+valid deep configurations when the application explicitly increases its limits.
 Snapshots contain application config, including secret values, and must not be
 logged. Failure retains the previous snapshot and revision. Failed outcomes expose
 only `load_failed`, `validation_failed` or `snapshot_failed`, never exceptions.
