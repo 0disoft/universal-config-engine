@@ -28,7 +28,9 @@ and external resources. Do not await another refresh from inside `load`.
 `await watchConfigFiles({ workspacePath, paths, load, onChange?, debounceMs? })`
 returns `{ ok: true, watcher, initial }` or a sanitized setup failure. `watcher`
 has the same methods as a reloader. At most 64 explicit paths are accepted;
-relative paths use the workspace. Parent directories and existing targets are
+the bounded selection is copied and validated before asynchronous filesystem work,
+so later changes to the caller's array do not change this watcher's inputs.
+Relative paths use the workspace. Parent directories and existing targets are
 canonicalized and checked inside that boundary. Actual file loaders must still
 enforce the workspace when opening each file, including after replacement.
 

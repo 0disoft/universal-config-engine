@@ -11,6 +11,18 @@ async function workspace(run: (root: string) => Promise<void>) {
 }
 
 describe("disposable bounded file watch", () => {
+  it("owns its bounded path selection before asynchronous filesystem work", async () => {
+    await workspace(async root => {
+      await writeFile(join(root, "config.json"), "{}");
+      const paths = ["config.json"];
+      const pending = watchConfigFiles({ workspacePath: root, paths, load: () => runConfigPipeline({ context: undefined, loaders: [] }) });
+      paths.splice(0, 1, "../outside.json", ...Array.from({ length: 64 }, (_, index) => `${index}.json`));
+      const result = await pending;
+      try { expect(result.ok).toBe(true); }
+      finally { if (result.ok) result.watcher.close(); }
+    });
+  });
+
   it("reloads atomic replacements and keeps the last good config after invalid JSON", async () => {
     await workspace(async root => {
       const path = join(root, "config.json");

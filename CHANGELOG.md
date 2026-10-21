@@ -50,6 +50,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Copy and validate the bounded file watch selection before asynchronous I/O,
+  preventing later caller mutations from changing paths or bypassing the 64-path cap.
+
 - Claim the reload execution slot before invoking an application loader, so a
   synchronous reentrant refresh stays queued and cannot overlap the initial load.
 

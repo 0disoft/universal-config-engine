@@ -18,12 +18,18 @@ export async function watchConfigFiles(input: WatchConfigFilesInput): Promise<Wa
   const delay = input.debounceMs ?? 25;
   if (!Array.isArray(input.paths) || input.paths.length === 0 || input.paths.length > 64 ||
       !Number.isSafeInteger(delay) || delay < 0 || delay > 1000) return { ok: false, code: "watch_input_invalid" };
+  const count = input.paths.length;
+  const paths: string[] = [];
+  for (let index = 0; index < count; index++) {
+    const path = input.paths[index];
+    if (typeof path !== "string" || path.length === 0 || path.length > 4096) return { ok: false, code: "watch_input_invalid" };
+    paths.push(path);
+  }
   const groups = new Map<string, Set<string>>();
   try {
     const root = await realpath(input.workspacePath);
     if (!(await stat(root)).isDirectory()) return { ok: false, code: "watch_setup_failed" };
-    for (const path of input.paths) {
-      if (typeof path !== "string" || path.length === 0 || path.length > 4096) return { ok: false, code: "watch_input_invalid" };
+    for (const path of paths) {
       const absolute = resolve(root, path);
       const directory = await realpath(dirname(absolute));
       if (!inside(root, directory)) return { ok: false, code: "watch_path_outside_workspace" };
