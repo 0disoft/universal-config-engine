@@ -41,3 +41,5 @@ export { DEFAULT_PIPELINE_FILENAMES, discoverPipelineDeclaration } from "./disco
 export type { DiscoverPipelineInput, DiscoverPipelineResult } from "./discovery.js";
 export { createConfigReloader } from "./reload.js";
 export type { ReloadFailure, ConfigReloadOutcome, ConfigReloadEvent, CreateConfigReloaderInput, ConfigReloader } from "./reload.js";
+export { watchConfigFiles } from "./watch.js";
+export type { WatchConfigFilesInput, WatchConfigFilesResult } from "./watch.js";

@@ -648,6 +648,8 @@ export { DEFAULT_PIPELINE_FILENAMES, discoverPipelineDeclaration } from "./disco
 export type { DiscoverPipelineInput, DiscoverPipelineResult } from "./discovery.js";
 export { createConfigReloader } from "./reload.js";
 export type { ReloadFailure, ConfigReloadOutcome, ConfigReloadEvent, CreateConfigReloaderInput, ConfigReloader } from "./reload.js";
+export { watchConfigFiles } from "./watch.js";
+export type { WatchConfigFilesInput, WatchConfigFilesResult } from "./watch.js";
 
 ### input-policy.d.ts
 import type { ConfigIssueSeverity } from "@0disoft/universal-config-engine-core";
@@ -722,6 +724,24 @@ export declare function createReloadState(input: CreateConfigReloaderInput): {
     controller: ConfigReloader;
     watchFailed: () => void;
 };
+
+### watch.d.ts
+import { type ConfigReloader, type ConfigReloadOutcome, type CreateConfigReloaderInput } from "./reload.js";
+export interface WatchConfigFilesInput extends CreateConfigReloaderInput {
+    readonly workspacePath: string;
+    readonly paths: readonly string[];
+    readonly debounceMs?: number;
+}
+export type WatchConfigFilesResult = {
+    readonly ok: true;
+    readonly watcher: ConfigReloader;
+    readonly initial: ConfigReloadOutcome;
+} | {
+    readonly ok: false;
+    readonly code: "watch_input_invalid" | "watch_path_outside_workspace" | "watch_setup_failed";
+};
+/** Watches selected basenames in their parent directories, including atomic replacements. */
+export declare function watchConfigFiles(input: WatchConfigFilesInput): Promise<WatchConfigFilesResult>;
 
 ## @0disoft/universal-config-engine-cli
 

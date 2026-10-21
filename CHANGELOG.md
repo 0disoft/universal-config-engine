@@ -33,6 +33,8 @@ semantic versioning and keeps package versions aligned across the workspace.
   and both comparison inputs, without changing the synchronous legacy parser.
 - Node serialized configuration reload with coalesced requests, immutable
   last-successful snapshots, sanitized events and explicit close semantics.
+- Disposable, bounded Node file watching with workspace checks, parent-directory
+  basename filtering, atomic replacement support and debounced refreshes.
 
 ## 1.2.0 - 2026-10-21
 

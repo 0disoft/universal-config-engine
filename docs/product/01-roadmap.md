@@ -191,7 +191,7 @@ legacy command output remain unchanged. Publication was separately authorized.
 - [x] Bounded, explicit workspace discovery.
 - [x] Standard Schema adapter and separate typed pipeline output.
 - [x] Explicit profiles and safe workspace-local inheritance.
-- [ ] Serialized reload, last successful snapshots and disposable file watching.
+- [x] Serialized reload, last successful snapshots and disposable file watching.
 - [ ] Non-destructive `init` and actionable secret-safe `doctor`.
 - [ ] Public-share report projection with metadata pseudonyms.
 - [ ] Actual package consumers for Node, Bun, Deno and Workers.
