@@ -50,6 +50,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Claim the reload execution slot before invoking an application loader, so a
+  synchronous reentrant refresh stays queued and cannot overlap the initial load.
+
 - Exclude redacted-path type/source/add/remove metadata from reload public change
   counts, in addition to skipping secret value comparison.
 

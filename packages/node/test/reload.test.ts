@@ -7,6 +7,34 @@ const pipeline = (port = 80) => runConfigPipeline({ context: undefined, loaders:
 }] });
 
 describe("serialized config reload", () => {
+  it("queues a refresh requested synchronously from inside the initial loader", async () => {
+    const first = await pipeline(80);
+    const second = await pipeline(443);
+    let calls = 0;
+    let release!: (value: typeof first) => void;
+    let nested: ReturnType<ReturnType<typeof createConfigReloader>["refresh"]> | undefined;
+    const reloader = createConfigReloader({ load: () => {
+      calls += 1;
+      if (calls !== 1) return Promise.resolve(second);
+      nested = reloader.refresh();
+      return new Promise(resolve => { release = resolve; });
+    } });
+    const active = reloader.refresh();
+    try {
+      expect(calls).toBe(1);
+      expect(reloader.refresh()).toBe(nested);
+      release(first);
+      expect(await active).toMatchObject({ ok: true, revision: 1 });
+      expect(await nested).toMatchObject({ ok: true, revision: 2 });
+      expect(calls).toBe(2);
+      expect(reloader.getSnapshot()?.result.config).toEqual({ port: 443 });
+    } finally {
+      release(first);
+      await Promise.all([active, nested]);
+      reloader.close();
+    }
+  });
+
   it("coalesces bursts into one queued load without overlapping callbacks", async () => {
     const first = await pipeline();
     let release!: (value: typeof first) => void;

@@ -6,6 +6,9 @@ Status: Unreleased, ADR 0018. Existing pipelines never start background work.
 and `close()`. The callback runs the application's existing pipeline. Refreshes
 are serialized: one load can run and one following load can be queued; further
 requests share that queued Promise. No unbounded queue of callback work is kept.
+The running slot is claimed before calling application code, so even a synchronous
+refresh request made inside `load` joins the single queue rather than overlapping
+the active load. Such a request must not be awaited by that active callback.
 
 A successful result and report are cloned and deeply frozen before publication.
 Snapshots contain application config, including secret values, and must not be

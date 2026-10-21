@@ -68,7 +68,10 @@ export function createReloadState(input: CreateConfigReloaderInput) {
     return { ok: true, revision, snapshot: next };
   }
   function start(): Promise<ConfigReloadOutcome> {
-    const task = perform().catch(() => closed ? failed("closed") : reject("load_failed"));
+    let complete!: (outcome: ConfigReloadOutcome) => void;
+    const task = new Promise<ConfigReloadOutcome>(resolve => { complete = resolve; });
+    // The application callback can synchronously request another refresh.
+    // Claim the running slot before invoking it so that request joins the queue.
     running = task;
     void task.then(() => {
       running = undefined;
@@ -79,6 +82,7 @@ export function createReloadState(input: CreateConfigReloaderInput) {
         else void start().then(waiting.resolve);
       }
     });
+    void perform().catch(() => closed ? failed("closed") : reject("load_failed")).then(complete);
     return task;
   }
   const controller: ConfigReloader = {
