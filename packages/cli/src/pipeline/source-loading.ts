@@ -61,7 +61,8 @@ export async function loadDeclaredSources(input: {
           ? await loadConfigFileSource({ ...fileInput, format: source.format,
               ...(input.declaration.limits === undefined ? {} : { limits: input.declaration.limits }),
               ...(source.allowTrailingComma === undefined ? {} : { allowTrailingComma: source.allowTrailingComma }) })
-          : source.kind === "json-file" ? await loadJsonFileSource(fileInput) : await loadDotenvFileSource(fileInput);
+          : source.kind === "json-file" ? await loadJsonFileSource(fileInput) : await loadDotenvFileSource({ ...fileInput,
+              ...(input.declaration.limits?.maxDiagnostics === undefined ? {} : { maxIssues: input.declaration.limits.maxDiagnostics }) });
         sources.push(withCliSourcePaths(loaded, input.configPath));
         break;
       }

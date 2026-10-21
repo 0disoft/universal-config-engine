@@ -376,6 +376,13 @@ non-BMP Unicode characters such as emoji.
 Node env mappings likewise read only own input properties. The env/argv staging
 dictionaries and dotenv parser preserve literal external names such as `__proto__`
 without invoking prototype setters, allowing explicit mapping to safe config paths.
+Dotenv parsing retains at most 200 issues by default, capped at 10,000. File
+loaders accept `maxIssues`; `parseSimpleDotenv` accepts the same budget as its
+optional fourth argument. On overflow the final slot contains the error
+`dotenv_issues_truncated` and parsing stops; partial values are rejected by core.
+Exactly filling the budget does not imply truncation. The CLI forwards its
+effective `maxDiagnostics` so the parser bounds allocation before core normalization.
+
 Simple dotenv parsing strips matching quotes only when both opening and closing
 characters are present; a lone quote remains a literal one-character value.
 

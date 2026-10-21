@@ -643,14 +643,16 @@ export type DiscoverPipelineResult = {
 export declare function discoverPipelineDeclaration(input: DiscoverPipelineInput): Promise<DiscoverPipelineResult>;
 
 ### dotenv-file-loader.d.ts
-import type { ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
+import { type ConfigSourceDescriptor, type LoadedSource } from "@0disoft/universal-config-engine-core";
 import type { FileReadPolicy } from "./file.js";
 export interface LoadDotenvFileSourceInput extends FileReadPolicy {
     readonly descriptor: ConfigSourceDescriptor;
     readonly filePath: string;
+    /** Retained issue budget, including truncation; defaults to 200, capped at 10,000. */
+    readonly maxIssues?: number;
 }
 export declare function loadDotenvFileSource(input: LoadDotenvFileSourceInput): Promise<LoadedSource>;
-export declare function parseSimpleDotenv(descriptor: ConfigSourceDescriptor, raw: string, sourcePath?: string): LoadedSource;
+export declare function parseSimpleDotenv(descriptor: ConfigSourceDescriptor, raw: string, sourcePath?: string, maxIssues?: number): LoadedSource;
 
 ### file-source.d.ts
 import type { ConfigIssue, ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";

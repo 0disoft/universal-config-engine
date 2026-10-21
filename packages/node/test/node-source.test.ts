@@ -23,6 +23,21 @@ function descriptor(id: string, kind: ConfigSourceDescriptor["kind"], priority: 
 }
 
 describe("node source loaders", () => {
+  it.each([undefined, 1, 3, 10_001])("bounds dotenv diagnostics during parsing at %s", maxIssues => {
+    const loaded = parseSimpleDotenv(descriptor("dotenv", "dotenv-file", 1),
+      "invalid\n".repeat(50_000) + "AFTER=unread", undefined, maxIssues);
+    expect(loaded.issues).toHaveLength(Math.min(maxIssues ?? 200, 10_000));
+    expect(loaded.issues?.at(-1)).toMatchObject({ code: "dotenv_issues_truncated", severity: "error" });
+    expect(loaded.value).not.toHaveProperty("AFTER");
+  });
+
+  it("does not truncate an exact dotenv issue budget or skip subsequent valid lines", () => {
+    const loaded = parseSimpleDotenv(descriptor("dotenv", "dotenv-file", 1), "invalid\nBAD!=value\nAFTER=read", undefined, 2);
+    expect(loaded.issues?.map(issue => issue.code)).toEqual(["dotenv_invalid_line", "dotenv_invalid_name"]);
+    expect(loaded.value).toEqual({ AFTER: "read" });
+    expect(loaded.locations?.[0]?.location.line).toBe(3);
+  });
+
   it.each([
     { name: "JSON", kind: "json-file" as const, load: loadJsonFileSource, readCode: "json_read_failed" },
     { name: "dotenv", kind: "dotenv-file" as const, load: loadDotenvFileSource, readCode: "dotenv_read_failed" }

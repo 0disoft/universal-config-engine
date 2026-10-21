@@ -5,6 +5,21 @@ import { runCli } from "../src/index.js";
 import { withTempDir } from "./helpers/temp-directory.js";
 
 describe("runCli", () => {
+  it("passes the declared diagnostic budget to dotenv parsing", async () => {
+    await withTempDir(async dir => {
+      await writeFile(join(dir, "config.env"), "invalid\n".repeat(1000));
+      await writeFile(join(dir, "uce.json"), JSON.stringify({ limits: { maxDiagnostics: 2 },
+        sources: [{ id: "dotenv", kind: "dotenv-file", priority: 0, path: "config.env" }] }));
+      let stdout = "";
+      const result = await runCli(["explain", "--config", "uce.json", "--json"], {
+        cwd: dir, env: {}, stdout: text => { stdout += text; }, stderr() {}
+      });
+      expect(result.exitCode).not.toBe(0);
+      expect(JSON.parse(stdout).issues.map((issue: { code: string }) => issue.code))
+        .toEqual(["dotenv_invalid_line", "dotenv_issues_truncated"]);
+    });
+  });
+
   it("explains a JSON file plus process env override as JSON", async () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, "config.json"), JSON.stringify({ server: { port: 3000 } }), "utf8");
