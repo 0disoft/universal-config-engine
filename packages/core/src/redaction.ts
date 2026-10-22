@@ -55,7 +55,7 @@ export function buildDiagnosticReport(
       schemaVersion: "0.2", status: "error", sources: [], resolvedPaths: [], provenance: [],
       issues: [{ category: "resource-limit", code: ownershipFailure, severity: "error",
         message: "Resolved path ownership is incomplete; diagnostic content was omitted." }],
-      limits: result.limits
+      limits: { ...result.limits }
     };
   }
   const { sourceById, redactionContext } = createRedactionState(result, options);
@@ -131,7 +131,7 @@ function buildReport(
     ),
     issues: result.issues.map((issue) => sanitizeIssue(issue, sourceById, redactionContext)),
     provenance: result.provenance.map((event) => sanitizeProvenance(event, sourceById, redactionContext)),
-    limits: result.limits
+    limits: { ...result.limits }
   };
   if (new TextEncoder().encode(JSON.stringify(report)).byteLength <= result.limits.maxReportBytes) {
     return report;
@@ -148,7 +148,7 @@ function buildReport(
       message: `Diagnostic report exceeded the maximum of ${result.limits.maxReportBytes} bytes.`
     }],
     provenance: [],
-    limits: result.limits
+    limits: { ...result.limits }
   };
 }
 
@@ -159,27 +159,17 @@ function buildResolvedPathReport(
 ): DiagnosticReportResolvedPath {
   const redaction = getRedactionForAnySource(resolvedPath.path, sourceById, redactionContext);
 
-  if (redaction.redacted) {
-    return {
-      path: resolvedPath.path,
-      status: "resolved",
-      winningSourceId: resolvedPath.winningSourceId,
-      overriddenSourceIds: resolvedPath.overriddenSourceIds,
-      ...(resolvedPath.winningLocation === undefined ? {} : { winningLocation: resolvedPath.winningLocation }),
-      ...(resolvedPath.overriddenLocations === undefined ? {} : { overriddenLocations: resolvedPath.overriddenLocations }),
-      redacted: true,
-      redactionReason: redaction.reason ?? "secret"
-    };
-  }
-
   return {
-    path: resolvedPath.path,
+    path: [...resolvedPath.path],
     status: "resolved",
     winningSourceId: resolvedPath.winningSourceId,
-    overriddenSourceIds: resolvedPath.overriddenSourceIds,
-    ...(resolvedPath.winningLocation === undefined ? {} : { winningLocation: resolvedPath.winningLocation }),
-    ...(resolvedPath.overriddenLocations === undefined ? {} : { overriddenLocations: resolvedPath.overriddenLocations }),
-    redacted: false
+    overriddenSourceIds: [...resolvedPath.overriddenSourceIds],
+    ...(resolvedPath.winningLocation === undefined ? {} : { winningLocation: { ...resolvedPath.winningLocation } }),
+    ...(resolvedPath.overriddenLocations === undefined ? {} : {
+      overriddenLocations: resolvedPath.overriddenLocations.map(location => ({ ...location }))
+    }),
+    redacted: redaction.redacted,
+    ...(redaction.redacted ? { redactionReason: redaction.reason ?? "secret" } : {})
   };
 }
 
@@ -189,14 +179,18 @@ function sanitizeIssue(
   redactionContext: RedactionContext
 ): ConfigIssue {
   if (!shouldSanitizeDiagnostic(issue, sourceById, redactionContext)) {
-    return issue;
+    return {
+      ...issue,
+      ...(issue.path === undefined ? {} : { path: [...issue.path] }),
+      ...(issue.details === undefined ? {} : { details: { ...issue.details } })
+    };
   }
 
   return {
     category: issue.category,
     code: issue.code,
     severity: issue.severity,
-    ...(issue.path === undefined ? {} : { path: issue.path }),
+    ...(issue.path === undefined ? {} : { path: [...issue.path] }),
     ...(issue.sourceId === undefined ? {} : { sourceId: issue.sourceId }),
     message: "Diagnostic message redacted because it is associated with a secret path or source."
   };
@@ -208,11 +202,11 @@ function sanitizeProvenance(
   redactionContext: RedactionContext
 ): ProvenanceEvent {
   if (!shouldSanitizeDiagnostic(event, sourceById, redactionContext)) {
-    return event;
+    return { ...event, path: [...event.path] };
   }
 
   return {
-    path: event.path,
+    path: [...event.path],
     action: event.action,
     sourceId: event.sourceId,
     ...(event.previousSourceId === undefined ? {} : { previousSourceId: event.previousSourceId }),

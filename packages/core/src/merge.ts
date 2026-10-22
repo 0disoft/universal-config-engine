@@ -5,6 +5,7 @@ import { flattenConfigObject } from "./value.js";
 import { normalizeResourceLimits } from "./limits.js";
 import { duplicateSourceIdIssues } from "./source-identity.js";
 import { sourcePriorityIssues } from "./source-priority.js";
+import { copySourceDescriptor } from "./source-descriptor.js";
 import { projectedMergeKeyCount } from "./merge-key-budget.js";
 import {
   createResolvedPathIndex,
@@ -46,7 +47,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     return {
       ok: false,
       config: {},
-      sources: input.sources.slice(0, limits.maxSources).map((source) => source.descriptor),
+      sources: input.sources.slice(0, limits.maxSources).map((source) => copySourceDescriptor(source.descriptor)),
       issues: [{
         category: "resource-limit",
         code: "max_sources_exceeded",
@@ -64,7 +65,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
   }
   const policy: MergePolicy = { ...DEFAULT_MERGE_POLICY, ...input.mergePolicy };
   const sources = sortSources(input.sources);
-  const descriptors = sources.map((source) => source.descriptor);
+  const descriptors = sources.map((source) => copySourceDescriptor(source.descriptor));
   let config: Record<string, ConfigValue> = {};
   const issues: ConfigIssue[] = [];
   const provenance: ProvenanceEvent[] = [];

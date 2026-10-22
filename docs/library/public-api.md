@@ -12,6 +12,8 @@ Repository Type: library
 ## Public API Areas
 
 - `ConfigSource`: source identity, priority, loader, and redaction metadata.
+  Resolution owns copies of returned descriptors and nested redaction policy
+  arrays, so later caller changes cannot alter the resolved masking policy.
   Priorities must be finite numbers. Core loading and direct resolution reject
   invalid priorities before invoking loaders, inspecting values or sorting; failure
   uses `source_priority_invalid` and omits invalid descriptor metadata.
@@ -63,6 +65,8 @@ Repository Type: library
 - `ConfigProvenance`: value-level source, override, default, coercion, validation,
   and redaction report.
 - `RedactedDiagnostic`: secret-safe errors and explain output.
+  Diagnostic reports own their paths, issue details, source locations, provenance
+  and limits metadata; editing a report does not mutate its resolution result.
 - `ResourceLimitPolicy`: bounds for source count, source size, object depth, key
   count, path length, diagnostics, provenance, resolved paths, and report bytes.
   `maxKeyCount` counts expanded object keys and array indexes, including repeated
