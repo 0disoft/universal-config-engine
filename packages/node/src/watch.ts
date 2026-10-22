@@ -105,7 +105,12 @@ export async function watchConfigFiles(input: WatchConfigFilesInput, dependencie
   }
   function flush() {
     if (!clearTimers()) { failWatch(); return; }
-    if (!closed) void state.controller.refresh();
+    if (!closed) void refresh();
+  }
+  async function refresh(): Promise<ConfigReloadOutcome> {
+    const outcome = await state.controller.refresh();
+    if (!outcome.ok && outcome.reason === "load_timeout") close();
+    return outcome;
   }
   function failWatch() {
     watchFailed = true;
@@ -143,9 +148,11 @@ export async function watchConfigFiles(input: WatchConfigFilesInput, dependencie
     if (input.signal?.aborted) { close(); return { ok: false, code: "watch_setup_failed" }; }
     reconcile(groups);
     // Install watches before the first load so a change during loading is queued.
-    const initial = await state.controller.refresh();
-    if (watchFailed || input.signal?.aborted) { close(); return { ok: false, code: "watch_setup_failed" }; }
-    return { ok: true, watcher: { ...state.controller, close }, initial };
+    const initial = await refresh();
+    if (watchFailed || input.signal?.aborted || !initial.ok && initial.reason === "load_timeout") {
+      close(); return { ok: false, code: "watch_setup_failed" };
+    }
+    return { ok: true, watcher: { ...state.controller, refresh, close }, initial };
   } catch { close(); return { ok: false, code: "watch_setup_failed" }; }
 }
 

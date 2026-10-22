@@ -1,6 +1,7 @@
 import { buildConfigDiff, cloneConfigValue, reportConfigOperationError, type ConfigOperationOptions, type ConfigChange, type ConfigPath, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
+import { createOperationDeadline, operationTimeout, OperationTimeoutError } from "./operation-deadline.js";
 
-export type ReloadFailure = "load_failed" | "validation_failed" | "snapshot_failed" | "closed";
+export type ReloadFailure = "load_failed" | "load_timeout" | "validation_failed" | "snapshot_failed" | "closed";
 export type ConfigReloadOutcome =
   | { readonly ok: true; readonly revision: number; readonly snapshot: RunConfigPipelineResult }
   | { readonly ok: false; readonly revision: number; readonly reason: ReloadFailure };
@@ -14,6 +15,10 @@ export interface ConfigReloadEvent {
 }
 
 export interface CreateConfigReloaderInput extends ConfigOperationOptions {
+  /** Defaults to 30 seconds. A timeout stops this reloader to prevent overlapping abandoned loads. */
+  readonly loadTimeoutMs?: number;
+  /** Defaults to 30 seconds. A timeout disables further notifications, leaving refresh operational. */
+  readonly observerTimeoutMs?: number;
   readonly load: (options?: ConfigOperationOptions) => Promise<RunConfigPipelineResult>;
   readonly onChange?: (event: ConfigReloadEvent, options?: ConfigOperationOptions) => void | Promise<void>;
 }
@@ -32,7 +37,11 @@ export function createConfigReloader(input: CreateConfigReloaderInput): ConfigRe
 
 /** Internal notification boundary shared with the filesystem watcher. */
 export function createReloadState(input: CreateConfigReloaderInput) {
+  const loadTimeoutMs = operationTimeout(input.loadTimeoutMs);
+  const observerTimeoutMs = operationTimeout(input.observerTimeoutMs);
   let closed = false;
+  let terminalReason: ReloadFailure = "closed";
+  let observerFailed = false;
   const cancellation = new AbortController();
   let cancelActive: (() => void) | undefined;
   let revision = 0;
@@ -43,7 +52,7 @@ export function createReloadState(input: CreateConfigReloaderInput) {
   let pendingNotification: ConfigReloadEvent | undefined;
   const failed = (reason: ReloadFailure): ConfigReloadOutcome => ({ ok: false, revision, reason });
   function notify(event: ConfigReloadEvent) {
-    if (closed || input.onChange === undefined) return;
+    if (closed || observerFailed || input.onChange === undefined) return;
     if (notifying) {
       // A count relative to an omitted intermediate snapshot would be misleading.
       const { changedPathCount: _count, ...coalesced } = event;
@@ -51,16 +60,24 @@ export function createReloadState(input: CreateConfigReloaderInput) {
       return;
     }
     notifying = true;
+    const deadline = createOperationDeadline(cancellation.signal, observerTimeoutMs);
+    function observerFailure(error: unknown) {
+      if (error instanceof OperationTimeoutError) {
+        observerFailed = true;
+        pendingNotification = undefined;
+      }
+      if (!closed) reportConfigOperationError(input,
+        error instanceof OperationTimeoutError ? "reload_observer_timeout" : "reload_observer_failed", error);
+      finishNotification();
+    }
     try {
-      const result = input.onChange(Object.freeze(event), { signal: cancellation.signal });
+      const result = input.onChange(Object.freeze(event), { signal: deadline.signal });
       if (result !== undefined) {
-        void Promise.resolve(result).then(finishNotification, error => {
-          reportConfigOperationError(input, "reload_observer_failed", error);
-          finishNotification();
-        });
+        void deadline.waitFor(result).then(finishNotification, observerFailure);
         return;
       }
-    } catch (error) { reportConfigOperationError(input, "reload_observer_failed", error); }
+    } catch (error) { deadline.dispose(); observerFailure(error); return; }
+    deadline.dispose();
     finishNotification();
   }
   function finishNotification() {
@@ -75,13 +92,22 @@ export function createReloadState(input: CreateConfigReloaderInput) {
   }
   async function perform(): Promise<ConfigReloadOutcome> {
     let loaded: RunConfigPipelineResult;
-    try { loaded = await input.load({ signal: cancellation.signal,
-      ...(input.onError === undefined ? {} : { onError: input.onError }) }); }
+    const deadline = createOperationDeadline(cancellation.signal, loadTimeoutMs);
+    try { loaded = await deadline.waitFor(input.load({ signal: deadline.signal,
+      ...(input.onError === undefined ? {} : { onError: input.onError }) })); }
     catch (error) {
+      if (closed) return failed(terminalReason);
+      if (error instanceof OperationTimeoutError) {
+        reportConfigOperationError(input, "reload_load_timeout", error);
+        reject("load_timeout");
+        stop("load_timeout");
+        return failed("load_timeout");
+      }
       reportConfigOperationError(input, "reload_load_failed", error);
-      return closed ? failed("closed") : reject("load_failed");
+      return reject("load_failed");
     }
-    if (closed) return failed("closed");
+    finally { deadline.dispose(); }
+    if (closed) return failed(terminalReason);
     if (!loaded?.result?.ok || loaded.report?.status !== "ok") return reject("validation_failed");
     let next: RunConfigPipelineResult;
     let changedPathCount: number | undefined;
@@ -111,23 +137,26 @@ export function createReloadState(input: CreateConfigReloaderInput) {
     // The application callback can synchronously request another refresh.
     // Claim the running slot before invoking it so that request joins the queue.
     running = task;
-    cancelActive = () => complete(failed("closed"));
+    cancelActive = () => complete(failed(terminalReason));
     void task.then(() => {
       running = undefined;
       cancelActive = undefined;
       const waiting = queued;
       queued = undefined;
       if (waiting !== undefined) {
-        if (closed) waiting.resolve(failed("closed"));
+        if (closed) waiting.resolve(failed(terminalReason));
         else void start().then(waiting.resolve);
       }
     });
-    void perform().catch(() => closed ? failed("closed") : reject("load_failed")).then(complete);
+    void perform().catch(error => {
+      reportConfigOperationError(input, "reload_load_failed", error);
+      return closed ? failed(terminalReason) : reject("load_failed");
+    }).then(complete);
     return task;
   }
   const controller: ConfigReloader = {
     refresh() {
-      if (closed) return Promise.resolve(failed("closed"));
+      if (closed) return Promise.resolve(failed(terminalReason));
       if (running === undefined) return start();
       if (queued === undefined) {
         let resolve!: (outcome: ConfigReloadOutcome) => void;
@@ -137,17 +166,21 @@ export function createReloadState(input: CreateConfigReloaderInput) {
       return queued.promise;
     },
     getSnapshot: () => snapshot,
-    close() {
-      if (closed) return;
-      closed = true;
-      pendingNotification = undefined;
-      cancellation.abort();
-      input.signal?.removeEventListener("abort", abort);
+    close() { stop("closed"); }
+  };
+  function stop(reason: ReloadFailure) {
+    if (closed) return;
+    closed = true;
+    terminalReason = reason;
+    pendingNotification = undefined;
+    cancellation.abort();
+    try { input.signal?.removeEventListener("abort", abort); }
+    finally {
       cancelActive?.();
-      queued?.resolve(failed("closed"));
+      queued?.resolve(failed(terminalReason));
       queued = undefined;
     }
-  };
+  }
   function abort() { controller.close(); }
   input.signal?.addEventListener("abort", abort, { once: true });
   if (input.signal?.aborted) controller.close();

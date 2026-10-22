@@ -15,7 +15,7 @@ Configuration cloning and freezing are iterative, preserving core's support for
 valid deep configurations when the application explicitly increases its limits.
 Snapshots contain application config, including secret values, and must not be
 logged. Failure retains the previous snapshot and revision. Failed outcomes expose
-only `load_failed`, `validation_failed` or `snapshot_failed`, never exceptions.
+only `load_failed`, `load_timeout`, `validation_failed` or `snapshot_failed`, never exceptions.
 Observer failures are contained. Observers run separately
 from refresh completion: at most one asynchronous observer runs and only the latest
 pending notification is retained. Superseded notifications are coalesced, and their
@@ -119,3 +119,29 @@ const reloader = createConfigReloader({
 ```
 
 Closing aborts the owned signal even when no external lifetime signal was passed.
+
+## Operation deadlines and private failures
+
+Loads and asynchronous observers have independent 30-second deadlines, configurable
+with `loadTimeoutMs` and `observerTimeoutMs` (integer milliseconds, 1–2147483647).
+Each callback receives an owned signal combining the lifetime cancellation with
+its operation deadline. Timers and listeners are removed when work settles or is
+cancelled; the operation signal also closes when its callback settles and must not
+be retained for background work. Existing synchronous observers still run immediately. Synchronous code
+cannot be preempted; callbacks must yield and cooperate with cancellation.
+
+A load timeout resolves active and queued refreshes as `load_timeout`, retains the
+last good snapshot and permanently stops that reloader. It never starts another
+load over an abandoned callback. Fix the external dependency and ensure abandoned
+work has stopped before creating a replacement. A watcher closes its handles and
+timers on load timeout; initial timeout returns `watch_setup_failed`.
+
+An observer timeout aborts its signal, drops queued notifications and disables
+future notifications on that instance. Refresh remains usable, with no second
+observer overlapping an uncooperative first one. Recreate after recovery when
+notifications are needed. No callback receives automatic retries.
+
+Optional `onError` observes private `Error.cause` chains using stable codes
+`reload_load_failed`, `reload_load_timeout`, `reload_snapshot_failed`,
+`reload_observer_failed` and `reload_observer_timeout`. It is never a public report
+or a default log sink. Normal close/cancellation is not reported as a failure.

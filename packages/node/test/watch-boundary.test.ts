@@ -29,6 +29,23 @@ function fixture() {
 const load = () => runConfigPipeline({ context: undefined, loaders: [] });
 
 describe("injected watch scheduling", () => {
+  it("releases watcher handles when a later refresh times out", async () => {
+    vi.useFakeTimers();
+    const runtime = fixture();
+    let calls = 0;
+    try {
+      const watched = await watchConfigFiles({ workspacePath: "/workspace", paths: ["config.json"], loadTimeoutMs: 10,
+        load: () => ++calls === 1 ? load() : new Promise(() => {}) }, runtime.dependencies);
+      expect(watched.ok).toBe(true); if (!watched.ok) return;
+      const pending = watched.watcher.refresh();
+      await vi.advanceTimersByTimeAsync(10);
+      expect(await pending).toMatchObject({ reason: "load_timeout" });
+      expect(runtime.close).toHaveBeenCalledTimes(1);
+      expect(runtime.jobs.size).toBe(0);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+
   it("continues closing other handles and the reloader when one disposer throws", async () => {
     const runtime = fixture();
     const firstClose = vi.fn().mockImplementationOnce(() => { throw new Error("close failed"); });
