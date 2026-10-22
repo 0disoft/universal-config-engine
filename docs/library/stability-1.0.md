@@ -59,6 +59,18 @@ cross-run wall-clock thresholds. Existing merge-trie and argv timing benchmarks
 remain local comparison tools and must record before-and-after evidence for hot-path
 changes.
 
+The complexity guard also counts resolved-path accesses during change-policy
+evaluation and source-policy accesses during diagnostic redaction. Doubling both
+rules and resolved paths (64/512 to 128/1024) produces 4,608 to 9,216 path reads;
+doubling sources and paths (16/512 to 32/1024) produces 48 to 96 source-policy
+reads. These are operation counts, not end-to-end latency measurements.
+
+Policy prefix indexes and ownership/equality caches live for one comparison.
+They preserve typed path segments and rule order. Redaction policies compile once
+per report, retaining first-source and path-before-name reason precedence.
+Distinct custom name patterns still require substring checks per uncached path;
+this is not a constant-time matcher for arbitrarily large pattern sets.
+
 ## Consumer Matrix
 
 The release candidate must pass packed or registry-backed consumers covering:

@@ -61,6 +61,12 @@ export declare function applyCoercionRules(input: ApplyCoercionRulesInput): Appl
 /** Internal resolution boundary; standalone coercion keeps its existing depth contract. */
 export declare function applyResolutionCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercionRulesResult;
 
+### compiled-redaction.d.ts
+import type { ConfigPath, ConfigSourceDescriptor } from "./types.js";
+import type { BuildDiagnosticReportOptions, RedactionDecision } from "./redaction.js";
+/** Compile once while retaining first-source and within-source path-before-name precedence. */
+export declare function compileRedaction(sources: Iterable<ConfigSourceDescriptor>, options: BuildDiagnosticReportOptions, defaults: readonly string[], secretSourcePaths: Iterable<ConfigPath>): (path: ConfigPath) => RedactionDecision;
+
 ### diagnostics.d.ts
 import type { ConfigIssue } from "./types.js";
 /** Append in order, reserving the final slot for a marker only when input overflows. */
@@ -257,6 +263,16 @@ export declare function runAbortable<T>(operation: () => T | PromiseLike<T>, sig
     readonly aborted: false;
     readonly value: T;
 }>;
+
+### path-intersection-index.d.ts
+import type { ConfigPath } from "./types.js";
+/** Per-operation typed prefix index. Queries include both ancestors and descendants. */
+export declare class PathIntersectionIndex<T> {
+    private readonly root;
+    constructor(entries: readonly T[], pathOf: (entry: T) => ConfigPath);
+    intersects(path: ConfigPath): boolean;
+    related(path: ConfigPath): readonly T[];
+}
 
 ### path.d.ts
 import type { ConfigPath, ConfigPathSegment, ConfigValue } from "./types.js";
@@ -1184,7 +1200,7 @@ export declare function resolveConfigRelativePath(input: {
     readonly sourceId: string;
     readonly targetPath: string;
     readonly allowedRootPath?: string;
-}): Promise<{
+}, canonicalize?: (path: string) => Promise<string>): Promise<{
     readonly ok: true;
     readonly path: string;
     readonly allowedRootPath: string;
@@ -1192,6 +1208,8 @@ export declare function resolveConfigRelativePath(input: {
     readonly ok: false;
     readonly issue: ConfigIssue;
 }>;
+/** Scope this cache to one load; opening a file still performs its own identity/boundary checks. */
+export declare function createSourcePathCanonicalizer(resolvePath?: (path: string) => Promise<string>): (path: string) => Promise<string>;
 export declare function resolveInputPath(inputPath: string, cwd: string): string;
 export declare function isInsideOrEqualPath(rootPath: string, targetPath: string): boolean;
 
