@@ -1,9 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { buildDiagnosticReport, resolveConfig } from "../src/index.js";
+import { buildDiagnosticReport, resolveConfig, runConfigPipeline, buildConfigInspection } from "../src/index.js";
 import type { ConfigIssue, ProvenanceEvent } from "../src/index.js";
 import { source } from "./helpers/source.js";
 
 describe("buildDiagnosticReport", () => {
+  it.each(["descriptor", "options"].flatMap(policy => [2, 200].map(maxDiagnostics => ({ policy, maxDiagnostics }))))(
+    "fails closed when $policy ownership is truncated at diagnostic budget $maxDiagnostics", async ({ policy, maxDiagnostics }) => {
+    const loaders = [
+      { descriptor: { id: "private", kind: "object" as const, priority: 0, displayName: "private",
+          ...(policy === "descriptor" ? { redaction: { secretSource: true } } : {}) },
+        load: () => ({ value: { first: 1, hidden: "UCE_TRUNCATED_MARKER" } }) },
+      { descriptor: { id: "public", kind: "object" as const, priority: 1, displayName: "public" },
+        load: () => ({ value: {}, issues: [{ category: "parse" as const, code: "custom_warning",
+          severity: "warning" as const, path: ["hidden"], message: "UCE_TRUNCATED_MARKER",
+          details: { value: "UCE_TRUNCATED_MARKER" } },
+          { category: "parse" as const, code: "another_warning", severity: "warning" as const,
+            path: ["hidden"], message: "UCE_TRUNCATED_MARKER" }] }) }
+    ];
+    const reportOptions = policy === "options" ? { secretSourceIds: ["private"] } : {};
+    const failed = await runConfigPipeline({ context: undefined, loaders, reportOptions, limits: { maxResolvedPaths: 1, maxDiagnostics } });
+    expect(failed.result.ok).toBe(false);
+    expect(failed.report.issues).toEqual([expect.objectContaining({
+      code: maxDiagnostics === 2 ? "max_diagnostics_exceeded" : "max_resolved_paths_exceeded"
+    })]);
+    expect(failed.report.provenance).toEqual([]);
+    expect(JSON.stringify(failed.report)).not.toContain("UCE_TRUNCATED_MARKER");
+    expect(JSON.stringify(buildConfigInspection(failed.result, reportOptions))).not.toContain("UCE_TRUNCATED_MARKER");
+    const complete = await runConfigPipeline({ context: undefined, loaders, reportOptions });
+    expect(complete.report.issues[0]?.message).toMatch(/^Diagnostic message redacted/);
+  });
+
   it.each(["descriptor", "options"])("inherits %s secret-source ownership for atomic array descendants", (policy) => {
     const vault = source("vault", 0, { users: [{ label: "array input" }] });
     const resolved = resolveConfig({ sources: [

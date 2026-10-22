@@ -49,6 +49,15 @@ export function buildDiagnosticReport(
   result: ConfigResult,
   options: BuildDiagnosticReportOptions = {}
 ): DiagnosticReport {
+  const ownershipFailure = incompleteOwnershipFailure(result);
+  if (ownershipFailure !== undefined) {
+    return {
+      schemaVersion: "0.2", status: "error", sources: [], resolvedPaths: [], provenance: [],
+      issues: [{ category: "resource-limit", code: ownershipFailure, severity: "error",
+        message: "Resolved path ownership is incomplete; diagnostic content was omitted." }],
+      limits: result.limits
+    };
+  }
   const { sourceById, redactionContext } = createRedactionState(result, options);
   return buildReport(result, sourceById, redactionContext);
 }
@@ -58,8 +67,18 @@ export function createPathRedactor(
   result: ConfigResult,
   options: BuildDiagnosticReportOptions = {}
 ): (path: ConfigPath) => RedactionDecision {
+  if (incompleteOwnershipFailure(result) !== undefined) return () => ({ redacted: true, reason: "incomplete-ownership" });
   const { sourceById, redactionContext } = createRedactionState(result, options);
   return (path) => getRedactionForAnySource(path, sourceById, redactionContext);
+}
+
+function incompleteOwnershipFailure(result: ConfigResult): string | undefined {
+  const overflow = result.issues.find(issue => issue.category === "resource-limit" && issue.severity === "error" &&
+    (issue.code === "max_resolved_paths_exceeded" ||
+      // Diagnostic truncation can replace the ownership-limit error. At a full
+      // path budget, fail closed rather than treating uncertain ownership as public.
+      issue.code === "max_diagnostics_exceeded" && result.resolvedPaths.length >= result.limits.maxResolvedPaths));
+  return overflow?.code;
 }
 
 function createRedactionState(result: ConfigResult, options: BuildDiagnosticReportOptions) {
