@@ -128,7 +128,8 @@ export type { CreateMappedOverrideSourceInput } from "./mapping.js";
 export type { RunValidatorsInput, RunValidatorsResult } from "./validation.js";
 export { buildPublicDiagnosticReport } from "./public-report.js";
 export type { PublicDiagnosticReport } from "./public-report.js";
-export type { ConfigAbortSignal, ConfigOperationOptions } from "./operation.js";
+export type { ConfigAbortSignal, ConfigOperationOptions, ConfigOperationError } from "./operation.js";
+export { reportConfigOperationError } from "./operation.js";
 
 ### inspection.d.ts
 import { type BuildDiagnosticReportOptions } from "./redaction.js";
@@ -230,14 +231,24 @@ import type { ConfigIssue, ConfigIssueCategory } from "./types.js";
 /** Structural subset accepted by native AbortSignal, without a Node/DOM type dependency. */
 export interface ConfigAbortSignal {
     readonly aborted: boolean;
+    readonly reason?: unknown;
     addEventListener(type: "abort", listener: () => void, options?: {
         readonly once?: boolean;
     }): void;
     removeEventListener(type: "abort", listener: () => void): void;
 }
+export interface ConfigOperationError {
+    readonly code: string;
+    readonly sourceId?: string;
+    /** Private operational context. Never attach this error to reports or log it by default. */
+    readonly error: Error;
+}
 export interface ConfigOperationOptions {
     readonly signal?: ConfigAbortSignal;
+    readonly onError?: (failure: ConfigOperationError) => void | Promise<void>;
 }
+/** Out-of-band failure reporting; observer failures cannot change operation outcomes. */
+export declare function reportConfigOperationError(options: ConfigOperationOptions, code: string, cause: unknown, sourceId?: string): void;
 export declare function operationAbortedIssue(category: ConfigIssueCategory, sourceId?: string): ConfigIssue;
 /** Stop waiting without claiming to stop a callback that ignores cancellation. */
 export declare function runAbortable<T>(operation: () => T | PromiseLike<T>, signal?: ConfigAbortSignal): Promise<{
@@ -703,7 +714,7 @@ export interface ConfigFileReadLimiter {
 export declare function createConfigFileReadLimiter(maxConcurrent?: number): ConfigFileReadLimiter;
 
 ### file-source.d.ts
-import type { ConfigIssue, ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
+import { type ConfigIssue, type ConfigSourceDescriptor, type LoadedSource } from "@0disoft/universal-config-engine-core";
 import { type FileReadPolicy } from "./file.js";
 interface FileSourceInput extends FileReadPolicy {
     readonly descriptor: ConfigSourceDescriptor;
@@ -720,7 +731,7 @@ export declare function loadTextFileSource(input: FileSourceInput, options: File
 export {};
 
 ### file.d.ts
-import type { ConfigIssue, ConfigOperationOptions, ConfigAbortSignal } from "@0disoft/universal-config-engine-core";
+import { type ConfigIssue, type ConfigOperationOptions, type ConfigAbortSignal } from "@0disoft/universal-config-engine-core";
 import { type ConfigFileReadLimiter } from "./file-read-limiter.js";
 export declare const DEFAULT_MAX_FILE_BYTES: number;
 export interface ConfigFileStats {
@@ -838,6 +849,20 @@ export declare const JSON_SCAN_ERROR_NONE = 0;
 ### limits.d.ts
 export declare function positiveSafeIntegerLimit(value: number | undefined, fallback: number): number;
 
+### operation-deadline.d.ts
+import type { ConfigAbortSignal } from "@0disoft/universal-config-engine-core";
+export declare const DEFAULT_OPERATION_TIMEOUT_MS = 30000;
+export declare class OperationTimeoutError extends Error {
+    constructor();
+}
+export declare function operationTimeout(value?: number): number;
+/** Own both cancellation and timer lifetime without pretending to force-stop work. */
+export declare function createOperationDeadline(parent: ConfigAbortSignal, timeoutMs: number): {
+    readonly signal: ConfigAbortSignal;
+    dispose(): void;
+    waitFor<T>(work: T | PromiseLike<T>): Promise<T>;
+};
+
 ### process-env-source.d.ts
 import { type ConfigSourceDescriptor, type LoadedSource, type OverrideMapping } from "@0disoft/universal-config-engine-core";
 import { type UnmappedInputBehavior } from "./input-policy.js";
@@ -854,7 +879,7 @@ export declare function createProcessEnvSource(input: CreateProcessEnvSourceInpu
 
 ### reload.d.ts
 import { type ConfigOperationOptions, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
-export type ReloadFailure = "load_failed" | "validation_failed" | "snapshot_failed" | "closed";
+export type ReloadFailure = "load_failed" | "load_timeout" | "validation_failed" | "snapshot_failed" | "closed";
 export type ConfigReloadOutcome = {
     readonly ok: true;
     readonly revision: number;
@@ -872,6 +897,10 @@ export interface ConfigReloadEvent {
     readonly changedPathCount?: number;
 }
 export interface CreateConfigReloaderInput extends ConfigOperationOptions {
+    /** Defaults to 30 seconds. A timeout stops this reloader to prevent overlapping abandoned loads. */
+    readonly loadTimeoutMs?: number;
+    /** Defaults to 30 seconds. A timeout disables further notifications, leaving refresh operational. */
+    readonly observerTimeoutMs?: number;
     readonly load: (options?: ConfigOperationOptions) => Promise<RunConfigPipelineResult>;
     readonly onChange?: (event: ConfigReloadEvent, options?: ConfigOperationOptions) => void | Promise<void>;
 }

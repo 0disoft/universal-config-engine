@@ -581,6 +581,12 @@ reports or default logs. Consumers own restricted handling of private causes.
 Public diagnostics retain their existing sanitized codes and messages. Signals may
 expose an optional private `reason`; cancellation reasons are not serialized.
 
+Core deliberately owns no clock or automatic retries. Callers needing a pipeline
+deadline can supply a native timeout/composed signal from their runtime; forward
+it through loaders to actual I/O. The Node reloader has independent configurable
+30-second load/observer deadlines; see `docs/adapters/reload.md` for terminal
+timeout behavior and recovery. Arbitrary callbacks are never assumed idempotent.
+
 Node file policies accept optional `signal`, `fileSystem` and `readLimiter` fields. The filesystem
 implements only `open`, `realpath`, `stat` and a bounded file handle's `stat/read/close`
 operations, so tests can reproduce I/O races without global module mocks. Optional
