@@ -18,6 +18,29 @@ describe("createAjvValidator", () => {
       load: () => ({ value })
     }] });
 
+  it.each([
+    { type: "number", config: "3000", expected: 3000 },
+    { type: "boolean", config: "true", expected: true },
+    { type: "array", config: "3000", expected: [3000] },
+    { type: "number", config: ["3000"], expected: 3000 }
+  ])("returns the actual root coercion for $type", async ({ type, config, expected }) => {
+    const original = structuredClone(config);
+    const validator = createAjvValidator({ options: { coerceTypes: "array" }, schema: {
+      $id: "https://example.test/root", $ref: "#/definitions/output",
+      definitions: { output: { type, ...(type === "array" ? { items: { type: "number" } } : {}) } }
+    } });
+    expect(await validator.validate({ config, provenance: [] })).toEqual({ ok: true, value: expected, issues: [] });
+    expect(config).toEqual(original);
+  });
+
+  it("normalizes error indexes against a root-coerced array", async () => {
+    const validator = createAjvValidator({ options: { coerceTypes: "array" }, schema: {
+      type: "array", items: { type: "number", minimum: 4000 }
+    } });
+    expect(await validator.validate({ config: "3000", provenance: [] })).toEqual({ ok: false,
+      issues: [{ code: "minimum", severity: "error", path: [0] }] });
+  });
+
   it("isolates modifying keywords supplied through options as well as custom instances", async () => {
     const validator = createAjvValidator({
       options: { keywords: [{ keyword: "normalizePort", modifying: true,

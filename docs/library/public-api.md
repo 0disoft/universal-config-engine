@@ -543,3 +543,5 @@ The Ajv adapter validates an owned mutable config copy when `coerceTypes`, `useD
 `loadConfigSources` rejects duplicate descriptor IDs before invoking any loader, including when called through `runConfigPipeline`. Its bounded preflight returns no loaded sources on identity conflicts. `resolveConfig` shares the same duplicate-ID rule for already loaded inputs. Invalid registrations therefore perform no source I/O or downstream validation.
 
 Node file readers reject malformed UTF-8 in the default `utf8`/`utf-8` mode rather than replacing invalid bytes with Unicode replacement characters. Decoding follows bounded byte collection, so valid multibyte characters crossing read chunks are preserved. Existing BOM handling and explicit non-UTF-8 encodings are unchanged.
+
+Ajv root coercions are captured through the compiled validator parent-data context: successful adapter output contains the transformed scalar or array, while the input and schema reference scope remain unchanged. Failure paths use the transformed root for typed array indexes.

@@ -43,13 +43,20 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
     id,
     validate(validatorInput: ValidatorInput): ValidatorResult {
       const config = needsCopy ? cloneConfigValue(validatorInput.config) : validatorInput.config;
-      const ok = validate(config);
+      // Let Ajv write root coercions through its existing parent-data context.
+      // The schema itself stays unchanged, preserving local and registered refs.
+      const root = { value: config };
+      const ok = validate(config, {
+        instancePath: "", parentData: root, parentDataProperty: "value",
+        // Ajv's context type omits scalar roots although validate accepts them.
+        rootData: config as Record<string, unknown>, dynamicAnchors: {}
+      });
       const errors = validate.errors ?? [];
 
       if (ok) {
         return {
           ok: true,
-          value: config,
+          value: root.value,
           issues: []
         };
       }
@@ -58,7 +65,7 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
       const retained = truncated ? maximum - 1 : errors.length;
       const issues: ValidatorIssue[] = [];
       for (let index = 0; index < retained; index += 1) {
-        issues.push(toValidatorIssue(errors[index]!, config));
+        issues.push(toValidatorIssue(errors[index]!, root.value));
       }
       if (truncated) issues.push({ code: "ajv_issues_truncated", severity: "error" });
       return { ok: false, issues };
