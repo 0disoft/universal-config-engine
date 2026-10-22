@@ -264,5 +264,5 @@ function isArgValueToken(value: string): boolean {
 }
 
 function isNegativeNumberToken(value: string): boolean {
-  return /^-(?:\d+|\d*\.\d+)(?:e[+-]?\d+)?$/i.test(value);
+  return /^-(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value);
 }

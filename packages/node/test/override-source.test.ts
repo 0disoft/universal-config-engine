@@ -7,6 +7,18 @@ function descriptor(kind: ConfigSourceDescriptor["kind"]): ConfigSourceDescripto
 }
 
 describe("override source dictionary keys", () => {
+  it.each(["-1", "-1.", "-.5", "-1.e2", "-0", "-1.5e-2"])(
+    "parses the same negative number in separate and assignment syntax (%s)", raw => {
+      const descriptor = { id: "argv", kind: "argv" as const, priority: 0, displayName: "argv" };
+      const mappings = [{ sourceKind: "argv" as const, externalName: "--n", targetPath: ["n"], parseAs: "number" as const }];
+      for (const argv of [["--n", raw], [`--n=${raw}`]]) {
+        const result = createArgvSource({ descriptor, mappings, argv });
+        expect(result.value).toEqual({ n: Number(raw) });
+        expect(result.issues).toEqual([]);
+      }
+    }
+  );
+
   it("rejects ambiguous assignment names before inspecting argument values", () => {
     const argv = Object.defineProperty(["--setting=a=b"], 0, {
       get() { throw new Error("Argument values must not be inspected for invalid declarations."); }

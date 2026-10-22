@@ -545,3 +545,5 @@ The Ajv adapter validates an owned mutable config copy when `coerceTypes`, `useD
 Node file readers reject malformed UTF-8 in the default `utf8`/`utf-8` mode rather than replacing invalid bytes with Unicode replacement characters. Decoding follows bounded byte collection, so valid multibyte characters crossing read chunks are preserved. Existing BOM handling and explicit non-UTF-8 encodings are unchanged.
 
 Ajv root coercions are captured through the compiled validator parent-data context: successful adapter output contains the transformed scalar or array, while the input and schema reference scope remain unchanged. Failure paths use the transformed root for typed array indexes.
+
+Argument values accept the same negative decimal forms in separate-token and assignment syntax, including trailing decimal points and exponents (`--n -1.e2` and `--n=-1.e2`). Short option tokens remain options rather than values.
