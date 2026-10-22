@@ -3,7 +3,8 @@ import { Ajv } from "ajv/dist/ajv.js";
 import {
   buildDiagnosticReport,
   resolveConfig,
-  runValidators
+  runValidators,
+  runValidatedConfigPipeline
 } from "@0disoft/universal-config-engine-core";
 import {
   createAjvValidator,
@@ -11,6 +12,46 @@ import {
 } from "../src/index.js";
 
 describe("createAjvValidator", () => {
+  const typedRun = (value: Record<string, string | number>, outputValidator: ReturnType<typeof createAjvValidator>) =>
+    runValidatedConfigPipeline({ context: undefined, outputValidator, loaders: [{
+      descriptor: { id: "settings", kind: "object", priority: 0, displayName: "settings" },
+      load: () => ({ value })
+    }] });
+
+  it.each([false, true])("returns coerced typed output without mutating resolved config (custom Ajv: %s)", async custom => {
+    const schema = { type: "object", properties: { port: { type: "number" } } };
+    const validator = createAjvValidator({ schema, ...(custom
+      ? { ajv: new Ajv({ coerceTypes: true }) } : { options: { coerceTypes: true } }) });
+    const run = await typedRun({ port: "3000" }, validator);
+    expect(run.ok).toBe(true);
+    if (run.ok) expect(run.value).toEqual({ port: 3000 });
+    expect(run.result.config).toEqual({ port: "3000" });
+  });
+
+  it("returns defaults and stripped fields only in the validated output", async () => {
+    const validator = createAjvValidator({ options: { useDefaults: true, removeAdditional: true }, schema: {
+      type: "object", required: ["port"], additionalProperties: false,
+      properties: { port: { type: "number", default: 3000 } }
+    } });
+    const run = await typedRun({ extra: "input marker" }, validator);
+    expect(run.ok).toBe(true);
+    if (run.ok) expect(run.value).toEqual({ port: 3000 });
+    expect(run.result.config).toEqual({ extra: "input marker" });
+  });
+
+  it("isolates modifying custom keywords on supplied instances", async () => {
+    const ajv = new Ajv();
+    ajv.addKeyword({ keyword: "normalizePort", modifying: true, validate(_schema: unknown, data: { port: string | number }) {
+      data.port = Number(data.port);
+      return true;
+    } });
+    const run = await typedRun({ port: "3000" }, createAjvValidator({ ajv,
+      schema: { type: "object", normalizePort: true } }));
+    expect(run.ok).toBe(true);
+    if (run.ok) expect(run.value).toEqual({ port: 3000 });
+    expect(run.result.config).toEqual({ port: "3000" });
+  });
+
   it("silences default schema logging while preserving an explicit application logger", () => {
     const schema = { type: "object", properties: { review_field: { minimum: 0 } } };
     const consoleWarning = vi.spyOn(console, "warn").mockImplementation(() => {});

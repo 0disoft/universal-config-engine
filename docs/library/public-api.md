@@ -528,3 +528,5 @@ Override location history deduplicates identical source/position tuples in first
 Generic loader and validator diagnostic paths must fit `maxPathLength` and the serialized UTF-8 `maxReportBytes` budget. Invalid or oversized paths fail closed as `invalid_loader_result` or `validator_issue_invalid`; the raw path is not retained.
 
 If `max_resolved_paths_exceeded` leaves source ownership incomplete, diagnostic reports return only a fixed resource-limit failure, without source metadata, arbitrary diagnostics or provenance. Shared value-report redaction also fails closed for this result. Normal complete results retain path-specific redaction.
+
+The Ajv adapter validates an owned mutable config copy when `coerceTypes`, `useDefaults` or `removeAdditional` is enabled, or when the caller supplies an Ajv instance (which may have modifying keywords). Its returned `value` contains those object/array mutations; resolved config and provenance remain unchanged under ADR 0009. Default non-modifying validation avoids this extra copy.

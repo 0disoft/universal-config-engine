@@ -11,7 +11,7 @@ import {
   type Options,
   type Schema
 } from "ajv/dist/ajv.js";
-import { DEFAULT_RESOURCE_LIMITS } from "@0disoft/universal-config-engine-core";
+import { cloneConfigValue, DEFAULT_RESOURCE_LIMITS } from "@0disoft/universal-config-engine-core";
 
 export interface CreateAjvValidatorInput {
   readonly id?: string;
@@ -29,6 +29,9 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
   const ajv = input.ajv ?? new Ajv({ allErrors: false, loopRequired: 1, logger: false, ...(input.options ?? {}) });
   const maximum = typeof input.maxIssues === "number" && Number.isSafeInteger(input.maxIssues) && input.maxIssues > 0
     ? Math.min(input.maxIssues, 10_000) : DEFAULT_RESOURCE_LIMITS.maxDiagnostics;
+  // Supplied instances can also have modifying custom keywords. Give those
+  // validators an owned mutable value, without copying the default read-only path.
+  const needsCopy = input.ajv !== undefined || Boolean(ajv.opts.coerceTypes || ajv.opts.useDefaults || ajv.opts.removeAdditional);
   const validate = ajv.compile(input.schema);
   if ("$async" in validate && validate.$async === true) {
     throw new Error("Asynchronous Ajv schemas are not supported by this adapter.");
@@ -37,13 +40,14 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
   return {
     id,
     validate(validatorInput: ValidatorInput): ValidatorResult {
-      const ok = validate(validatorInput.config);
+      const config = needsCopy ? cloneConfigValue(validatorInput.config) : validatorInput.config;
+      const ok = validate(config);
       const errors = validate.errors ?? [];
 
       if (ok) {
         return {
           ok: true,
-          value: validatorInput.config,
+          value: config,
           issues: []
         };
       }
@@ -52,7 +56,7 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
       const retained = truncated ? maximum - 1 : errors.length;
       const issues: ValidatorIssue[] = [];
       for (let index = 0; index < retained; index += 1) {
-        issues.push(toValidatorIssue(errors[index]!, validatorInput.config));
+        issues.push(toValidatorIssue(errors[index]!, config));
       }
       if (truncated) issues.push({ code: "ajv_issues_truncated", severity: "error" });
       return { ok: false, issues };
