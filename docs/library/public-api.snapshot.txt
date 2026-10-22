@@ -359,6 +359,11 @@ export declare function setResolvedPath(index: MutableResolvedPathIndex, resolve
 export declare function deleteResolvedPath(index: MutableResolvedPathIndex, key: string): void;
 export {};
 
+### source-descriptor.d.ts
+import type { ConfigSourceDescriptor } from "./types.js";
+/** Own mutable policy arrays without copying source config values. */
+export declare function copySourceDescriptor(source: ConfigSourceDescriptor): ConfigSourceDescriptor;
+
 ### source-identity.d.ts
 import type { ConfigIssue, ConfigSourceDescriptor, ResolvedPath } from "./types.js";
 /** Compare metadata fields, independent of the adapter's object insertion order. */
@@ -794,7 +799,26 @@ export declare function loadJsonFileSource(input: LoadJsonFileSourceInput): Prom
 
 ### json-locations.d.ts
 import type { LoadedSource } from "@0disoft/universal-config-engine-core";
+export declare const DEFAULT_MAX_LOCATION_BYTES: number;
 export declare function collectJsonLocations(sourceId: string, sourcePath: string, raw: string, maxLocationBytes: number): Pick<LoadedSource, "locations" | "issues">;
+
+### jsonc-tokens.d.ts
+export declare const JSON_TOKEN: {
+    readonly OpenBraceToken: 1;
+    readonly CloseBraceToken: 2;
+    readonly OpenBracketToken: 3;
+    readonly CloseBracketToken: 4;
+    readonly CommaToken: 5;
+    readonly ColonToken: 6;
+    readonly StringLiteral: 10;
+    readonly LineCommentTrivia: 12;
+    readonly BlockCommentTrivia: 13;
+    readonly LineBreakTrivia: 14;
+    readonly Trivia: 15;
+    readonly Unknown: 16;
+    readonly EOF: 17;
+};
+export declare const JSON_SCAN_ERROR_NONE = 0;
 
 ### limits.d.ts
 export declare function positiveSafeIntegerLimit(value: number | undefined, fallback: number): number;
