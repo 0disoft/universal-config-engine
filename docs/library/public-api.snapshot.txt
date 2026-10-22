@@ -58,6 +58,8 @@ export interface ApplyCoercionRulesResult {
     readonly provenance: readonly ProvenanceEvent[];
 }
 export declare function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercionRulesResult;
+/** Internal resolution boundary; standalone coercion keeps its existing depth contract. */
+export declare function applyResolutionCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercionRulesResult;
 
 ### diagnostics.d.ts
 import type { ConfigIssue } from "./types.js";
@@ -213,6 +215,7 @@ export declare function createMappedOverrideSource(input: CreateMappedOverrideSo
 import type { ConfigPath, ConfigValue } from "./types.js";
 /** Count the projected tree before setConfigValueAtPath can allocate its copy. */
 export declare function projectedMergeKeyCount(config: Record<string, ConfigValue>, path: ConfigPath, value: ConfigValue, currentCount: number): number;
+export declare function nestedKeyCount(value: ConfigValue): number;
 
 ### merge.d.ts
 import type { ConfigResult, MergePolicy, ResolveConfigInput } from "./types.js";

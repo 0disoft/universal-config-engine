@@ -1,5 +1,5 @@
 import { appendBoundedIssues } from "./diagnostics.js";
-import { applyCoercionRules } from "./coercion.js";
+import { applyResolutionCoercionRules } from "./coercion.js";
 import { getConfigValueAtPath, pathToKey, setConfigValueAtPath } from "./path.js";
 import { flattenConfigObject } from "./value.js";
 import { normalizeResourceLimits } from "./limits.js";
@@ -133,7 +133,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
 
   let didCoerce = false;
   if (input.coercionRules !== undefined && input.coercionRules.length > 0 && !issues.some(issue => issue.severity === "error")) {
-    const coercionResult = applyCoercionRules({
+    const coercionResult = applyResolutionCoercionRules({
       config,
       rules: input.coercionRules,
       limits,

@@ -1,6 +1,8 @@
 import { cloneConfigValue, getConfigValueAtPath, isUnsafePathSegment } from "./path.js";
 import { parseJsonConfigValue } from "./json-value.js";
 import { appendBoundedIssues, isDiagnosticsLimitReached } from "./diagnostics.js";
+import { nestedKeyCount } from "./merge-key-budget.js";
+import { flattenConfigObject } from "./value.js";
 import { normalizeResourceLimits } from "./limits.js";
 import type { CoercionRule, ConfigIssue, ConfigPath, ConfigValue, ProvenanceEvent, ResourceLimitPolicy } from "./types.js";
 
@@ -19,6 +21,15 @@ export interface ApplyCoercionRulesResult {
 }
 
 export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercionRulesResult {
+  return coerce(input, false);
+}
+
+/** Internal resolution boundary; standalone coercion keeps its existing depth contract. */
+export function applyResolutionCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercionRulesResult {
+  return coerce(input, true);
+}
+
+function coerce(input: ApplyCoercionRulesInput, enforceStructure: boolean): ApplyCoercionRulesResult {
   const issues: ConfigIssue[] = [];
   const provenance: ProvenanceEvent[] = [];
   const limits = normalizeResourceLimits(input.limits);
@@ -51,6 +62,7 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
     };
   }
 
+  let keyCount = enforceStructure ? nestedKeyCount(config) : 0;
   for (const rule of input.rules) {
     if (isDiagnosticsLimitReached(issues, limits.maxDiagnostics)) break;
     const currentValue = getConfigValueAtPath(config, rule.path);
@@ -80,8 +92,27 @@ export function applyCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercio
       continue;
     }
 
+    let addedKeys = 0;
+    if (enforceStructure && rule.to === "json") {
+      // The replaced value is a string, so only its newly decoded descendants
+      // grow the tree. Inspect that candidate, never the whole config per rule.
+      const checked = flattenConfigObject("core:resolved-config", { value: coerced.value }, {
+        ...limits, maxKeyCount: limits.maxKeyCount - keyCount + 1,
+        maxDepth: limits.maxDepth - rule.path.length + 1,
+        maxPathLength: limits.maxPathLength - rule.path.length + 1
+      });
+      if (checked.issues.length > 0) {
+        appendBoundedIssues(issues, checked.issues.map(issue => ({
+          ...issue, path: [...rule.path, ...(issue.path?.slice(1) ?? [])],
+          message: "JSON coercion would exceed the resolved config structure budget."
+        })), limits.maxDiagnostics);
+        break;
+      }
+      addedKeys = nestedKeyCount(coerced.value);
+    }
     try {
       setExistingCoercionValue(config, rule.path, coerced.value);
+      keyCount += addedKeys;
       provenance.push({
         path: [...rule.path],
         action: "coerced",

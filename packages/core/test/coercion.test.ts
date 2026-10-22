@@ -3,6 +3,39 @@ import { applyCoercionRules, buildDiagnosticReport, getConfigValueAtPath, resolv
 import { source } from "./helpers/source.js";
 
 describe("applyCoercionRules", () => {
+  it("stops resolution before writing oversized JSON or reading later rules", () => {
+    let laterReads = 0;
+    const result = resolveConfig({ sources: [source("settings", 0, { a: "[1,2]", b: "[3,4]" })],
+      limits: { maxKeyCount: 2 }, coercionRules: [
+        { path: ["a"], from: "string", to: "json", onFailure: "issue" },
+        { get path() { laterReads++; return ["b"]; }, from: "string", to: "json", onFailure: "issue" }
+      ] });
+    expect(result.config).toEqual({ a: "[1,2]", b: "[3,4]" });
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "max_key_count_exceeded" }));
+    expect(result.provenance.filter(event => event.action === "coerced")).toEqual([]);
+    expect(laterReads).toBe(0);
+  });
+
+  it("accepts the exact aggregate key budget and keeps completed conversions on later overflow", () => {
+    const run = (maxKeyCount: number) => resolveConfig({
+      sources: [source("settings", 0, { a: "[1]", b: "[2,3]" })], limits: { maxKeyCount },
+      coercionRules: ["a", "b"].map(key => ({ path: [key], from: "string", to: "json", onFailure: "issue" }))
+    });
+    expect(run(5)).toMatchObject({ ok: true, config: { a: [1], b: [2, 3] } });
+    const partial = run(4);
+    expect(partial.config).toEqual({ a: [1], b: "[2,3]" });
+    expect(partial.provenance.filter(event => event.action === "coerced").map(event => event.path)).toEqual([["a"]]);
+    expect(partial.resolvedPaths.map(path => path.path)).toEqual([["a"], ["b"]]);
+  });
+
+  it.each(["maxDepth", "maxPathLength"] as const)("checks absolute %s before expanding JSON", key => {
+    const result = resolveConfig({ sources: [source("settings", 0, { a: '{"x":1}' })], limits: { [key]: 1 },
+      coercionRules: [{ path: ["a"], from: "string", to: "json", onFailure: "issue" }] });
+    expect(result.ok).toBe(false);
+    expect(result.config).toEqual({ a: '{"x":1}' });
+    expect(result.issues[0]?.code).toBe(key === "maxDepth" ? "max_depth_exceeded" : "max_path_length_exceeded");
+  });
+
   it("stops failed-rule work and allocations at diagnostic overflow", () => {
     let reads = 0;
     const rule: CoercionRule = { get path() { reads++; return ["flag"]; }, from: "string", to: "boolean", onFailure: "issue" };

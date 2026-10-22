@@ -289,9 +289,12 @@ accepted.
 JSON value checks, structural validation and `cloneConfigValue` traverse containers
 iteratively. Valid deep JSON is not mislabeled as invalid syntax because a JSON
 reviver or value copy exhausts the call stack. Mapping and standalone coercion do
-not impose a separate depth policy: `resolveConfig` applies its configured
-depth/path/key limits to the
-staged source or expanded config and returns `resource-limit` issues. Native JSON
+not impose a separate depth policy. During resolution, JSON coercion checks each
+candidate against absolute depth/path limits and the remaining aggregate key/index
+budget before cloning or assigning it. A structural overflow stops subsequent
+rules, preserving completed conversions and the original value at the failed path.
+The existing tree is counted once; later checks inspect only each candidate.
+`resolveConfig` returns `resource-limit` issues for structural overflow. Native JSON
 parsing still allocates the decoded value before those structural checks; bound
 raw input bytes at the source adapter boundary.
 Cloning preserves array holes, creates null-prototype object copies, and copies

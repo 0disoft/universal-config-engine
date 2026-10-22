@@ -18,7 +18,7 @@ export function projectedMergeKeyCount(
   return currentCount;
 }
 
-function nestedKeyCount(value: ConfigValue): number {
+export function nestedKeyCount(value: ConfigValue): number {
   let count = 0;
   const stack: Iterator<ConfigValue>[] = [];
   function enter(child: ConfigValue) {
