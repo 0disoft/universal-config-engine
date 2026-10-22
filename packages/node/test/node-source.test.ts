@@ -23,6 +23,25 @@ function descriptor(id: string, kind: ConfigSourceDescriptor["kind"], priority: 
 }
 
 describe("node source loaders", () => {
+  it("rejects malformed UTF-8 instead of changing configuration values", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "uce-encoding-"));
+    try {
+      const path = join(dir, "config.json");
+      for (const invalid of [Buffer.from([0xff]), Buffer.from([0xe2, 0x82])]) {
+        await writeFile(path, Buffer.concat([Buffer.from('{"name":"'), invalid, Buffer.from('"}') ]));
+        const loaded = await loadJsonFileSource({ descriptor: descriptor("json", "json-file", 0), filePath: path });
+        expect(loaded.value).toEqual({});
+        expect(loaded.issues).toEqual([expect.objectContaining({ code: "json_read_failed" })]);
+      }
+      // Decode after concatenation: valid multibyte sequences may cross read chunks.
+      const text = JSON.stringify({ name: "x".repeat(65_526) + "한😀" });
+      await writeFile(path, text);
+      const loaded = await loadJsonFileSource({ descriptor: descriptor("json", "json-file", 0), filePath: path });
+      expect(loaded.value).toEqual(JSON.parse(text));
+      expect(loaded.issues ?? []).toEqual([]);
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+
   it.each([undefined, 1, 3, 10_001])("bounds dotenv diagnostics during parsing at %s", maxIssues => {
     const loaded = parseSimpleDotenv(descriptor("dotenv", "dotenv-file", 1),
       "invalid\n".repeat(50_000) + "AFTER=unread", undefined, maxIssues);

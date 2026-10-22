@@ -198,7 +198,7 @@ async function readFileHandleWithinLimit(
     if (bytesRead === 0) {
       return {
         ok: true,
-        raw: Buffer.concat(chunks, totalBytes).toString(encoding)
+        raw: decodeFileBytes(Buffer.concat(chunks, totalBytes), encoding)
       };
     }
 
@@ -212,4 +212,11 @@ async function readFileHandleWithinLimit(
 
     chunks.push(buffer.subarray(0, bytesRead));
   }
+}
+
+/** Keep BOM handling unchanged while refusing lossy UTF-8 replacement. */
+function decodeFileBytes(bytes: Buffer, encoding: BufferEncoding): string {
+  return encoding === "utf8" || encoding === "utf-8"
+    ? new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes)
+    : bytes.toString(encoding);
 }
