@@ -39,7 +39,8 @@ export function getConfigValueAtPath(value: ConfigValue, path: ConfigPath): Conf
     }
 
     if (Array.isArray(current)) {
-      if (typeof segment !== "number") {
+      if (typeof segment !== "number" || !Number.isSafeInteger(segment) || segment < 0 ||
+          segment >= current.length || !Object.prototype.hasOwnProperty.call(current, segment)) {
         return undefined;
       }
       current = current[segment];

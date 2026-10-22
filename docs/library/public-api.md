@@ -32,6 +32,9 @@ Repository Type: library
   Empty objects contribute no fields when merged into non-empty objects; existing
   descendants, source ownership and locations remain intact. They still create a
   missing object or replace a scalar, array or null with an empty object.
+- `getConfigValueAtPath`: typed lookup reads only own object fields and existing
+  own array elements. Array indexes must be non-negative safe integers below the
+  array length; inherited indexes and numeric metadata are not config values.
 - `CoercionPolicy`: opt-in type conversion rules.
 - `applyCoercionRules`: immutable coercion stage that returns a cloned `config`
   together with issues and provenance; caller input is never modified.
