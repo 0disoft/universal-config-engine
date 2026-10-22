@@ -547,3 +547,16 @@ Node file readers reject malformed UTF-8 in the default `utf8`/`utf-8` mode rath
 Ajv root coercions are captured through the compiled validator parent-data context: successful adapter output contains the transformed scalar or array, while the input and schema reference scope remain unchanged. Failure paths use the transformed root for typed array indexes.
 
 Argument values accept the same negative decimal forms in separate-token and assignment syntax, including trailing decimal points and exponents (`--n -1.e2` and `--n=-1.e2`). Short option tokens remain options rather than values.
+
+## Optional cancellation
+
+Pipeline, source loading and validation accept an optional `signal` compatible
+with native `AbortSignal`. `ConfigAbortSignal` is a structural interface, so core
+adds no Node or DOM declaration dependency. Loader callbacks may accept a second
+optional `ConfigOperationOptions` argument; validator inputs may contain `signal`.
+Existing required parameters and result shapes are unchanged. Pre-cancelled work
+skips callbacks and validation cloning. Cancellation stops waiting for a pending
+callback, skips later callbacks, reports sanitized `operation_aborted` and prevents
+successful typed output; listeners are removed and late rejections are observed.
+Callback I/O must cooperate with the signal to actually stop its external work.
+Synchronous resolution and provider execution cannot be preempted by this signal.

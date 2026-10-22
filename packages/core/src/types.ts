@@ -1,3 +1,5 @@
+import type { ConfigOperationOptions, ConfigAbortSignal } from "./operation.js";
+
 export type ConfigScalar = string | number | boolean | null;
 
 export type ConfigValue =
@@ -82,7 +84,7 @@ export interface ConfigLoaderResult {
 
 export interface ConfigLoader<TContext = undefined> {
   readonly descriptor: ConfigSourceDescriptor;
-  load(context: TContext): Promise<ConfigLoaderResult> | ConfigLoaderResult;
+  load(context: TContext, options?: ConfigOperationOptions): Promise<ConfigLoaderResult> | ConfigLoaderResult;
 }
 
 export type ProvenanceAction =
@@ -138,6 +140,7 @@ export interface CoercionRule {
 }
 
 export interface ValidatorInput {
+  readonly signal?: ConfigAbortSignal;
   readonly config: ConfigValue;
   readonly provenance: readonly ProvenanceEvent[];
 }

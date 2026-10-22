@@ -1,3 +1,4 @@
+import { runAbortable, operationAbortedIssue, type ConfigOperationOptions } from "./operation.js";
 import { appendBoundedIssues, isDiagnosticsLimitReached, markDiagnosticsOverflow } from "./diagnostics.js";
 import { isConfigPath, isIssueCode, isIssueDetails, isRecord } from "./adapter-guards.js";
 import { normalizeResourceLimits } from "./limits.js";
@@ -12,7 +13,7 @@ import type {
   ValidatorResult
 } from "./types.js";
 
-export interface RunValidatorsInput {
+export interface RunValidatorsInput extends ConfigOperationOptions {
   readonly config: ConfigValue;
   readonly provenance: readonly ProvenanceEvent[];
   readonly validators: readonly ValidatorAdapter[];
@@ -29,6 +30,7 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
   const provenance: ProvenanceEvent[] = [];
   const limits = normalizeResourceLimits(input.limits);
   const maxDiagnostics = limits.maxDiagnostics;
+  if (input.signal?.aborted) return { issues: [operationAbortedIssue("validation")], provenance };
   const remainingProvenanceEvents = limits.maxProvenanceEvents - input.provenance.length;
   if (remainingProvenanceEvents < 0 || (remainingProvenanceEvents === 0 && input.validators.length > 0)) {
     return {
@@ -49,10 +51,15 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
     }
 
     try {
-      const result = await validator.validate({
-        config: validatorConfig,
-        provenance: validatorProvenance
-      });
+      const step = await runAbortable(() => validator.validate({
+        config: validatorConfig, provenance: validatorProvenance,
+        ...(input.signal === undefined ? {} : { signal: input.signal })
+      }), input.signal);
+      if (step.aborted) {
+        appendBoundedIssues(issues, [operationAbortedIssue("validation", validator.id)], maxDiagnostics);
+        break;
+      }
+      const result = step.value;
       if (!isValidatorResult(result)) {
         appendBoundedIssues(issues, [invalidValidatorResultIssue(validator.id)], maxDiagnostics);
         provenance.push({

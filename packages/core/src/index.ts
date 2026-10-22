@@ -110,3 +110,5 @@ export type {
 } from "./validation.js";
 export { buildPublicDiagnosticReport } from "./public-report.js";
 export type { PublicDiagnosticReport } from "./public-report.js";
+
+export type { ConfigAbortSignal, ConfigOperationOptions } from "./operation.js";

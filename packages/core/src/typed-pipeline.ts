@@ -48,7 +48,7 @@ export async function runValidatedConfigPipeline<TOutput, TContext = undefined>(
   };
   // Running after the ordinary pipeline avoids invoking output transforms on
   // invalid inputs. The existing stage owns frozen inputs and aggregate budgets.
-  const result = await applyPipelineValidators(pipeline.result, [outputValidator]);
+  const result = await applyPipelineValidators(pipeline.result, [outputValidator], input);
   const report = buildDiagnosticReport(result, input.reportOptions);
   return result.ok && report.status === "ok" && captured
     ? { ok: true, value, result, report }

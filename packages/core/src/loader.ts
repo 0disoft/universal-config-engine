@@ -1,3 +1,4 @@
+import { runAbortable, operationAbortedIssue, type ConfigOperationOptions } from "./operation.js";
 import { appendBoundedIssues, markDiagnosticsOverflow } from "./diagnostics.js";
 import { isConfigPath, isIssueCode, isIssueDetails, isRecord } from "./adapter-guards.js";
 import type {
@@ -25,7 +26,7 @@ const ISSUE_CATEGORIES = new Set([
   "resource-limit"
 ]);
 
-export interface LoadConfigSourcesInput<TContext = undefined> {
+export interface LoadConfigSourcesInput<TContext = undefined> extends ConfigOperationOptions {
   readonly loaders: readonly ConfigLoader<TContext>[];
   readonly context: TContext;
   readonly limits?: Partial<ResourceLimitPolicy>;
@@ -43,6 +44,7 @@ export async function loadConfigSources<TContext = undefined>(
   const issues: ConfigIssue[] = [];
   const limits = normalizeResourceLimits(input.limits);
   const maxDiagnostics = limits.maxDiagnostics;
+  if (input.signal?.aborted) return { sources, issues: [operationAbortedIssue("source-load")] };
 
   if (input.loaders.length > limits.maxSources) {
     return {
@@ -63,8 +65,15 @@ export async function loadConfigSources<TContext = undefined>(
 
   for (const loader of input.loaders) {
     try {
-      const result = await loader.load(input.context);
-      const source = toLoadedSource(loader, result, limits);
+      const step = await runAbortable(() => input.signal === undefined ? loader.load(input.context)
+        : loader.load(input.context, { signal: input.signal }), input.signal);
+      if (step.aborted) {
+        const issue = operationAbortedIssue("source-load", loader.descriptor.id);
+        sources.push({ descriptor: loader.descriptor, value: {}, issues: [issue] });
+        appendBoundedIssues(issues, [issue], maxDiagnostics);
+        break;
+      }
+      const source = toLoadedSource(loader, step.value, limits);
       sources.push(source);
       appendBoundedIssues(issues, source.issues ?? [], maxDiagnostics);
     } catch {

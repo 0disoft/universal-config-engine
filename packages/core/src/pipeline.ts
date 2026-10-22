@@ -1,3 +1,4 @@
+import { operationAbortedIssue, type ConfigOperationOptions } from "./operation.js";
 import { appendBoundedIssues } from "./diagnostics.js";
 import { loadConfigSources } from "./loader.js";
 import { resolveConfig } from "./merge.js";
@@ -17,7 +18,7 @@ import type {
 } from "./types.js";
 import { runValidators } from "./validation.js";
 
-export interface RunConfigPipelineInput<TContext = undefined> {
+export interface RunConfigPipelineInput<TContext = undefined> extends ConfigOperationOptions {
   readonly loaders: readonly ConfigLoader<TContext>[];
   readonly context: TContext;
   readonly validators?: readonly ValidatorAdapter[];
@@ -38,6 +39,7 @@ export async function runConfigPipeline<TContext = undefined>(
   const loaded = await loadConfigSources({
     loaders: input.loaders,
     context: input.context,
+    ...(input.signal === undefined ? {} : { signal: input.signal }),
     ...(input.limits === undefined ? {} : { limits: input.limits })
   });
   let resolved = resolveConfig({
@@ -52,7 +54,7 @@ export async function runConfigPipeline<TContext = undefined>(
     const issues = combineConfigIssues(resolved.issues, loaded.issues, resolved.limits.maxDiagnostics);
     resolved = { ...resolved, ok: resolved.ok && !issues.some((issue) => issue.severity === "error"), issues };
   }
-  const result = await applyPipelineValidators(resolved, input.validators ?? []);
+  const result = await applyPipelineValidators(resolved, input.validators ?? [], input);
 
   return {
     result,
@@ -63,8 +65,13 @@ export async function runConfigPipeline<TContext = undefined>(
 /** Internal shared validation stage; public facades retain separate result shapes. */
 export async function applyPipelineValidators(
   result: ConfigResult,
-  validators: readonly ValidatorAdapter[]
+  validators: readonly ValidatorAdapter[],
+  options: ConfigOperationOptions = {}
 ): Promise<ConfigResult> {
+  if (options.signal?.aborted && !result.issues.some(issue => issue.code === "operation_aborted")) {
+    return { ...result, ok: false, issues: combineConfigIssues(result.issues,
+      [operationAbortedIssue("validation")], result.limits.maxDiagnostics) };
+  }
   if (!result.ok || validators.length === 0) {
     return result;
   }
@@ -73,7 +80,8 @@ export async function applyPipelineValidators(
     config: result.config,
     provenance: result.provenance,
     validators,
-    limits: result.limits
+    limits: result.limits,
+    ...(options.signal === undefined ? {} : { signal: options.signal })
   });
   const issues = combineConfigIssues(
     result.issues,

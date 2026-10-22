@@ -128,6 +128,7 @@ export type { CreateMappedOverrideSourceInput } from "./mapping.js";
 export type { RunValidatorsInput, RunValidatorsResult } from "./validation.js";
 export { buildPublicDiagnosticReport } from "./public-report.js";
 export type { PublicDiagnosticReport } from "./public-report.js";
+export type { ConfigAbortSignal, ConfigOperationOptions } from "./operation.js";
 
 ### inspection.d.ts
 import { type BuildDiagnosticReportOptions } from "./redaction.js";
@@ -190,8 +191,9 @@ export declare function normalizeLoaderLocations(raw: unknown[], sourceId: strin
 };
 
 ### loader.d.ts
+import { type ConfigOperationOptions } from "./operation.js";
 import type { ConfigIssue, ConfigLoader, LoadedSource, ResourceLimitPolicy } from "./types.js";
-export interface LoadConfigSourcesInput<TContext = undefined> {
+export interface LoadConfigSourcesInput<TContext = undefined> extends ConfigOperationOptions {
     readonly loaders: readonly ConfigLoader<TContext>[];
     readonly context: TContext;
     readonly limits?: Partial<ResourceLimitPolicy>;
@@ -223,6 +225,28 @@ export declare const DEFAULT_MERGE_POLICY: MergePolicy;
 export { DEFAULT_RESOURCE_LIMITS } from "./limits.js";
 export declare function resolveConfig(input: ResolveConfigInput): ConfigResult;
 
+### operation.d.ts
+import type { ConfigIssue, ConfigIssueCategory } from "./types.js";
+/** Structural subset accepted by native AbortSignal, without a Node/DOM type dependency. */
+export interface ConfigAbortSignal {
+    readonly aborted: boolean;
+    addEventListener(type: "abort", listener: () => void, options?: {
+        readonly once?: boolean;
+    }): void;
+    removeEventListener(type: "abort", listener: () => void): void;
+}
+export interface ConfigOperationOptions {
+    readonly signal?: ConfigAbortSignal;
+}
+export declare function operationAbortedIssue(category: ConfigIssueCategory, sourceId?: string): ConfigIssue;
+/** Stop waiting without claiming to stop a callback that ignores cancellation. */
+export declare function runAbortable<T>(operation: () => T | PromiseLike<T>, signal?: ConfigAbortSignal): Promise<{
+    readonly aborted: true;
+} | {
+    readonly aborted: false;
+    readonly value: T;
+}>;
+
 ### path.d.ts
 import type { ConfigPath, ConfigPathSegment, ConfigValue } from "./types.js";
 export declare function isUnsafePathSegment(segment: ConfigPathSegment): boolean;
@@ -235,9 +259,10 @@ export declare function setConfigValueAtPath(root: Record<string, ConfigValue>, 
 export declare function cloneConfigValue(value: ConfigValue): ConfigValue;
 
 ### pipeline.d.ts
+import { type ConfigOperationOptions } from "./operation.js";
 import { type BuildDiagnosticReportOptions } from "./redaction.js";
 import type { CoercionRule, ConfigIssue, ConfigLoader, ConfigResult, DiagnosticReport, MergePolicy, ResourceLimitPolicy, ValidatorAdapter } from "./types.js";
-export interface RunConfigPipelineInput<TContext = undefined> {
+export interface RunConfigPipelineInput<TContext = undefined> extends ConfigOperationOptions {
     readonly loaders: readonly ConfigLoader<TContext>[];
     readonly context: TContext;
     readonly validators?: readonly ValidatorAdapter[];
@@ -252,7 +277,7 @@ export interface RunConfigPipelineResult {
 }
 export declare function runConfigPipeline<TContext = undefined>(input: RunConfigPipelineInput<TContext>): Promise<RunConfigPipelineResult>;
 /** Internal shared validation stage; public facades retain separate result shapes. */
-export declare function applyPipelineValidators(result: ConfigResult, validators: readonly ValidatorAdapter[]): Promise<ConfigResult>;
+export declare function applyPipelineValidators(result: ConfigResult, validators: readonly ValidatorAdapter[], options?: ConfigOperationOptions): Promise<ConfigResult>;
 export declare function combineConfigIssues(existing: readonly ConfigIssue[], next: readonly ConfigIssue[], declaredMaxDiagnostics: number): readonly ConfigIssue[];
 
 ### public-report.d.ts
@@ -402,6 +427,7 @@ export type RunValidatedConfigPipelineResult<TOutput> = RunConfigPipelineResult 
 export declare function runValidatedConfigPipeline<TOutput, TContext = undefined>(input: RunValidatedConfigPipelineInput<TOutput, TContext>): Promise<RunValidatedConfigPipelineResult<TOutput>>;
 
 ### types.d.ts
+import type { ConfigOperationOptions, ConfigAbortSignal } from "./operation.js";
 export type ConfigScalar = string | number | boolean | null;
 export type ConfigValue = ConfigScalar | readonly ConfigValue[] | {
     readonly [key: string]: ConfigValue;
@@ -455,7 +481,7 @@ export interface ConfigLoaderResult {
 }
 export interface ConfigLoader<TContext = undefined> {
     readonly descriptor: ConfigSourceDescriptor;
-    load(context: TContext): Promise<ConfigLoaderResult> | ConfigLoaderResult;
+    load(context: TContext, options?: ConfigOperationOptions): Promise<ConfigLoaderResult> | ConfigLoaderResult;
 }
 export type ProvenanceAction = "defined" | "overridden" | "defaulted" | "coerced" | "validated" | "redacted" | "rejected";
 export interface ProvenanceEvent {
@@ -497,6 +523,7 @@ export interface CoercionRule {
     readonly onFailure: "issue";
 }
 export interface ValidatorInput {
+    readonly signal?: ConfigAbortSignal;
     readonly config: ConfigValue;
     readonly provenance: readonly ProvenanceEvent[];
 }
@@ -571,8 +598,9 @@ export interface DiagnosticReport {
 }
 
 ### validation.d.ts
+import { type ConfigOperationOptions } from "./operation.js";
 import type { ConfigIssue, ConfigValue, ProvenanceEvent, ResourceLimitPolicy, ValidatorAdapter } from "./types.js";
-export interface RunValidatorsInput {
+export interface RunValidatorsInput extends ConfigOperationOptions {
     readonly config: ConfigValue;
     readonly provenance: readonly ProvenanceEvent[];
     readonly validators: readonly ValidatorAdapter[];
