@@ -14,7 +14,7 @@ import type {
   RedactionPolicyInput,
   SourceKind
 } from "@0disoft/universal-config-engine-core";
-import { pathsEqual } from "@0disoft/universal-config-engine-core";
+import { pathToKey } from "@0disoft/universal-config-engine-core";
 import type { PipelineDeclaration, PipelineSourceDeclaration } from "../types.js";
 import { resolveConfigRelativePath } from "./source-paths.js";
 import { PipelineDeclarationError } from "./declaration-diagnostics.js";
@@ -170,8 +170,11 @@ function mergeSourceRedactionWithSecretMappings(source: PipelineSourceDeclaratio
   }
 
   const secretPaths: ConfigPath[] = [];
+  const seen = new Set<string>();
   for (const path of [...(declaredRedaction?.secretPaths ?? []), ...secretMappingPaths]) {
-    if (!secretPaths.some((existing) => pathsEqual(existing, path))) {
+    const key = pathToKey(path);
+    if (!seen.has(key)) {
+      seen.add(key);
       secretPaths.push(path);
     }
   }
