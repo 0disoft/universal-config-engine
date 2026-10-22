@@ -335,9 +335,13 @@ export declare function deleteResolvedPath(index: MutableResolvedPathIndex, key:
 export {};
 
 ### source-identity.d.ts
-import type { ResolvedPath } from "./types.js";
+import type { ConfigIssue, ConfigSourceDescriptor, ResolvedPath } from "./types.js";
 /** Compare metadata fields, independent of the adapter's object insertion order. */
 export declare function sourceIdentity(source: Pick<ResolvedPath, "winningSourceId" | "overriddenSourceIds" | "winningLocation" | "overriddenLocations">, priorities: ReadonlyMap<string, number>): string;
+/** Reject known identity conflicts before loading; resolution reuses the same rule. */
+export declare function duplicateSourceIdIssues(sources: readonly {
+    readonly descriptor: ConfigSourceDescriptor;
+}[], maxDiagnostics: number, indexOrder?: "declared" | "sorted"): readonly ConfigIssue[];
 
 ### source-priority.d.ts
 import type { ConfigIssue, ConfigSourceDescriptor } from "./types.js";

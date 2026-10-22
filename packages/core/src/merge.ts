@@ -3,6 +3,7 @@ import { applyResolutionCoercionRules } from "./coercion.js";
 import { getConfigValueAtPath, pathToKey, setConfigValueAtPath } from "./path.js";
 import { flattenConfigObject } from "./value.js";
 import { normalizeResourceLimits } from "./limits.js";
+import { duplicateSourceIdIssues } from "./source-identity.js";
 import { sourcePriorityIssues } from "./source-priority.js";
 import { projectedMergeKeyCount } from "./merge-key-budget.js";
 import {
@@ -68,7 +69,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
   const issues: ConfigIssue[] = [];
   const provenance: ProvenanceEvent[] = [];
   const resolvedIndex = createResolvedPathIndex();
-  const sourceIdentityIssues = duplicateSourceIdIssues(sources, limits.maxDiagnostics);
+  const sourceIdentityIssues = duplicateSourceIdIssues(sources, limits.maxDiagnostics, "sorted");
   if (sourceIdentityIssues.length > 0) {
     return {
       ok: false,
@@ -190,36 +191,6 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
   };
 }
 
-function duplicateSourceIdIssues(
-  sources: readonly LoadedSource[],
-  maxDiagnostics: number
-): readonly ConfigIssue[] {
-  const firstIndexById = new Map<string, number>();
-  const issues: ConfigIssue[] = [];
-
-  for (const [index, source] of sources.entries()) {
-    const firstIndex = firstIndexById.get(source.descriptor.id);
-    if (firstIndex === undefined) {
-      firstIndexById.set(source.descriptor.id, index);
-      continue;
-    }
-    appendBoundedIssues(
-      issues,
-      [
-        {
-          category: "source-load",
-          code: "duplicate_source_id",
-          severity: "error",
-          sourceId: source.descriptor.id,
-          message: `Source id duplicates the source declared at sorted index ${firstIndex}.`
-        }
-      ],
-      maxDiagnostics
-    );
-  }
-
-  return issues;
-}
 
 function flattenSourceValue(
   source: LoadedSource,

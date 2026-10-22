@@ -9,6 +9,7 @@ import type {
   ValueLocation
 } from "./types.js";
 import { normalizeResourceLimits } from "./limits.js";
+import { duplicateSourceIdIssues } from "./source-identity.js";
 import { sourcePriorityIssues } from "./source-priority.js";
 import { normalizeLoaderLocations } from "./loader-locations.js";
 
@@ -57,6 +58,8 @@ export async function loadConfigSources<TContext = undefined>(
 
   const priorityIssues = sourcePriorityIssues(input.loaders, maxDiagnostics);
   if (priorityIssues.length > 0) return { sources, issues: priorityIssues };
+  const identityIssues = duplicateSourceIdIssues(input.loaders, maxDiagnostics);
+  if (identityIssues.length > 0) return { sources, issues: identityIssues };
 
   for (const loader of input.loaders) {
     try {

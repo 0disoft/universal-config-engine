@@ -29,6 +29,20 @@ function loader(
 }
 
 describe("runConfigPipeline", () => {
+  it("reports duplicate loader ids without executing loaders or validators", async () => {
+    let loads = 0;
+    let validations = 0;
+    const pipeline = await runConfigPipeline({ context: undefined, loaders: [0, 1].map(priority => ({
+      descriptor: { id: "duplicate", kind: "object", priority, displayName: "input" },
+      load() { loads++; return { value: { port: 80 } }; }
+    })), validators: [{ id: "schema", validate() { validations++; return { ok: true, issues: [] }; } }] });
+    expect(loads).toBe(0);
+    expect(validations).toBe(0);
+    expect(pipeline.result).toMatchObject({ ok: false, config: {}, sources: [], provenance: [] });
+    expect(pipeline.report.status).toBe("error");
+    expect(pipeline.report.issues).toEqual([expect.objectContaining({ code: "duplicate_source_id" })]);
+  });
+
   it("carries source-priority preflight errors into a failed pipeline report", async () => {
     const pipeline = await runConfigPipeline({ context: undefined, loaders: [loader("invalid", NaN, { port: 80 })] });
     expect(pipeline.result.ok).toBe(false);

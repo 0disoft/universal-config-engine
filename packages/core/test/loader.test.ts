@@ -15,6 +15,21 @@ describe("loadConfigSources", () => {
     path, location: { sourceId: "untrusted", line, ...(sourcePath === undefined ? {} : { sourcePath }) }
   });
 
+  it.each([1, 10])("rejects duplicate source ids before loading, within diagnostic budget %s", async maxDiagnostics => {
+    let calls = 0;
+    const loaded = await loadConfigSources({ context: undefined, limits: { maxDiagnostics },
+      loaders: [0, 1, 2].map(priority => ({
+        descriptor: { id: "repeated", kind: "adapter", priority, displayName: "input" },
+        load() { calls++; throw new Error("Must not perform I/O for an invalid source registry."); }
+      })) });
+    expect(calls).toBe(0);
+    expect(loaded.sources).toEqual([]);
+    expect(loaded.issues.length).toBeLessThanOrEqual(maxDiagnostics);
+    expect(loaded.issues).toContainEqual(expect.objectContaining({
+      code: maxDiagnostics === 1 ? "max_diagnostics_exceeded" : "duplicate_source_id", severity: "error"
+    }));
+  });
+
   it("deduplicates locations before copying paths and keeps the last position", async () => {
     let copies = 0;
     const path = Object.defineProperty(["port"], Symbol.iterator, { value: function* () { copies++; yield "port"; } });
