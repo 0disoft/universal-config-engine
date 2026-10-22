@@ -4,12 +4,54 @@ import {
   createMappedOverrideSource,
   getConfigValueAtPath,
   resolveConfig,
+  runConfigPipeline,
   setConfigValueAtPath
 } from "../src/index.js";
 import { source } from "./helpers/source.js";
 import type { ConfigIssue } from "../src/index.js";
 
 describe("resolveConfig", () => {
+  it("bounds retained location fanout after JSON coercion projects a parent history", () => {
+    const bag = Object.fromEntries(Array.from({ length: 300 }, (_, i) => [`k${i}`, i]));
+    const result = resolveConfig({ sources: [
+      { ...source("a", 0, { bag }), locations: Object.keys(bag).map((key, i) => ({
+        path: ["bag", key], location: { sourceId: "a", sourcePath: "a.json", line: i + 1, column: 1 }
+      })) }, source("b", 1, { bag: JSON.stringify(bag) })
+    ], coercionRules: [{ path: ["bag"], from: "string", to: "json", onFailure: "issue" }] });
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({ bag });
+    expect(result.resolvedPaths.reduce((count, path) => count + (path.overriddenLocations?.length ?? 0), 0))
+      .toBeLessThanOrEqual(result.limits.maxResolvedPaths);
+    expect(result.resolvedPaths.every(path => path.winningSourceId === "b" && path.overriddenSourceIds.includes("a"))).toBe(true);
+    expect(result.issues.filter(issue => issue.code === "max_location_metadata_exceeded")).toHaveLength(1);
+    expect(buildDiagnosticReport(result).status).toBe("ok");
+  });
+
+  it.each([4 * 1024 * 1024, 64_000])("bounds aggregate history when distinct locations fan out (bytes: %s)", async maxReportBytes => {
+    const bag = Object.fromEntries(Array.from({ length: 300 }, (_, i) => [`k${i}`, i]));
+    const first = source("a", 0, { bag });
+    const scalar = source("b", 1, { bag: 0 });
+    const last = source("c", 2, { bag });
+    const run = await runConfigPipeline({ context: undefined, limits: { maxReportBytes }, loaders: [
+      { descriptor: first.descriptor, load: () => ({ value: first.value, locations: Object.keys(bag).map((key, i) => ({
+        path: ["bag", key], location: { sourceId: "a", sourcePath: "a.json", line: i + 1, column: 1 }
+      })) }) },
+      { descriptor: scalar.descriptor, load: () => ({ value: scalar.value, locations: [{ path: ["bag"],
+        location: { sourceId: "b", sourcePath: "b.json", line: 1, column: 1 } }] }) },
+      { descriptor: last.descriptor, load: () => ({ value: last.value }) }
+    ] });
+    expect(run.result.ok).toBe(true);
+    expect(run.result.config).toEqual({ bag });
+    const locations = run.result.resolvedPaths.flatMap(path => path.overriddenLocations ?? []);
+    expect(locations.length).toBeLessThanOrEqual(run.result.limits.maxResolvedPaths);
+    expect(locations.reduce((bytes, location) => bytes + new TextEncoder().encode(JSON.stringify(location)).byteLength, 0))
+      .toBeLessThanOrEqual(maxReportBytes);
+    expect(run.result.issues.filter(issue => issue.code === "max_location_metadata_exceeded")).toHaveLength(1);
+    expect(run.result.resolvedPaths.every(path => path.winningSourceId === "c" &&
+      path.overriddenSourceIds.includes("a") && path.overriddenSourceIds.includes("b"))).toBe(true);
+    if (maxReportBytes === 4 * 1024 * 1024) expect(run.report.status).toBe("ok");
+  });
+
   it("deduplicates shared parent locations through repeated shape replacements", () => {
     const location = { sourceId: "initial", sourcePath: "base.json", line: 1, column: 1 };
     const sources = [{ ...source("initial", 0, { root: 0 }), locations: [{ path: ["root"], location }] }];

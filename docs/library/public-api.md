@@ -523,7 +523,7 @@ migration review before running `pnpm run update:api-snapshot`.
   0003, 0004, 0006, and 0009. ADR 0016 fixes the `1.x` stability, deprecation,
   report, CLI, low-level helper, and runtime compatibility contracts.
 
-Override location history deduplicates identical source/position tuples in first-seen order. Each retained history is bounded by `maxResolvedPaths` and `maxReportBytes`; overflow omits optional history with `max_location_metadata_exceeded`, without discarding configuration values.
+Override location history deduplicates identical source/position tuples in first-seen order. All override-history insertions share cumulative resolution-wide `maxResolvedPaths` entry and `maxReportBytes` serialized-location budgets, including copies inherited by siblings; exhaustion stops subsequent optional history expansion and omits the overflowing history with `max_location_metadata_exceeded`, without discarding configuration values.
 
 Generic loader and validator diagnostic paths must fit `maxPathLength` and the serialized UTF-8 `maxReportBytes` budget. Invalid or oversized paths fail closed as `invalid_loader_result` or `validator_issue_invalid`; the raw path is not retained.
 

@@ -82,6 +82,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
   }
 
   const keyBudget = { count: 0, exceeded: false };
+  const locationBudget = { count: 0, bytes: 0, exhausted: false };
   sourceLoop: for (const source of sources) {
     const sourceIssues = source.issues ?? [];
     const flattened = flattenSourceValue(source, limits);
@@ -123,7 +124,8 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
         provenance,
         resolvedIndex,
         displacedParents,
-        keyBudget
+        keyBudget,
+        locationBudget
       });
       if (keyBudget.exceeded) break sourceLoop;
     }
@@ -153,6 +155,14 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
   appendBoundedIssues(issues, finalStructure.issues, limits.maxDiagnostics);
   if (didCoerce) {
     synchronizeCoercedResolvedPaths(resolvedIndex, finalStructure.entries);
+    // Projection can share one parent's history across many JSON-expanded leaves.
+    // Bound its retained serialized fanout as well as the earlier merge work.
+    const projectedLocations = { count: 0, bytes: 0, exhausted: false };
+    for (const resolved of resolvedIndex.byPath.values()) {
+      resolved.overriddenLocations = collectOverriddenLocations(
+        [{ resolved }], issues, limits, projectedLocations, false
+      );
+    }
   }
   const resolvedPaths = Array.from(resolvedIndex.byPath.values());
   if (resolvedPaths.length > limits.maxResolvedPaths) {
@@ -256,6 +266,7 @@ function applyEntry(input: {
   readonly resolvedIndex: MutableResolvedPathIndex;
   readonly displacedParents: MutableResolvedPathIndex;
   readonly keyBudget: { count: number; exceeded: boolean };
+  readonly locationBudget: { count: number; bytes: number; exhausted: boolean };
 }): void {
   if (input.entryPath.length === 0) {
     pushBoundedIssue(
@@ -364,7 +375,7 @@ function applyEntry(input: {
   }
 
   const overriddenSourceIds = collectOverriddenSourceIds(relatedResolved, input.descriptor.id);
-  const overriddenLocations = collectOverriddenLocations(relatedResolved, input.issues, input.limits);
+  const overriddenLocations = collectOverriddenLocations(relatedResolved, input.issues, input.limits, input.locationBudget);
   for (const { key, resolved } of liveRelated) {
     if (resolved.path.length < input.entryPath.length) setResolvedPath(input.displacedParents, resolved);
     deleteResolvedPath(input.resolvedIndex, key);
@@ -458,19 +469,24 @@ function collectOverriddenSourceIds(
 function collectOverriddenLocations(
   relatedResolved: readonly { readonly resolved: MutableResolvedPath }[],
   issues: ConfigIssue[],
-  limits: ResourceLimitPolicy
+  limits: ResourceLimitPolicy,
+  budget: { count: number; bytes: number; exhausted: boolean },
+  includeWinner = true
 ): SourceLocation[] {
+  if (budget.exhausted) return [];
   const locations: SourceLocation[] = [];
   const seen = new Set<string>();
-  let bytes = 0;
   for (const { resolved } of relatedResolved) {
-    for (const location of locationHistory(resolved)) {
+    for (const location of locationHistory(resolved, includeWinner)) {
       const characters = location.sourceId.length + (location.sourcePath?.length ?? 0);
       if (characters > limits.maxReportBytes) return omit();
       const key = JSON.stringify([location.sourceId, location.sourcePath, location.line, location.column]);
       if (seen.has(key)) continue;
-      bytes += new TextEncoder().encode(key).byteLength;
-      if (locations.length >= limits.maxResolvedPaths || bytes > limits.maxReportBytes) return omit();
+      const bytes = new TextEncoder().encode(JSON.stringify(location)).byteLength;
+      if (budget.count >= limits.maxResolvedPaths || budget.bytes + bytes > limits.maxReportBytes) return omit();
+      // Charge before each insertion, including copies inherited by sibling paths.
+      budget.count++;
+      budget.bytes += bytes;
       seen.add(key);
       locations.push(location);
     }
@@ -478,19 +494,20 @@ function collectOverriddenLocations(
   return locations;
 
   function omit(): SourceLocation[] {
+    budget.exhausted = true;
     if (!issues.some(issue => issue.code === "max_location_metadata_exceeded")) {
       pushBoundedIssue(issues, {
         category: "resource-limit", code: "max_location_metadata_exceeded", severity: "warning",
-        message: "Override locations exceeded their count or byte budget; optional history was omitted."
+        message: "Override locations exceeded their resolution-wide count or byte budget; optional history was omitted."
       }, limits);
     }
     return [];
   }
 }
 
-function* locationHistory(resolved: MutableResolvedPath): Iterable<SourceLocation> {
+function* locationHistory(resolved: MutableResolvedPath, includeWinner: boolean): Iterable<SourceLocation> {
   yield* resolved.overriddenLocations;
-  if (resolved.winningLocation !== undefined) yield resolved.winningLocation;
+  if (includeWinner && resolved.winningLocation !== undefined) yield resolved.winningLocation;
 }
 
 function pushBoundedIssue(
