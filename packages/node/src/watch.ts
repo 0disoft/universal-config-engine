@@ -159,17 +159,26 @@ export async function watchConfigFiles(input: WatchConfigFilesInput, dependencie
 /** At most two parent-directory selections per bounded input path. */
 async function resolveWatchGroups(root: string, paths: readonly string[], dependencies: ConfigWatchDependencies): Promise<Map<string, Set<string>> | undefined> {
   const groups = new Map<string, Set<string>>();
+  const canonicalPaths = new Map<string, Promise<string>>();
+  function canonicalize(path: string): Promise<string> {
+    let pending = canonicalPaths.get(path);
+    if (pending === undefined) {
+      pending = dependencies.realpath(path);
+      canonicalPaths.set(path, pending);
+    }
+    return pending;
+  }
   function add(directory: string, name: string) {
     const names = groups.get(directory) ?? new Set<string>();
     names.add(name); groups.set(directory, names);
   }
   for (const path of paths) {
     const absolute = resolve(root, path);
-    const directory = await dependencies.realpath(dirname(absolute));
+    const directory = await canonicalize(dirname(absolute));
     if (!inside(root, directory)) return undefined;
     add(directory, basename(absolute));
     try {
-      const target = await dependencies.realpath(absolute);
+      const target = await canonicalize(absolute);
       if (!inside(root, target)) return undefined;
       add(dirname(target), basename(target));
     } catch (error) {

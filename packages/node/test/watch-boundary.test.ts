@@ -29,6 +29,20 @@ function fixture() {
 const load = () => runConfigPipeline({ context: undefined, loaders: [] });
 
 describe("injected watch scheduling", () => {
+  it("canonicalizes shared parents once per pass and rechecks them on every refresh", async () => {
+    const runtime = fixture();
+    const watched = await watchConfigFiles({ workspacePath: "/workspace",
+      paths: Array.from({ length: 64 }, (_, index) => `${index}.json`), load }, runtime.dependencies);
+    expect(watched.ok).toBe(true); if (!watched.ok) return;
+    try {
+      for (let index = 0; index < 2; index += 1) {
+        runtime.dependencies.realpath.mockClear();
+        await watched.watcher.refresh();
+        expect(runtime.dependencies.realpath).toHaveBeenCalledTimes(65);
+      }
+    } finally { watched.watcher.close(); }
+  });
+
   it("releases watcher handles when a later refresh times out", async () => {
     vi.useFakeTimers();
     const runtime = fixture();

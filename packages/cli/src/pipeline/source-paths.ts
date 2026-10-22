@@ -10,12 +10,12 @@ export async function resolveConfigRelativePath(input: {
   readonly sourceId: string;
   readonly targetPath: string;
   readonly allowedRootPath?: string;
-}): Promise<
+}, canonicalize: (path: string) => Promise<string> = canonicalizeExistingPath): Promise<
   | { readonly ok: true; readonly path: string; readonly allowedRootPath: string }
   | { readonly ok: false; readonly issue: ConfigIssue }
 > {
   const absoluteConfigPath = resolveInputPath(input.configPath, input.cwd);
-  const canonicalConfigPath = await canonicalizeExistingPath(absoluteConfigPath);
+  const canonicalConfigPath = await canonicalize(absoluteConfigPath);
   const configDirectory = dirname(canonicalConfigPath);
   const resolvedTargetPath = input.targetPath === ""
     ? configDirectory
@@ -23,8 +23,8 @@ export async function resolveConfigRelativePath(input: {
       ? resolve(input.targetPath)
       : resolve(configDirectory, input.targetPath);
 
-  const canonicalTargetPath = await canonicalizeExistingPath(resolvedTargetPath);
-  const allowedRootPath = input.allowedRootPath === undefined ? configDirectory : await canonicalizeExistingPath(input.allowedRootPath);
+  const canonicalTargetPath = await canonicalize(resolvedTargetPath);
+  const allowedRootPath = input.allowedRootPath === undefined ? configDirectory : await canonicalize(input.allowedRootPath);
   if (!isInsideOrEqualPath(allowedRootPath, canonicalTargetPath)) {
     if (input.allowedRootPath !== undefined) return { ok: false, issue: pipelineDeclarationIssue({
       code: "pipeline_file_source_path_outside_workspace", path: ["sources", input.sourceIndex, "path"],
@@ -45,6 +45,16 @@ async function canonicalizeExistingPath(path: string): Promise<string> {
   } catch {
     return path;
   }
+}
+
+/** Scope this cache to one load; opening a file still performs its own identity/boundary checks. */
+export function createSourcePathCanonicalizer(resolvePath: (path: string) => Promise<string> = canonicalizeExistingPath): (path: string) => Promise<string> {
+  const paths = new Map<string, Promise<string>>();
+  return path => {
+    let pending = paths.get(path);
+    if (pending === undefined) { pending = resolvePath(path); paths.set(path, pending); }
+    return pending;
+  };
 }
 
 function outsideConfigDirectoryResult(input: {

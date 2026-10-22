@@ -120,6 +120,10 @@ const reloader = createConfigReloader({
 
 Closing aborts the owned signal even when no external lifetime signal was passed.
 
+Watcher path canonicalization shares repeated parent and target lookups within
+one setup or refresh pass. Each refresh starts a fresh cache so symlink changes
+remain visible. File loaders retain their own open-time boundary checks.
+
 ## Operation deadlines and private failures
 
 Loads and asynchronous observers have independent 30-second deadlines, configurable
