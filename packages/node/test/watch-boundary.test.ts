@@ -29,6 +29,56 @@ function fixture() {
 const load = () => runConfigPipeline({ context: undefined, loaders: [] });
 
 describe("injected watch scheduling", () => {
+  it("continues closing other handles and the reloader when one disposer throws", async () => {
+    const runtime = fixture();
+    const firstClose = vi.fn().mockImplementationOnce(() => { throw new Error("close failed"); });
+    const otherClose = vi.fn();
+    runtime.dependencies.watch.mockImplementationOnce(() => ({ close: firstClose, on() {} }))
+      .mockImplementationOnce(() => ({ close: otherClose, on() {} }));
+    let signal: { readonly aborted: boolean } | undefined;
+    const watched = await watchConfigFiles({ workspacePath: "/workspace", paths: ["a/config.json", "b/config.json"],
+      load: options => { signal = options?.signal; return load(); } }, runtime.dependencies);
+    expect(watched.ok).toBe(true); if (!watched.ok) return;
+    expect(() => watched.watcher.close()).not.toThrow();
+    expect(firstClose).toHaveBeenCalledTimes(1);
+    expect(otherClose).toHaveBeenCalledTimes(1);
+    expect(signal?.aborted).toBe(true);
+    expect(await watched.watcher.refresh()).toMatchObject({ ok: false, reason: "closed" });
+    watched.watcher.close();
+    expect(firstClose).toHaveBeenCalledTimes(2);
+    expect(otherClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("releases remaining resources when a timer cancellation throws and retries only failures", async () => {
+    const runtime = fixture();
+    const cancelDebounce = vi.fn().mockImplementationOnce(() => { throw new Error("cancel failed"); });
+    const cancelMaxWait = vi.fn();
+    runtime.dependencies.schedule = vi.fn().mockReturnValueOnce(cancelDebounce).mockReturnValueOnce(cancelMaxWait);
+    const watched = await watchConfigFiles({ workspacePath: "/workspace", paths: ["config.json"], load }, runtime.dependencies);
+    expect(watched.ok).toBe(true); if (!watched.ok) return;
+    runtime.emit();
+    expect(() => watched.watcher.close()).not.toThrow();
+    expect(cancelMaxWait).toHaveBeenCalledTimes(1);
+    expect(runtime.close).toHaveBeenCalledTimes(1);
+    watched.watcher.close();
+    expect(cancelDebounce).toHaveBeenCalledTimes(2);
+    expect(cancelMaxWait).toHaveBeenCalledTimes(1);
+    expect(runtime.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("contains scheduling exceptions and cleans already created resources", async () => {
+    const runtime = fixture();
+    const cancel = vi.fn();
+    runtime.dependencies.schedule = vi.fn().mockReturnValueOnce(cancel)
+      .mockImplementationOnce(() => { throw new Error("schedule failed"); });
+    const watched = await watchConfigFiles({ workspacePath: "/workspace", paths: ["config.json"], load }, runtime.dependencies);
+    expect(watched.ok).toBe(true); if (!watched.ok) return;
+    expect(() => runtime.emit()).not.toThrow();
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(runtime.close).toHaveBeenCalledTimes(1);
+    expect(await watched.watcher.refresh()).toMatchObject({ ok: false, reason: "closed" });
+  });
+
   it("flushes exactly at max-wait without global timers and clears work on abort", async () => {
     const runtime = fixture(); const controller = new AbortController();
     let updated: (() => void) | undefined;

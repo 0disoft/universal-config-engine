@@ -66,7 +66,13 @@ watcher if that dependency set changes. Environment/argv updates require manual
 refresh. Filesystem watching is best effort and is not a transactional filesystem
 snapshot; callers needing transactions must provide that in `load`.
 
-`close()` clears both timers and closes all handles. A watch error emits
+`close()` clears both timers and closes all handles.
+Cleanup attempts every timer and handle even if an injected disposer throws,
+and always closes the reloader. Failed disposers remain owned and an explicit
+repeated `close()` retries them; successful disposers are not called again.
+Timer scheduling or cancellation failures also stop the watcher.
+
+A watch error emits
 `rejected/watch_failed` and closes the watcher; recreate it after fixing the
 filesystem problem. A failed initial load still returns a watcher so a later
 file correction can recover. Watch handles are non-persistent and do not keep an

@@ -62,7 +62,9 @@ export async function watchConfigFiles(input: WatchConfigFilesInput, dependencie
   const handles = new Map<string, { handle: ConfigWatchHandle; filter: { names: Set<string> } }>();
   let timer: (() => void) | undefined;
   let maxWaitTimer: (() => void) | undefined;
+  const pendingCancellations = new Set<() => void>();
   let closed = false;
+  let disposing = false;
   let watchFailed = false;
   const state = createReloadState({ ...input, async load(options) {
     // Refresh is serialized by the reload state, including watch rebinding.
@@ -74,28 +76,46 @@ export async function watchConfigFiles(input: WatchConfigFilesInput, dependencie
     return input.load(options);
   } });
   function close() {
-    if (closed) return;
     closed = true;
-    clearTimers();
-    input.signal?.removeEventListener("abort", close);
-    for (const { handle } of handles.values()) handle.close();
-    handles.clear();
-    state.controller.close();
+    if (disposing) return;
+    disposing = true;
+    try {
+      clearTimers();
+      try { input.signal?.removeEventListener("abort", close); }
+      catch { /* A custom signal must not prevent handle cleanup. */ }
+      for (const [directory, { handle }] of handles) {
+        try { handle.close(); handles.delete(directory); }
+        catch { /* Retain failed handles so an explicit close can retry them. */ }
+      }
+    } finally {
+      try { state.controller.close(); }
+      finally { disposing = false; }
+    }
   }
-  function clearTimers() {
-    if (timer !== undefined) timer();
-    if (maxWaitTimer !== undefined) maxWaitTimer();
+  function clearTimers(): boolean {
+    if (timer !== undefined) pendingCancellations.add(timer);
+    if (maxWaitTimer !== undefined) pendingCancellations.add(maxWaitTimer);
     timer = undefined;
     maxWaitTimer = undefined;
+    for (const cancel of pendingCancellations) {
+      try { cancel(); pendingCancellations.delete(cancel); }
+      catch { /* Other timers and handles must still be released. */ }
+    }
+    return pendingCancellations.size === 0;
   }
   function flush() {
-    clearTimers();
+    if (!clearTimers()) { failWatch(); return; }
     if (!closed) void state.controller.refresh();
+  }
+  function failWatch() {
+    watchFailed = true;
+    state.watchFailed();
+    close();
   }
   function reconcile(selected: Map<string, Set<string>>) {
     // Release stale targets first so rebinding keeps the same handle bound.
     for (const [directory, { handle }] of handles) {
-      if (!selected.has(directory)) { handles.delete(directory); handle.close(); }
+      if (!selected.has(directory)) { handle.close(); handles.delete(directory); }
     }
     for (const [directory, names] of selected) {
       if (closed) throw new Error("Watcher is closed.");
@@ -104,16 +124,17 @@ export async function watchConfigFiles(input: WatchConfigFilesInput, dependencie
       const filter = { names };
       const handle = dependencies.watch(directory, { persistent: false }, (_event, filename) => {
         if (closed || filename !== null && !filter.names.has(filename)) return;
-        if (timer !== undefined) timer();
-        timer = dependencies.schedule(flush, delay);
-        // Continuous writes must not postpone refresh indefinitely. Both timers
-        // feed the reload state's single active / single queued refresh boundary.
-        if (maxWaitTimer === undefined) maxWaitTimer = dependencies.schedule(flush, WATCH_LIMITS.maxWaitMs);
+        try {
+          if (timer !== undefined) timer();
+          timer = dependencies.schedule(flush, delay);
+          // Continuous writes must not postpone refresh indefinitely.
+          if (maxWaitTimer === undefined) maxWaitTimer = dependencies.schedule(flush, WATCH_LIMITS.maxWaitMs);
+        } catch { failWatch(); }
       });
       handles.set(directory, { handle, filter });
       handle.on("error", () => {
         if (handles.get(directory)?.handle !== handle) return;
-        watchFailed = true; state.watchFailed(); close();
+        failWatch();
       });
     }
   }
