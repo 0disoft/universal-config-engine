@@ -1,4 +1,5 @@
 import { pathToKey } from "./path.js";
+import { compileRedaction } from "./compiled-redaction.js";
 import type {
   ConfigIssue,
   ConfigPath,
@@ -7,7 +8,6 @@ import type {
   DiagnosticReport,
   DiagnosticReportResolvedPath,
   ProvenanceEvent,
-  RedactionPolicyInput,
   ResolvedPath
 } from "./types.js";
 
@@ -28,16 +28,9 @@ export interface BuildDiagnosticReportOptions {
 }
 
 interface RedactionContext {
-  readonly options: BuildDiagnosticReportOptions;
   readonly secretSourceIds: ReadonlySet<string>;
-  readonly secretSourcePaths: ReadonlySet<string>;
-  readonly patternCache: Map<string, PatternMatcher>;
   readonly anySourceRedactionCache: Map<string, RedactionDecision>;
-  readonly pathPolicyCache: WeakMap<object, ReadonlySet<string>>;
-}
-
-interface PatternMatcher {
-  readonly rawLower: string;
+  readonly redactPath: (path: ConfigPath) => RedactionDecision;
 }
 
 export interface RedactionDecision {
@@ -88,19 +81,16 @@ function createRedactionState(result: ConfigResult, options: BuildDiagnosticRepo
     ...result.sources.filter((source) => source.redaction?.secretSource === true).map((source) => source.id)
   ]);
   const redactionContext: RedactionContext = {
-    options,
     secretSourceIds,
-    secretSourcePaths: new Set(
+    redactPath: compileRedaction(sourceById.values(), options, DEFAULT_SECRET_NAME_PATTERNS,
       result.resolvedPaths
         .filter((path) =>
           secretSourceIds.has(path.winningSourceId) ||
           path.overriddenSourceIds.some((id) => secretSourceIds.has(id))
         )
-        .map((path) => pathToKey(path.path))
+        .map((path) => path.path)
     ),
-    patternCache: new Map(),
-    anySourceRedactionCache: new Map(),
-    pathPolicyCache: new WeakMap()
+    anySourceRedactionCache: new Map()
   };
   return { sourceById, redactionContext };
 }
@@ -232,119 +222,13 @@ function shouldSanitizeDiagnostic(
 
 function getRedactionForAnySource(
   path: ConfigPath,
-  sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
+  _sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
   redactionContext: RedactionContext
 ): RedactionDecision {
-  const cacheKey = pathToKey(path);
-  const cached = redactionContext.anySourceRedactionCache.get(cacheKey);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  // Arrays are retained as atomic resolved paths; their owned descendants must
-  // use the same source policy as inspection, even without their own index entry.
-  let secretOwner = redactionContext.secretSourcePaths.has(cacheKey);
-  for (let length = path.length - 1; !secretOwner && redactionContext.secretSourcePaths.size > 0 && length >= 0; length -= 1) {
-    secretOwner = redactionContext.secretSourcePaths.has(pathToKey(path.slice(0, length)));
-  }
-  if (secretOwner) {
-    const redaction = { redacted: true, reason: "secret-source" };
-    redactionContext.anySourceRedactionCache.set(cacheKey, redaction);
-    return redaction;
-  }
-
-  for (const source of sourceById.values()) {
-    // Explicit path/name policies apply across diagnostics; a whole-source policy
-    // only applies to diagnostics tied to that source or its resolved path history.
-    const redaction = getPathRedaction(path, source, redactionContext);
-    if (redaction.redacted) {
-      redactionContext.anySourceRedactionCache.set(cacheKey, redaction);
-      return redaction;
-    }
-  }
-
-  const fallback = getPathRedaction(path, undefined, redactionContext);
-  redactionContext.anySourceRedactionCache.set(cacheKey, fallback);
-  return fallback;
-}
-
-function getPathRedaction(
-  path: ConfigPath,
-  source: ConfigSourceDescriptor | undefined,
-  redactionContext: RedactionContext
-): RedactionDecision {
-  if (matchesAnyPath(path, source?.redaction, redactionContext) || matchesAnyPath(path, redactionContext.options, redactionContext)) {
-    return { redacted: true, reason: "secret-path" };
-  }
-
-  if (
-    matchesNamePattern(path, source?.redaction?.secretNamePatterns, redactionContext) ||
-    matchesNamePattern(path, redactionContext.options.secretNamePatterns, redactionContext)
-  ) {
-    return { redacted: true, reason: "secret-name" };
-  }
-
-  if (matchesNamePattern(path, DEFAULT_SECRET_NAME_PATTERNS, redactionContext)) {
-    return { redacted: true, reason: "secret-name" };
-  }
-
-  return { redacted: false };
-}
-
-function matchesAnyPath(
-  path: ConfigPath,
-  policy: Pick<RedactionPolicyInput, "secretPaths"> | Pick<BuildDiagnosticReportOptions, "secretPaths"> | undefined,
-  context: RedactionContext
-): boolean {
-  if (policy === undefined || policy.secretPaths === undefined || policy.secretPaths.length === 0) return false;
-  let keys = context.pathPolicyCache.get(policy);
-  if (keys === undefined) {
-    keys = new Set(policy.secretPaths.map(pathToKey));
-    context.pathPolicyCache.set(policy, keys);
-  }
-  for (let length = 0; length <= path.length; length += 1) {
-    if (keys.has(pathToKey(path.slice(0, length)))) return true;
-  }
-  return false;
-}
-
-function matchesNamePattern(
-  path: ConfigPath,
-  patterns: readonly string[] | undefined,
-  redactionContext: RedactionContext
-): boolean {
-  if (patterns === undefined || patterns.length === 0) {
-    return false;
-  }
-
-  const pathName = path.map(String).join(".");
-  const lastSegment = String(path[path.length - 1] ?? "");
-
-  return patterns.some(
-    (pattern) =>
-      safePatternMatches(pattern, pathName, redactionContext) ||
-      safePatternMatches(pattern, lastSegment, redactionContext)
-  );
-}
-
-function safePatternMatches(pattern: string, value: string, redactionContext: RedactionContext): boolean {
-  const matcher = getPatternMatcher(pattern, redactionContext.patternCache);
-  return value.toLowerCase().includes(matcher.rawLower);
-}
-
-function getPatternMatcher(pattern: string, patternCache: Map<string, PatternMatcher>): PatternMatcher {
-  const cached = patternCache.get(pattern);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  const matcher = compilePatternMatcher(pattern);
-  patternCache.set(pattern, matcher);
-  return matcher;
-}
-
-function compilePatternMatcher(pattern: string): PatternMatcher {
-  return {
-    rawLower: pattern.toLowerCase()
-  };
+  const key = pathToKey(path);
+  const cached = redactionContext.anySourceRedactionCache.get(key);
+  if (cached !== undefined) return cached;
+  const decision = redactionContext.redactPath(path);
+  redactionContext.anySourceRedactionCache.set(key, decision);
+  return decision;
 }

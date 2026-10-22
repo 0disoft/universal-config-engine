@@ -1,4 +1,4 @@
-import { resolveConfig, checkConfigChanges } from "../packages/core/dist/index.js";
+import { resolveConfig, checkConfigChanges, buildDiagnosticReport } from "../packages/core/dist/index.js";
 import { createArgvSource } from "../packages/node/dist/index.js";
 
 const mergeResults = [512, 1024].map((size) => ({
@@ -25,6 +25,19 @@ const policyResults = [512, 1024].map(size => {
 });
 assertLinearGrowth("policy path accesses", policyResults, "pathAccesses");
 
+const redactionResults = [512, 1024].map(size => {
+  const sourceCount = size / 32;
+  const result = resolveConfig({ sources: Array.from({ length: sourceCount }, (_, index) =>
+    objectSource(`source-${index}`, index, index === sourceCount - 1 ? createWideObject(size, 0) : {})) });
+  let total = 0;
+  const measured = { ...result, sources: result.sources.map(source => new Proxy(source, {
+    get(target, key, receiver) { if (key === "redaction") total++; return Reflect.get(target, key, receiver); }
+  })) };
+  assertEqual(buildDiagnosticReport(measured).status, "ok", "compiled redaction outcome");
+  return { size, sourceCount, policyAccesses: { total } };
+});
+assertLinearGrowth("redaction policy accesses", redactionResults, "policyAccesses");
+
 const argvResults = [128, 4096].flatMap((mappingCount) =>
   [undefined, "warning"].map((unmappedBehavior) =>
     measureArgvAccesses(128, mappingCount, unmappedBehavior)
@@ -39,6 +52,7 @@ process.stdout.write(`${JSON.stringify({
   check: "deterministic-complexity-bounds",
   mergeResults,
   policyResults,
+  redactionResults,
   argvResults
 }, null, 2)}\n`);
 
