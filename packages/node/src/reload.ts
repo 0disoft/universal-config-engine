@@ -1,4 +1,4 @@
-import { buildConfigDiff, cloneConfigValue, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
+import { buildConfigDiff, cloneConfigValue, type ConfigChange, type ConfigPath, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
 
 export type ReloadFailure = "load_failed" | "validation_failed" | "snapshot_failed" | "closed";
 export type ConfigReloadOutcome =
@@ -9,7 +9,7 @@ export interface ConfigReloadEvent {
   readonly status: "updated" | "rejected";
   readonly revision: number;
   readonly reason?: ReloadFailure | "watch_failed";
-  /** Counts public changes only; absent when comparison cannot fit its budget. */
+  /** Counts public changes only; absent when comparison exceeds its budget or secret container structure is ambiguous. */
   readonly changedPathCount?: number;
 }
 
@@ -62,7 +62,7 @@ export function createReloadState(input: CreateConfigReloaderInput) {
         const secretPaths = [snapshot, next].flatMap(item => item.report.resolvedPaths
           .filter(entry => entry.redacted).map(entry => entry.path));
         const diff = buildConfigDiff(snapshot.result, next.result, { secretPaths });
-        if (diff.status === "ok") changedPathCount = diff.changes.filter(change =>
+        if (diff.status === "ok" && !hasOpaqueContainerChange(diff.changes, secretPaths)) changedPathCount = diff.changes.filter(change =>
           change.before?.visibility !== "redacted" && change.after?.visibility !== "redacted").length;
       }
     } catch { return reject("snapshot_failed"); }
@@ -108,6 +108,28 @@ export function createReloadState(input: CreateConfigReloaderInput) {
     }
   };
   return { controller, watchFailed: () => notify({ status: "rejected", revision, reason: "watch_failed" }) };
+}
+
+/** Leaf redaction cannot prove whether a changed ancestor container is public. */
+function hasOpaqueContainerChange(changes: readonly ConfigChange[], secretPaths: readonly ConfigPath[]): boolean {
+  const containers = changes.filter(change => change.before?.visibility === "container" || change.after?.visibility === "container");
+  if (containers.length === 0 || secretPaths.length === 0) return false;
+  // Typed segments preserve array indexes vs object names, without an all-pairs scan.
+  type Trie = Map<string | number, Trie>;
+  const root: Trie = new Map();
+  for (const path of secretPaths) {
+    let node = root;
+    for (const segment of path) {
+      let child = node.get(segment);
+      if (child === undefined) { child = new Map(); node.set(segment, child); }
+      node = child;
+    }
+  }
+  return containers.some(change => {
+    let node: Trie | undefined = root;
+    for (const segment of change.path) node = node?.get(segment);
+    return node !== undefined && node.size > 0;
+  });
 }
 
 function freezeSnapshot(value: RunConfigPipelineResult): RunConfigPipelineResult {

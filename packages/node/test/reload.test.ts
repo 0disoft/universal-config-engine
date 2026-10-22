@@ -7,6 +7,40 @@ const pipeline = (port = 80) => runConfigPipeline({ context: undefined, loaders:
 }] });
 
 describe("serialized config reload", () => {
+  it.each([
+    { added: false, opaque: { a: 1 } }, { added: true, opaque: { a: 1 } },
+    { added: false, opaque: { inner: { a: 1 } } }, { added: true, opaque: { inner: { a: 1 } } }
+  ])("omits ambiguous public counts for secret object structure changes ($added, $opaque)", async ({ added, opaque }) => {
+    const events: ConfigReloadEvent[] = [];
+    let present = !added;
+    const reloader = createConfigReloader({ load: () => runConfigPipeline({ context: undefined,
+      reportOptions: { secretPaths: [["opaque"]] }, loaders: [{
+        descriptor: { id: "settings", kind: "object", priority: 0, displayName: "settings" },
+        load: () => ({ value: { port: 80, ...(present ? { opaque } : {}) } })
+      }] }), onChange: event => { events.push(event); } });
+    try {
+      expect(await reloader.refresh()).toMatchObject({ ok: true, revision: 1 });
+      present = added;
+      expect(await reloader.refresh()).toMatchObject({ ok: true, revision: 2 });
+      expect(events[1]).toEqual({ status: "updated", revision: 2 });
+      expect(reloader.getSnapshot()?.result.config).toEqual({ port: 80, ...(added ? { opaque } : {}) });
+    } finally { reloader.close(); }
+  });
+
+  it("keeps public sibling container counts when names share a string prefix", async () => {
+    const events: ConfigReloadEvent[] = [];
+    let removed = false;
+    const reloader = createConfigReloader({ load: () => runConfigPipeline({ context: undefined,
+      reportOptions: { secretPaths: [["opaque"]] }, loaders: [{
+        descriptor: { id: "settings", kind: "object", priority: 0, displayName: "settings" },
+        load: () => ({ value: { opaque: { a: 1 }, ...(removed ? {} : { opaque2: { x: 1 } }) } })
+      }] }), onChange: event => { events.push(event); } });
+    try {
+      await reloader.refresh(); removed = true; await reloader.refresh();
+      expect(events[1]).toMatchObject({ status: "updated", changedPathCount: 2 });
+    } finally { reloader.close(); }
+  });
+
   it("publishes an owned frozen snapshot at an explicitly increased config depth", async () => {
     const depth = 2500;
     let value: ConfigValue = { leaf: 1 };

@@ -777,7 +777,7 @@ export interface ConfigReloadEvent {
     readonly status: "updated" | "rejected";
     readonly revision: number;
     readonly reason?: ReloadFailure | "watch_failed";
-    /** Counts public changes only; absent when comparison cannot fit its budget. */
+    /** Counts public changes only; absent when comparison exceeds its budget or secret container structure is ambiguous. */
     readonly changedPathCount?: number;
 }
 export interface CreateConfigReloaderInput {

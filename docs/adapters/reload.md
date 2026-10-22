@@ -21,6 +21,11 @@ comparison fits its budget, a public-path change count. Secret-only changes are
 not counted; no value, fingerprint or diagnostic prose is emitted by these events.
 Comparison retains redacted paths from both reports, including policies supplied
 only through pipeline `reportOptions` and policies removed on the next refresh.
+When a changed container is a strict typed ancestor of a redacted reported path,
+its public/secret boundary cannot be reconstructed from leaf metadata alone.
+The event omits `changedPathCount` in that case, including opaque object addition
+or deletion, while still publishing the successful snapshot and revision.
+Unambiguous scalar secret changes and independent public changes retain counts.
 
 `close()` is idempotent, resolves queued work as `closed`, prevents late snapshots
 or notifications and retains the last good snapshot for reading. It cannot cancel
