@@ -164,8 +164,34 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
     ];
   }
 
-  const issues: ConfigIssue[] = [];
   const sourceId = typeof source.id === "string" && source.id.length > 0 ? source.id : undefined;
+  const sourcePath = (field: string): ConfigPath => [...path, field];
+  const issues = validateCommonSourceFields(source, path, sourceId);
+  switch (source.kind) {
+    case "object":
+      if (!("value" in source)) {
+        issues.push(pipelineDeclarationIssue({
+          code: "pipeline_object_source_value_missing", path: sourcePath("value"), sourceId,
+          message: "Object sources must include a value field."
+        }));
+      }
+      break;
+    case "json-file":
+    case "dotenv-file":
+    case "adapter":
+      issues.push(...validateFileSourceFields(source, path, sourceId));
+      break;
+    case "process-env":
+    case "argv":
+      return validateOverrideSourceFields(source, source.kind, path, sourceId, issues);
+  }
+  return issues;
+}
+
+function validateCommonSourceFields(
+  source: Record<string, unknown>, path: ConfigPath, sourceId: string | undefined
+): ConfigIssue[] {
+  const issues: ConfigIssue[] = [];
   const sourcePath = (field: string): ConfigPath => [...path, field];
   const allowedSourceFields = typeof source.kind === "string" && Object.hasOwn(SOURCE_KIND_FIELDS, source.kind)
     ? SOURCE_KIND_FIELDS[source.kind] : undefined;
@@ -237,159 +263,161 @@ function validateSourceDeclaration(source: unknown, index: number): readonly Con
       })
     );
   }
+  return issues;
+}
 
-  switch (source.kind) {
-    case "object":
-      if (!("value" in source)) {
-        issues.push(
-          pipelineDeclarationIssue({
-            code: "pipeline_object_source_value_missing",
-            path: sourcePath("value"),
-            sourceId,
-            message: "Object sources must include a value field."
-          })
-        );
-      }
-      break;
-    case "json-file":
-    case "dotenv-file":
-    case "adapter":
-      if (source.kind === "adapter") {
-        if (typeof source.format !== "string" || !SUPPORTED_FILE_FORMATS.has(source.format)) {
-          issues.push(pipelineDeclarationIssue({ code: "pipeline_file_format_invalid",
-            path: sourcePath("format"), sourceId, message: "File adapters require a supported explicit format." }));
-        }
-        if (source.allowTrailingComma !== undefined &&
-            (typeof source.allowTrailingComma !== "boolean" || source.format !== "jsonc")) {
-          issues.push(pipelineDeclarationIssue({ code: "pipeline_file_trailing_comma_invalid",
-            path: sourcePath("allowTrailingComma"), sourceId,
-            message: "allowTrailingComma must be a boolean and is only supported for JSONC." }));
-        }
-      }
-      if (typeof source.path !== "string" || source.path.length === 0) {
-        issues.push(
-          pipelineDeclarationIssue({
-            code: "pipeline_file_source_path_invalid",
-            path: sourcePath("path"),
-            sourceId,
-            message: "File sources must include a non-empty path string."
-          })
-        );
-      }
-      if (source.maxFileBytes !== undefined && !isPositiveInteger(source.maxFileBytes)) {
-        issues.push(
-          pipelineDeclarationIssue({
-            code: "pipeline_file_source_max_file_bytes_invalid",
-            path: sourcePath("maxFileBytes"),
-            sourceId,
-            message: "File source maxFileBytes must be a positive integer when provided."
-          })
-        );
-      }
-      break;
-    case "process-env":
-    case "argv":
-      {
-        const limitField = source.kind === "process-env" ? "maxEnvEntries" : "maxArgvEntries";
-        if (source[limitField] !== undefined && !isPositiveInteger(source[limitField])) {
-          issues.push(
-            pipelineDeclarationIssue({
-              code: source.kind === "process-env"
-                ? "pipeline_process_env_max_entries_invalid"
-                : "pipeline_argv_max_entries_invalid",
-              path: sourcePath(limitField),
-              sourceId,
-              message: `${limitField} must be a positive integer when provided.`
-            })
-          );
-        }
-      }
-      if (
-        source.unmappedBehavior !== undefined &&
-        source.unmappedBehavior !== "warning" &&
-        source.unmappedBehavior !== "error"
-      ) {
-        issues.push(
-          pipelineDeclarationIssue({
-            code: "pipeline_unmapped_behavior_invalid",
-            path: sourcePath("unmappedBehavior"),
-            sourceId,
-            message: "unmappedBehavior must be warning or error when provided."
-          })
-        );
-      }
-      if (source.kind === "process-env") {
-        if (source.unmappedPrefix !== undefined && (
-          typeof source.unmappedPrefix !== "string" || source.unmappedPrefix.length === 0
-        )) {
-          issues.push(
-            pipelineDeclarationIssue({
-              code: "pipeline_unmapped_prefix_invalid",
-              path: sourcePath("unmappedPrefix"),
-              sourceId,
-              message: "Process env unmappedPrefix must be a non-empty string when provided."
-            })
-          );
-        }
-        if (
-          (source.unmappedBehavior === "warning" || source.unmappedBehavior === "error") &&
-          (typeof source.unmappedPrefix !== "string" || source.unmappedPrefix.length === 0)
-        ) {
-          issues.push(
-            pipelineDeclarationIssue({
-              code: "pipeline_unmapped_prefix_required",
-              path: sourcePath("unmappedPrefix"),
-              sourceId,
-              message: "Strict process env mapping requires unmappedPrefix."
-            })
-          );
-        }
-        if (
-          typeof source.unmappedPrefix === "string" &&
-          source.unmappedPrefix.length > 0 &&
-          source.unmappedBehavior === undefined
-        ) {
-          issues.push(
-            pipelineDeclarationIssue({
-              code: "pipeline_unmapped_behavior_required",
-              path: sourcePath("unmappedBehavior"),
-              sourceId,
-              message: "Process env unmappedPrefix requires unmappedBehavior."
-            })
-          );
-        }
-      }
-      if (!Array.isArray(source.mappings)) {
-        issues.push(
-          pipelineDeclarationIssue({
-            code: "pipeline_override_mappings_invalid",
-            path: sourcePath("mappings"),
-            sourceId,
-            message: "Override sources must include a mappings array."
-          })
-        );
-      } else {
-        for (const [mappingIndex, mapping] of source.mappings.entries()) {
-          if (!appendDeclarationIssues(
-            issues,
-            validateOverrideMappingDeclaration(
-              mapping,
-              source.kind,
-              [...sourcePath("mappings"), mappingIndex],
-              sourceId
-            )
-          )) {
-            return issues;
-          }
-        }
-        appendDeclarationIssues(
-          issues,
-          validateUniqueMappingTargetPaths(source.mappings, sourcePath("mappings"), sourceId)
-        );
-      }
-      break;
+function validateFileSourceFields(
+  source: Record<string, unknown>, path: ConfigPath, sourceId: string | undefined
+): readonly ConfigIssue[] {
+  const issues: ConfigIssue[] = [];
+  const sourcePath = (field: string): ConfigPath => [...path, field];
+  if (source.kind === "adapter") {
+    if (typeof source.format !== "string" || !SUPPORTED_FILE_FORMATS.has(source.format)) {
+      issues.push(pipelineDeclarationIssue({ code: "pipeline_file_format_invalid",
+        path: sourcePath("format"), sourceId, message: "File adapters require a supported explicit format." }));
+    }
+    if (source.allowTrailingComma !== undefined &&
+        (typeof source.allowTrailingComma !== "boolean" || source.format !== "jsonc")) {
+      issues.push(pipelineDeclarationIssue({ code: "pipeline_file_trailing_comma_invalid",
+        path: sourcePath("allowTrailingComma"), sourceId,
+        message: "allowTrailingComma must be a boolean and is only supported for JSONC." }));
+    }
   }
+  if (typeof source.path !== "string" || source.path.length === 0) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_file_source_path_invalid",
+        path: sourcePath("path"),
+        sourceId,
+        message: "File sources must include a non-empty path string."
+      })
+    );
+  }
+  if (source.maxFileBytes !== undefined && !isPositiveInteger(source.maxFileBytes)) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_file_source_max_file_bytes_invalid",
+        path: sourcePath("maxFileBytes"),
+        sourceId,
+        message: "File source maxFileBytes must be a positive integer when provided."
+      })
+    );
+  }
+  return issues;
+}
 
+function validateOverrideSourceFields(
+  source: Record<string, unknown>, kind: "process-env" | "argv",
+  path: ConfigPath, sourceId: string | undefined,
+  commonIssues: readonly ConfigIssue[]
+): readonly ConfigIssue[] {
+  const issues = [...commonIssues];
+  const sourcePath = (field: string): ConfigPath => [...path, field];
+  const limitField = kind === "process-env" ? "maxEnvEntries" : "maxArgvEntries";
+  if (source[limitField] !== undefined && !isPositiveInteger(source[limitField])) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: kind === "process-env"
+          ? "pipeline_process_env_max_entries_invalid"
+          : "pipeline_argv_max_entries_invalid",
+        path: sourcePath(limitField),
+        sourceId,
+        message: `${limitField} must be a positive integer when provided.`
+      })
+    );
+  }
+  if (
+    source.unmappedBehavior !== undefined &&
+    source.unmappedBehavior !== "warning" &&
+    source.unmappedBehavior !== "error"
+  ) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_unmapped_behavior_invalid",
+        path: sourcePath("unmappedBehavior"),
+        sourceId,
+        message: "unmappedBehavior must be warning or error when provided."
+      })
+    );
+  }
+  if (kind === "process-env") {
+    issues.push(...validateProcessEnvPrefix(source, path, sourceId));
+  }
+  if (!Array.isArray(source.mappings)) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_override_mappings_invalid",
+        path: sourcePath("mappings"),
+        sourceId,
+        message: "Override sources must include a mappings array."
+      })
+    );
+    return issues;
+  }
+  for (const [mappingIndex, mapping] of source.mappings.entries()) {
+    if (!appendDeclarationIssues(
+      issues,
+      validateOverrideMappingDeclaration(
+        mapping,
+        kind,
+        [...sourcePath("mappings"), mappingIndex],
+        sourceId
+      )
+    )) {
+      return issues;
+    }
+  }
+  appendDeclarationIssues(
+    issues,
+    validateUniqueMappingTargetPaths(source.mappings, sourcePath("mappings"), sourceId)
+  );
+  return issues;
+}
+
+function validateProcessEnvPrefix(
+  source: Record<string, unknown>, path: ConfigPath, sourceId: string | undefined
+): readonly ConfigIssue[] {
+  const issues: ConfigIssue[] = [];
+  const sourcePath = (field: string): ConfigPath => [...path, field];
+  if (source.unmappedPrefix !== undefined && (
+    typeof source.unmappedPrefix !== "string" || source.unmappedPrefix.length === 0
+  )) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_unmapped_prefix_invalid",
+        path: sourcePath("unmappedPrefix"),
+        sourceId,
+        message: "Process env unmappedPrefix must be a non-empty string when provided."
+      })
+    );
+  }
+  if (
+    (source.unmappedBehavior === "warning" || source.unmappedBehavior === "error") &&
+    (typeof source.unmappedPrefix !== "string" || source.unmappedPrefix.length === 0)
+  ) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_unmapped_prefix_required",
+        path: sourcePath("unmappedPrefix"),
+        sourceId,
+        message: "Strict process env mapping requires unmappedPrefix."
+      })
+    );
+  }
+  if (
+    typeof source.unmappedPrefix === "string" &&
+    source.unmappedPrefix.length > 0 &&
+    source.unmappedBehavior === undefined
+  ) {
+    issues.push(
+      pipelineDeclarationIssue({
+        code: "pipeline_unmapped_behavior_required",
+        path: sourcePath("unmappedBehavior"),
+        sourceId,
+        message: "Process env unmappedPrefix requires unmappedBehavior."
+      })
+    );
+  }
   return issues;
 }
 
