@@ -694,6 +694,14 @@ export interface LoadDotenvFileSourceInput extends FileReadPolicy {
 export declare function loadDotenvFileSource(input: LoadDotenvFileSourceInput): Promise<LoadedSource>;
 export declare function parseSimpleDotenv(descriptor: ConfigSourceDescriptor, raw: string, sourcePath?: string, maxIssues?: number): LoadedSource;
 
+### file-read-limiter.d.ts
+export declare const DEFAULT_MAX_CONCURRENT_FILE_READS = 64;
+export interface ConfigFileReadLimiter {
+    /** A lease remains active through I/O cleanup. Undefined means capacity is full. */
+    tryAcquire(): (() => void) | undefined;
+}
+export declare function createConfigFileReadLimiter(maxConcurrent?: number): ConfigFileReadLimiter;
+
 ### file-source.d.ts
 import type { ConfigIssue, ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
 import { type FileReadPolicy } from "./file.js";
@@ -712,7 +720,8 @@ export declare function loadTextFileSource(input: FileSourceInput, options: File
 export {};
 
 ### file.d.ts
-import type { ConfigIssue, ConfigOperationOptions } from "@0disoft/universal-config-engine-core";
+import type { ConfigIssue, ConfigOperationOptions, ConfigAbortSignal } from "@0disoft/universal-config-engine-core";
+import { type ConfigFileReadLimiter } from "./file-read-limiter.js";
 export declare const DEFAULT_MAX_FILE_BYTES: number;
 export interface ConfigFileStats {
     readonly dev: bigint;
@@ -734,10 +743,14 @@ export interface ConfigFileSystem {
     stat(path: string, options: {
         bigint: true;
     }): Promise<ConfigFileStats>;
+    /** Optional cancellation-aware view; binding itself must not acquire resources. */
+    withSignal?(signal: ConfigAbortSignal): ConfigFileSystem;
 }
 export interface FileReadPolicy extends ConfigOperationOptions {
     /** Optional I/O boundary for deterministic tests; defaults to Node filesystem. */
     readonly fileSystem?: ConfigFileSystem;
+    /** Shared admission budget; defaults to 64 active reads per loaded adapter instance. */
+    readonly readLimiter?: ConfigFileReadLimiter;
     readonly maxFileBytes?: number;
     readonly encoding?: BufferEncoding;
     readonly allowedRootPath?: string;
@@ -780,6 +793,8 @@ export { createConfigReloader } from "./reload.js";
 export type { ReloadFailure, ConfigReloadOutcome, ConfigReloadEvent, CreateConfigReloaderInput, ConfigReloader } from "./reload.js";
 export { watchConfigFiles } from "./watch.js";
 export type { ConfigWatchHandle, ConfigWatchDependencies, WatchConfigFilesInput, WatchConfigFilesResult } from "./watch.js";
+export { createConfigFileReadLimiter, DEFAULT_MAX_CONCURRENT_FILE_READS } from "./file-read-limiter.js";
+export type { ConfigFileReadLimiter } from "./file-read-limiter.js";
 
 ### input-policy.d.ts
 import type { ConfigIssueSeverity } from "@0disoft/universal-config-engine-core";
@@ -858,7 +873,7 @@ export interface ConfigReloadEvent {
 }
 export interface CreateConfigReloaderInput extends ConfigOperationOptions {
     readonly load: (options?: ConfigOperationOptions) => Promise<RunConfigPipelineResult>;
-    readonly onChange?: (event: ConfigReloadEvent) => void | Promise<void>;
+    readonly onChange?: (event: ConfigReloadEvent, options?: ConfigOperationOptions) => void | Promise<void>;
 }
 export interface ConfigReloader {
     /** An active refresh and at most one queued refresh; bursts share that queue. */
