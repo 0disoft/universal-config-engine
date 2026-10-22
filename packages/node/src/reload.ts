@@ -1,4 +1,4 @@
-import { buildConfigDiff, cloneConfigValue, type ConfigOperationOptions, type ConfigChange, type ConfigPath, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
+import { buildConfigDiff, cloneConfigValue, reportConfigOperationError, type ConfigOperationOptions, type ConfigChange, type ConfigPath, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
 
 export type ReloadFailure = "load_failed" | "validation_failed" | "snapshot_failed" | "closed";
 export type ConfigReloadOutcome =
@@ -54,10 +54,13 @@ export function createReloadState(input: CreateConfigReloaderInput) {
     try {
       const result = input.onChange(Object.freeze(event), { signal: cancellation.signal });
       if (result !== undefined) {
-        void Promise.resolve(result).then(finishNotification, finishNotification);
+        void Promise.resolve(result).then(finishNotification, error => {
+          reportConfigOperationError(input, "reload_observer_failed", error);
+          finishNotification();
+        });
         return;
       }
-    } catch { /* Observers cannot break loading. */ }
+    } catch (error) { reportConfigOperationError(input, "reload_observer_failed", error); }
     finishNotification();
   }
   function finishNotification() {
@@ -72,8 +75,12 @@ export function createReloadState(input: CreateConfigReloaderInput) {
   }
   async function perform(): Promise<ConfigReloadOutcome> {
     let loaded: RunConfigPipelineResult;
-    try { loaded = await input.load({ signal: cancellation.signal }); }
-    catch { return closed ? failed("closed") : reject("load_failed"); }
+    try { loaded = await input.load({ signal: cancellation.signal,
+      ...(input.onError === undefined ? {} : { onError: input.onError }) }); }
+    catch (error) {
+      reportConfigOperationError(input, "reload_load_failed", error);
+      return closed ? failed("closed") : reject("load_failed");
+    }
     if (closed) return failed("closed");
     if (!loaded?.result?.ok || loaded.report?.status !== "ok") return reject("validation_failed");
     let next: RunConfigPipelineResult;
@@ -89,7 +96,10 @@ export function createReloadState(input: CreateConfigReloaderInput) {
         if (diff.status === "ok" && !hasOpaqueContainerChange(diff.changes, secretPaths)) changedPathCount = diff.changes.filter(change =>
           change.before?.visibility !== "redacted" && change.after?.visibility !== "redacted").length;
       }
-    } catch { return reject("snapshot_failed"); }
+    } catch (error) {
+      reportConfigOperationError(input, "reload_snapshot_failed", error);
+      return reject("snapshot_failed");
+    }
     snapshot = next;
     revision += 1;
     notify({ status: "updated", revision, ...(changedPathCount === undefined ? {} : { changedPathCount }) });

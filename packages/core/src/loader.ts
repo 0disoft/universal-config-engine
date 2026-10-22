@@ -1,4 +1,4 @@
-import { runAbortable, operationAbortedIssue, type ConfigOperationOptions } from "./operation.js";
+import { runAbortable, operationAbortedIssue, reportConfigOperationError, type ConfigOperationOptions } from "./operation.js";
 import { appendBoundedIssues, markDiagnosticsOverflow } from "./diagnostics.js";
 import { isConfigPath, isIssueCode, isIssueDetails, isRecord } from "./adapter-guards.js";
 import type {
@@ -65,8 +65,11 @@ export async function loadConfigSources<TContext = undefined>(
 
   for (const loader of input.loaders) {
     try {
-      const step = await runAbortable(() => input.signal === undefined ? loader.load(input.context)
-        : loader.load(input.context, { signal: input.signal }), input.signal);
+      const step = await runAbortable(() => input.signal === undefined && input.onError === undefined ? loader.load(input.context)
+        : loader.load(input.context, {
+          ...(input.signal === undefined ? {} : { signal: input.signal }),
+          ...(input.onError === undefined ? {} : { onError: input.onError })
+        }), input.signal);
       if (step.aborted) {
         const issue = operationAbortedIssue("source-load", loader.descriptor.id);
         sources.push({ descriptor: loader.descriptor, value: {}, issues: [issue] });
@@ -76,7 +79,8 @@ export async function loadConfigSources<TContext = undefined>(
       const source = toLoadedSource(loader, step.value, limits);
       sources.push(source);
       appendBoundedIssues(issues, source.issues ?? [], maxDiagnostics);
-    } catch {
+    } catch (error) {
+      reportConfigOperationError(input, "loader_threw", error, loader.descriptor.id);
       const issue = loaderThrewIssue(loader);
       const source: LoadedSource = {
         descriptor: loader.descriptor,

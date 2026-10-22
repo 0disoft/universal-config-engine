@@ -569,6 +569,18 @@ successful typed output; listeners are removed and late rejections are observed.
 Callback I/O must cooperate with the signal to actually stop its external work.
 Synchronous resolution and provider execution cannot be preempted by this signal.
 
+`ConfigOperationOptions.onError?` is an opt-in private operational observer. Loader,
+validator, Node file and reload boundaries send `ConfigOperationError` containing a
+stable `code`, optional `sourceId`, and an `Error` whose `cause` is the original
+exception. `reportConfigOperationError(options, code, cause, sourceId?)` provides
+the same isolated boundary for custom adapters. Pipeline hooks reach loader options;
+forward those options to nested file loaders. Hook exceptions/rejections cannot
+change operation results. Hooks must finish promptly; they are never awaited.
+These errors can contain secrets and are never attached to config results, public
+reports or default logs. Consumers own restricted handling of private causes.
+Public diagnostics retain their existing sanitized codes and messages. Signals may
+expose an optional private `reason`; cancellation reasons are not serialized.
+
 Node file policies accept optional `signal`, `fileSystem` and `readLimiter` fields. The filesystem
 implements only `open`, `realpath`, `stat` and a bounded file handle's `stat/read/close`
 operations, so tests can reproduce I/O races without global module mocks. Optional

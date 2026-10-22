@@ -1,4 +1,4 @@
-import { runAbortable, operationAbortedIssue, type ConfigOperationOptions } from "./operation.js";
+import { runAbortable, operationAbortedIssue, reportConfigOperationError, type ConfigOperationOptions } from "./operation.js";
 import { appendBoundedIssues, isDiagnosticsLimitReached, markDiagnosticsOverflow } from "./diagnostics.js";
 import { isConfigPath, isIssueCode, isIssueDetails, isRecord } from "./adapter-guards.js";
 import { normalizeResourceLimits } from "./limits.js";
@@ -87,7 +87,8 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
         sourceId: validator.id,
         message: `Validator ${validator.id} completed with status ${validatorStatus(result, validatorIssues)}.`
       });
-    } catch {
+    } catch (error) {
+      reportConfigOperationError(input, "validator_threw", error, validator.id);
       appendBoundedIssues(
         issues,
         [

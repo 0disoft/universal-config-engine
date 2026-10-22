@@ -1,4 +1,4 @@
-import type { ConfigIssue, ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
+import { reportConfigOperationError, type ConfigIssue, type ConfigSourceDescriptor, type LoadedSource } from "@0disoft/universal-config-engine-core";
 import { DEFAULT_MAX_FILE_BYTES, readTextFileWithinLimit, type FileReadPolicy } from "./file.js";
 
 interface FileSourceInput extends FileReadPolicy {
@@ -24,11 +24,13 @@ export async function loadTextFileSource(input: FileSourceInput, options: FileSo
       maxFileBytes: input.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES,
       encoding: input.encoding ?? "utf8",
       ...(input.signal === undefined ? {} : { signal: input.signal }),
+      ...(input.onError === undefined ? {} : { onError: input.onError }),
       ...(input.fileSystem === undefined ? {} : { fileSystem: input.fileSystem }),
       ...(input.readLimiter === undefined ? {} : { readLimiter: input.readLimiter }),
       ...(input.allowedRootPath === undefined ? {} : { allowedRootPath: input.allowedRootPath })
     });
-  } catch {
+  } catch (error) {
+    reportConfigOperationError(input, options.readFailure.code, error, input.descriptor.id);
     return input.signal?.aborted ? cancelledSource(input.descriptor) : failureSource(input.descriptor, options.readFailure);
   }
   if (!readResult.ok) {
@@ -38,7 +40,8 @@ export async function loadTextFileSource(input: FileSourceInput, options: FileSo
   try {
     const parsed = await options.parse(readResult.raw, readResult.canonicalPath);
     return input.signal?.aborted ? cancelledSource(input.descriptor) : parsed;
-  } catch {
+  } catch (error) {
+    reportConfigOperationError(input, (options.parseFailure ?? options.readFailure).code, error, input.descriptor.id);
     return input.signal?.aborted ? cancelledSource(input.descriptor)
       : failureSource(input.descriptor, options.parseFailure ?? options.readFailure);
   }

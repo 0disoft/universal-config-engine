@@ -40,6 +40,7 @@ export async function runConfigPipeline<TContext = undefined>(
     loaders: input.loaders,
     context: input.context,
     ...(input.signal === undefined ? {} : { signal: input.signal }),
+    ...(input.onError === undefined ? {} : { onError: input.onError }),
     ...(input.limits === undefined ? {} : { limits: input.limits })
   });
   let resolved = resolveConfig({
@@ -81,7 +82,8 @@ export async function applyPipelineValidators(
     provenance: result.provenance,
     validators,
     limits: result.limits,
-    ...(options.signal === undefined ? {} : { signal: options.signal })
+    ...(options.signal === undefined ? {} : { signal: options.signal }),
+    ...(options.onError === undefined ? {} : { onError: options.onError })
   });
   const issues = combineConfigIssues(
     result.issues,

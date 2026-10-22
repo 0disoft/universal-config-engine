@@ -1,6 +1,6 @@
 import { open, realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, sep } from "node:path";
-import type { ConfigIssue, ConfigOperationOptions, ConfigAbortSignal } from "@0disoft/universal-config-engine-core";
+import { reportConfigOperationError, type ConfigIssue, type ConfigOperationOptions, type ConfigAbortSignal } from "@0disoft/universal-config-engine-core";
 import { positiveSafeIntegerLimit } from "./limits.js";
 import { createConfigFileReadLimiter, type ConfigFileReadLimiter } from "./file-read-limiter.js";
 
@@ -113,6 +113,7 @@ async function readOwnedTextFile(input: FileReadPolicy & {
     catch (error) {
       onCleanupFailure();
       if (completedSuccessfully) throw error;
+      reportConfigOperationError(input, "file_close_failed", error, input.sourceId);
     }
   }
 }
