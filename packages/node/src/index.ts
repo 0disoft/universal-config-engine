@@ -19,6 +19,7 @@ export {
   createArgvSource
 } from "./argv-source.js";
 export type {
+  ConfigFileStats, ConfigFileHandle, ConfigFileSystem,
   BoundedTextFileReadResult,
   FileReadPolicy
 } from "./file.js";

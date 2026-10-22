@@ -707,9 +707,32 @@ export declare function loadTextFileSource(input: FileSourceInput, options: File
 export {};
 
 ### file.d.ts
-import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
+import type { ConfigIssue, ConfigOperationOptions } from "@0disoft/universal-config-engine-core";
 export declare const DEFAULT_MAX_FILE_BYTES: number;
-export interface FileReadPolicy {
+export interface ConfigFileStats {
+    readonly dev: bigint;
+    readonly ino: bigint;
+    readonly size: bigint;
+}
+export interface ConfigFileHandle {
+    stat(options: {
+        bigint: true;
+    }): Promise<ConfigFileStats>;
+    read(buffer: Buffer, offset: number, length: number, position: null): Promise<{
+        bytesRead: number;
+    }>;
+    close(): Promise<void>;
+}
+export interface ConfigFileSystem {
+    open(path: string, flags: "r"): Promise<ConfigFileHandle>;
+    realpath(path: string): Promise<string>;
+    stat(path: string, options: {
+        bigint: true;
+    }): Promise<ConfigFileStats>;
+}
+export interface FileReadPolicy extends ConfigOperationOptions {
+    /** Optional I/O boundary for deterministic tests; defaults to Node filesystem. */
+    readonly fileSystem?: ConfigFileSystem;
     readonly maxFileBytes?: number;
     readonly encoding?: BufferEncoding;
     readonly allowedRootPath?: string;
@@ -722,12 +745,9 @@ export type BoundedTextFileReadResult = {
     readonly ok: false;
     readonly issues: readonly ConfigIssue[];
 };
-export declare function readTextFileWithinLimit(input: {
+export declare function readTextFileWithinLimit(input: FileReadPolicy & {
     readonly filePath: string;
     readonly sourceId: string;
-    readonly maxFileBytes?: number;
-    readonly encoding?: BufferEncoding;
-    readonly allowedRootPath?: string;
 }): Promise<BoundedTextFileReadResult>;
 export declare function checkFileSize(input: {
     readonly filePath: string;
@@ -741,7 +761,7 @@ export { loadJsonFileSource } from "./json-file-loader.js";
 export { loadDotenvFileSource, parseSimpleDotenv } from "./dotenv-file-loader.js";
 export { DEFAULT_MAX_ENV_ENTRIES, createProcessEnvSource } from "./process-env-source.js";
 export { DEFAULT_MAX_ARGV_ENTRIES, createArgvSource } from "./argv-source.js";
-export type { BoundedTextFileReadResult, FileReadPolicy } from "./file.js";
+export type { ConfigFileStats, ConfigFileHandle, ConfigFileSystem, BoundedTextFileReadResult, FileReadPolicy } from "./file.js";
 export type { LoadJsonFileSourceInput } from "./json-file-loader.js";
 export type { LoadDotenvFileSourceInput } from "./dotenv-file-loader.js";
 export type { CreateProcessEnvSourceInput } from "./process-env-source.js";

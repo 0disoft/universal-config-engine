@@ -560,3 +560,11 @@ callback, skips later callbacks, reports sanitized `operation_aborted` and preve
 successful typed output; listeners are removed and late rejections are observed.
 Callback I/O must cooperate with the signal to actually stop its external work.
 Synchronous resolution and provider execution cannot be preempted by this signal.
+
+Node file policies accept optional `signal` and `fileSystem` fields. The latter
+implements only `open`, `realpath`, `stat` and a bounded file handle's `stat/read/close`
+operations, so tests can reproduce I/O races without global module mocks. Signals
+are checked before opening and after asynchronous boundaries; native in-flight reads
+must finish before their handle can be cleaned up. Cancellation uses `operation_aborted`.
+Handles close once on every path, and a cleanup exception does not replace an
+existing operation exception or policy failure. Successful reads still report close failures.

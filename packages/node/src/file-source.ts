@@ -23,18 +23,23 @@ export async function loadTextFileSource(input: FileSourceInput, options: FileSo
       sourceId: input.descriptor.id,
       maxFileBytes: input.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES,
       encoding: input.encoding ?? "utf8",
+      ...(input.signal === undefined ? {} : { signal: input.signal }),
+      ...(input.fileSystem === undefined ? {} : { fileSystem: input.fileSystem }),
       ...(input.allowedRootPath === undefined ? {} : { allowedRootPath: input.allowedRootPath })
     });
   } catch {
-    return failureSource(input.descriptor, options.readFailure);
+    return input.signal?.aborted ? cancelledSource(input.descriptor) : failureSource(input.descriptor, options.readFailure);
   }
   if (!readResult.ok) {
     return { descriptor: input.descriptor, value: {}, issues: readResult.issues };
   }
+  if (input.signal?.aborted) return cancelledSource(input.descriptor);
   try {
-    return await options.parse(readResult.raw, readResult.canonicalPath);
+    const parsed = await options.parse(readResult.raw, readResult.canonicalPath);
+    return input.signal?.aborted ? cancelledSource(input.descriptor) : parsed;
   } catch {
-    return failureSource(input.descriptor, options.parseFailure ?? options.readFailure);
+    return input.signal?.aborted ? cancelledSource(input.descriptor)
+      : failureSource(input.descriptor, options.parseFailure ?? options.readFailure);
   }
 }
 
@@ -50,4 +55,9 @@ function failureSource(descriptor: ConfigSourceDescriptor, diagnostic: FailureDi
       message: diagnostic.message
     }]
   };
+}
+
+function cancelledSource(descriptor: ConfigSourceDescriptor): LoadedSource {
+  return failureSource(descriptor, { category: "source-load", code: "operation_aborted",
+    message: "Configuration file loading was cancelled." });
 }
