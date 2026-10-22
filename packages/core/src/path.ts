@@ -73,18 +73,22 @@ export function setConfigValueAtPath(
     throw new Error("Cannot set the root path through setConfigValueAtPath.");
   }
 
-  let current: Record<string, ConfigValue> = root;
-
-  for (let index = 0; index < path.length - 1; index += 1) {
+  // Validate and own all inputs before replacing any existing ancestor.
+  for (let index = 0; index < path.length; index += 1) {
     const segment = path[index];
     if (segment === undefined) {
       throw new Error("Config path contained an undefined segment.");
     }
     assertSafeObjectPathSegment(segment);
     if (typeof segment !== "string") {
-      throw new Error(`Object merge paths cannot create numeric segment ${String(segment)}.`);
+      throw new Error(`Object merge paths cannot write numeric segment ${String(segment)}.`);
     }
+  }
+  const ownedValue = cloneConfigValue(value);
+  let current: Record<string, ConfigValue> = root;
 
+  for (let index = 0; index < path.length - 1; index += 1) {
+    const segment = path[index] as string;
     const existing = Object.prototype.hasOwnProperty.call(current, segment) ? current[segment] : undefined;
     if (existing === undefined || existing === null || typeof existing !== "object" || Array.isArray(existing)) {
       const next = createConfigObject();
@@ -96,16 +100,7 @@ export function setConfigValueAtPath(
     current = existing as Record<string, ConfigValue>;
   }
 
-  const finalSegment = path[path.length - 1];
-  if (finalSegment === undefined) {
-    throw new Error("Config path contained an undefined final segment.");
-  }
-  assertSafeObjectPathSegment(finalSegment);
-  if (typeof finalSegment !== "string") {
-    throw new Error(`Object merge paths cannot set numeric segment ${String(finalSegment)}.`);
-  }
-
-  current[finalSegment] = cloneConfigValue(value);
+  current[path[path.length - 1] as string] = ownedValue;
 }
 
 export function cloneConfigValue(value: ConfigValue): ConfigValue {

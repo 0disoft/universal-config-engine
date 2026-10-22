@@ -35,6 +35,9 @@ Repository Type: library
 - `getConfigValueAtPath`: typed lookup reads only own object fields and existing
   own array elements. Array indexes must be non-negative safe integers below the
   array length; inherited indexes and numeric metadata are not config values.
+- `setConfigValueAtPath`: object-only writes validate every path segment and clone
+  the replacement before changing ancestors. Invalid paths, unsafe keys and cyclic
+  replacement values therefore fail without partially replacing existing config.
 - `CoercionPolicy`: opt-in type conversion rules.
 - `applyCoercionRules`: immutable coercion stage that returns a cloned `config`
   together with issues and provenance; caller input is never modified.
