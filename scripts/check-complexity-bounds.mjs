@@ -1,4 +1,4 @@
-import { resolveConfig } from "../packages/core/dist/index.js";
+import { resolveConfig, checkConfigChanges } from "../packages/core/dist/index.js";
 import { createArgvSource } from "../packages/node/dist/index.js";
 
 const mergeResults = [512, 1024].map((size) => ({
@@ -9,6 +9,21 @@ const mergeResults = [512, 1024].map((size) => ({
 
 assertLinearGrowth("wide conflicts", mergeResults, "wideConflicts");
 assertLinearGrowth("subtree replacement", mergeResults, "subtreeReplacement");
+
+const policyResults = [512, 1024].map(size => {
+  const result = resolveConfig({ sources: [objectSource("file", 0, createWideObject(size, 0))] });
+  let total = 0;
+  const measured = { ...result, resolvedPaths: result.resolvedPaths.map(entry => new Proxy(entry, {
+    get(target, key, receiver) { if (key === "path") total++; return Reflect.get(target, key, receiver); }
+  })) };
+  const rules = Array.from({ length: size / 8 }, (_, index) => ({
+    id: `rule-${index}`, path: [], mode: "allowed-sources", allowedSourceIds: ["file"]
+  }));
+  const checked = checkConfigChanges(measured, measured, { version: "change-policy-1", rules });
+  assertEqual(checked.status, "ok", "indexed policy outcome");
+  return { size, rules: rules.length, pathAccesses: { total } };
+});
+assertLinearGrowth("policy path accesses", policyResults, "pathAccesses");
 
 const argvResults = [128, 4096].flatMap((mappingCount) =>
   [undefined, "warning"].map((unmappedBehavior) =>
@@ -23,6 +38,7 @@ for (const result of argvResults) {
 process.stdout.write(`${JSON.stringify({
   check: "deterministic-complexity-bounds",
   mergeResults,
+  policyResults,
   argvResults
 }, null, 2)}\n`);
 

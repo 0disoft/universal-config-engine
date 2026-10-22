@@ -1,8 +1,9 @@
 import { isConfigPath, isIssueCode, isRecord } from "./adapter-guards.js";
 import { buildConfigDiff, configValuesEqual, diffFailure, type BuildConfigDiffOptions, type ConfigDiff } from "./diff.js";
-import { getConfigValueAtPath, isPathPrefix, isUnsafePathSegment } from "./path.js";
-import type { ConfigPath, ConfigResult } from "./types.js";
+import { getConfigValueAtPath, isUnsafePathSegment, pathToKey } from "./path.js";
+import type { ConfigPath, ConfigResult, ResolvedPath } from "./types.js";
 import { sourceIdentity } from "./source-identity.js";
+import { PathIntersectionIndex } from "./path-intersection-index.js";
 
 export type ConfigChangeRule = {
   readonly id: string;
@@ -49,8 +50,9 @@ export function checkConfigChanges(
   else if (normalized === undefined) evaluation = { status: "error", violations: [{ code: "invalid_policy" }] };
   else {
     const violations: ConfigPolicyViolation[] = [];
+    const evaluateRule = createRuleEvaluator(diff, before, after);
     for (const rule of normalized.rules) {
-      const code = evaluateRule(rule, diff, before, after);
+      const code = evaluateRule(rule);
       if (code !== undefined) violations.push({ code, ruleId: rule.id, path: [...rule.path] });
     }
     evaluation = { status: violations.length === 0 ? "passed" : "failed", violations };
@@ -65,34 +67,59 @@ export function checkConfigChanges(
     policy: { status: "error", violations: [{ code: "max_report_bytes_exceeded" }] } };
 }
 
-function evaluateRule(rule: ConfigChangeRule, diff: ConfigDiff, before: ConfigResult, after: ConfigResult): ConfigPolicyViolation["code"] | undefined {
-  if (rule.mode === "require-path") {
-    return getConfigValueAtPath(after.config, rule.path) === undefined ? "required_path_missing" : undefined;
+function createRuleEvaluator(diff: ConfigDiff, before: ConfigResult, after: ConfigResult) {
+  const unknown = new PathIntersectionIndex(diff.uncomparedSecretPaths, path => path);
+  const changes = new PathIntersectionIndex(diff.changes, change => change.path);
+  const sourceChanges = new PathIntersectionIndex(diff.changes.filter(change => change.kinds.includes("source-changed")), change => change.path);
+  const equality = new Map<string, boolean>();
+  let sources: Map<string, PathIntersectionIndex<ResolvedPath>> | undefined;
+  const ownership = new Map<ConfigResult, { index: PathIntersectionIndex<ResolvedPath>; priorities: Map<string, number>; cache: Map<string, string> }>();
+  function ownershipAtPath(result: ConfigResult, path: ConfigPath): string {
+    let state = ownership.get(result);
+    if (state === undefined) {
+      state = { index: new PathIntersectionIndex(result.resolvedPaths, entry => entry.path),
+        priorities: new Map(result.sources.map(source => [source.id, source.priority])), cache: new Map() };
+      ownership.set(result, state);
+    }
+    const key = pathToKey(path);
+    let value = state.cache.get(key);
+    if (value === undefined) {
+      value = JSON.stringify(state.index.related(path).map(entry =>
+        JSON.stringify([entry.path, sourceIdentity(entry, state.priorities)])).sort());
+      state.cache.set(key, value);
+    }
+    return value;
   }
-  if (rule.mode === "allowed-sources") {
-    return after.resolvedPaths.some((entry) => intersects(rule.path, entry.path) && !rule.allowedSourceIds.includes(entry.winningSourceId))
-      ? "source_not_allowed" : undefined;
-  }
-  const previous = getConfigValueAtPath(before.config, rule.path);
-  const next = getConfigValueAtPath(after.config, rule.path);
-  if (previous === undefined || next === undefined) return previous === next ? undefined : "change_forbidden";
-  const unknown = diff.uncomparedSecretPaths.some((path) => intersects(rule.path, path));
-  const knownChanges = diff.changes.filter((change) => intersects(rule.path, change.path));
-  if (unknown) return knownChanges.length > 0 ? "change_forbidden" : "comparison_indeterminate";
-  if (!configValuesEqual(previous, next) || knownChanges.some(change => change.kinds.includes("source-changed")) &&
-      ownershipAtPath(before, rule.path) !== ownershipAtPath(after, rule.path)) return "change_forbidden";
-  return undefined;
-}
-
-function ownershipAtPath(result: ConfigResult, path: ConfigPath): string {
-  const priorities = new Map(result.sources.map(source => [source.id, source.priority]));
-  return JSON.stringify(result.resolvedPaths.filter(entry => intersects(path, entry.path)).map(entry =>
-    JSON.stringify([entry.path, sourceIdentity(entry, priorities)])
-  ).sort());
-}
-
-function intersects(left: ConfigPath, right: ConfigPath) {
-  return isPathPrefix(left, right) || isPathPrefix(right, left);
+  return function evaluateRule(rule: ConfigChangeRule): ConfigPolicyViolation["code"] | undefined {
+    if (rule.mode === "require-path") {
+      return getConfigValueAtPath(after.config, rule.path) === undefined ? "required_path_missing" : undefined;
+    }
+    if (rule.mode === "allowed-sources") {
+      if (sources === undefined) {
+        const grouped = new Map<string, ResolvedPath[]>();
+        for (const entry of after.resolvedPaths) {
+          const entries = grouped.get(entry.winningSourceId) ?? [];
+          entries.push(entry); grouped.set(entry.winningSourceId, entries);
+        }
+        sources = new Map([...grouped].map(([id, entries]) => [id, new PathIntersectionIndex(entries, entry => entry.path)]));
+      }
+      const allowed = new Set(rule.allowedSourceIds);
+      for (const [id, index] of sources) {
+        if (!allowed.has(id) && index.intersects(rule.path)) return "source_not_allowed";
+      }
+      return undefined;
+    }
+    const previous = getConfigValueAtPath(before.config, rule.path);
+    const next = getConfigValueAtPath(after.config, rule.path);
+    if (previous === undefined || next === undefined) return previous === next ? undefined : "change_forbidden";
+    if (unknown.intersects(rule.path)) return changes.intersects(rule.path) ? "change_forbidden" : "comparison_indeterminate";
+    const key = pathToKey(rule.path);
+    let equal = equality.get(key);
+    if (equal === undefined) { equal = configValuesEqual(previous, next); equality.set(key, equal); }
+    if (!equal || sourceChanges.intersects(rule.path) &&
+        ownershipAtPath(before, rule.path) !== ownershipAtPath(after, rule.path)) return "change_forbidden";
+    return undefined;
+  };
 }
 
 function parsePolicy(value: unknown): ConfigChangePolicy | undefined {
