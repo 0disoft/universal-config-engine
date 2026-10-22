@@ -18,6 +18,27 @@ describe("createAjvValidator", () => {
       load: () => ({ value })
     }] });
 
+  it("isolates modifying keywords supplied through options as well as custom instances", async () => {
+    const validator = createAjvValidator({
+      options: { keywords: [{ keyword: "normalizePort", modifying: true,
+        validate(_schema: unknown, data: { port: string | number }) {
+          data.port = Number(data.port);
+          return true;
+        }
+      }] },
+      schema: { type: "object", normalizePort: true }
+    });
+    const input = Object.freeze({ port: "3000" });
+    const direct = await validator.validate({ config: input, provenance: [] });
+    expect(direct).toMatchObject({ ok: true, value: { port: 3000 } });
+    expect(input.port).toBe("3000");
+    expect(direct.value).not.toBe(input);
+    const run = await typedRun({ port: "3000" }, validator);
+    expect(run.ok).toBe(true);
+    if (run.ok) expect(run.value).toEqual({ port: 3000 });
+    expect(run.result.config).toEqual({ port: "3000" });
+  });
+
   it.each([false, true])("returns coerced typed output without mutating resolved config (custom Ajv: %s)", async custom => {
     const schema = { type: "object", properties: { port: { type: "number" } } };
     const validator = createAjvValidator({ schema, ...(custom

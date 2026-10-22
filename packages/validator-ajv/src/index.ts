@@ -29,9 +29,11 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
   const ajv = input.ajv ?? new Ajv({ allErrors: false, loopRequired: 1, logger: false, ...(input.options ?? {}) });
   const maximum = typeof input.maxIssues === "number" && Number.isSafeInteger(input.maxIssues) && input.maxIssues > 0
     ? Math.min(input.maxIssues, 10_000) : DEFAULT_RESOURCE_LIMITS.maxDiagnostics;
-  // Supplied instances can also have modifying custom keywords. Give those
-  // validators an owned mutable value, without copying the default read-only path.
-  const needsCopy = input.ajv !== undefined || Boolean(ajv.opts.coerceTypes || ajv.opts.useDefaults || ajv.opts.removeAdditional);
+  // Custom keywords can be registered on a supplied instance or through options.
+  // Both may modify data; the default keyword-free read-only path needs no copy.
+  const needsCopy = input.ajv !== undefined || Boolean(
+    ajv.opts.coerceTypes || ajv.opts.useDefaults || ajv.opts.removeAdditional || ajv.opts.keywords
+  );
   const validate = ajv.compile(input.schema);
   if ("$async" in validate && validate.$async === true) {
     throw new Error("Asynchronous Ajv schemas are not supported by this adapter.");
