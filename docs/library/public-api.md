@@ -12,8 +12,10 @@ Repository Type: library
 ## Public API Areas
 
 - `ConfigSource`: source identity, priority, loader, and redaction metadata.
-  Resolution owns copies of returned descriptors and nested redaction policy
-  arrays, so later caller changes cannot alter the resolved masking policy.
+  After source-count and priority preflight, resolution owns copies of returned
+  descriptors and nested redaction policy arrays, so later caller changes cannot
+  alter the resolved masking policy. Source-count failures retain only bounded
+  descriptor references without inspecting their fields.
   Priorities must be finite numbers. Core loading and direct resolution reject
   invalid priorities before invoking loaders, inspecting values or sorting; failure
   uses `source_priority_invalid` and omits invalid descriptor metadata.

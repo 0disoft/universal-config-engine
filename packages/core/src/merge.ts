@@ -47,7 +47,7 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
     return {
       ok: false,
       config: {},
-      sources: input.sources.slice(0, limits.maxSources).map((source) => copySourceDescriptor(source.descriptor)),
+      sources: input.sources.slice(0, limits.maxSources).map((source) => source.descriptor),
       issues: [{
         category: "resource-limit",
         code: "max_sources_exceeded",
@@ -225,7 +225,7 @@ function sortSources(sources: readonly LoadedSource[]): readonly LoadedSource[] 
     .map(({ source }) => source);
 }
 
-function applyEntry(input: {
+interface MergeEntryInput {
   readonly config: Record<string, ConfigValue>;
   readonly descriptor: ConfigSourceDescriptor;
   readonly entryPath: readonly (string | number)[];
@@ -239,7 +239,12 @@ function applyEntry(input: {
   readonly displacedParents: MutableResolvedPathIndex;
   readonly keyBudget: { count: number; exceeded: boolean };
   readonly locationBudget: { count: number; bytes: number; exhausted: boolean };
-}): void {
+}
+
+type RelatedResolvedPaths = ReturnType<typeof findRelatedResolvedPaths>;
+
+/** Mutates only the resolution-owned work state, after ordered preflight checks. */
+function applyEntry(input: MergeEntryInput): void {
   if (input.entryPath.length === 0) {
     pushBoundedIssue(
       input.issues,
@@ -265,30 +270,8 @@ function applyEntry(input: {
   const liveRelated = findRelatedResolvedPaths(input.resolvedIndex, input.entryPath);
   const relatedResolved = [...liveRelated, ...findRelatedResolvedPaths(input.displacedParents, input.entryPath)];
 
-  if (
-    relatedResolved.some(
-      ({ resolved }) =>
-        resolved.winningPriority === input.descriptor.priority &&
-        resolved.winningSourceId !== input.descriptor.id
-    )
-  ) {
-    pushBoundedIssue(
-      input.issues,
-      {
-        category: "merge",
-        code: "same_priority_conflict",
-        severity: "error",
-        path: input.entryPath,
-        sourceId: input.descriptor.id,
-        message: "Two sources with the same priority wrote the same or overlapping config path.",
-        details: {
-          previousSourceId: relatedResolved[0]?.resolved.winningSourceId ?? existingResolved?.winningSourceId ?? "",
-          priority: input.descriptor.priority
-        }
-      },
-      input.limits
-    );
-  }
+  const conflict = samePriorityConflict(input, relatedResolved, existingResolved);
+  if (conflict !== undefined) pushBoundedIssue(input.issues, conflict, input.limits);
 
   const nextKeyCount = projectedMergeKeyCount(input.config, input.entryPath, input.entryValue, input.keyBudget.count);
   if (nextKeyCount > input.limits.maxKeyCount) {
@@ -318,49 +301,59 @@ function applyEntry(input: {
   input.keyBudget.count = nextKeyCount;
 
   if (relatedResolved.length === 0 && existingValue === undefined) {
-    const event: ProvenanceEvent = {
-      path: input.entryPath,
-      action: "defined",
-      sourceId: input.descriptor.id,
-      message: `Path was defined by source ${input.descriptor.id}.`
-    };
-    if (input.provenance.length < input.limits.maxProvenanceEvents) {
-      input.provenance.push(event);
-    } else {
-      pushResourceLimitIssueOnce(
-        input.issues,
-        "max_provenance_events_exceeded",
-        input.limits.maxProvenanceEvents,
-        input.limits
-      );
-    }
-    setResolvedPath(input.resolvedIndex, {
-      path: input.entryPath,
-      status: "resolved",
-      winningSourceId: input.descriptor.id,
-      winningPriority: input.descriptor.priority,
-      overriddenSourceIds: [],
-      ...(input.entryLocation === undefined ? {} : { winningLocation: input.entryLocation }),
-      overriddenLocations: []
-    });
+    recordDefinedEntry(input);
     return;
   }
+  recordOverriddenEntry(input, existingResolved, liveRelated, relatedResolved);
+}
 
+function samePriorityConflict(
+  input: Pick<MergeEntryInput, "descriptor" | "entryPath">,
+  relatedResolved: RelatedResolvedPaths, existingResolved: MutableResolvedPath | undefined
+): ConfigIssue | undefined {
+  if (!relatedResolved.some(({ resolved }) =>
+    resolved.winningPriority === input.descriptor.priority && resolved.winningSourceId !== input.descriptor.id)) return undefined;
+  return {
+    category: "merge", code: "same_priority_conflict", severity: "error",
+    path: input.entryPath, sourceId: input.descriptor.id,
+    message: "Two sources with the same priority wrote the same or overlapping config path.",
+    details: {
+      previousSourceId: relatedResolved[0]?.resolved.winningSourceId ?? existingResolved?.winningSourceId ?? "",
+      priority: input.descriptor.priority
+    }
+  };
+}
+
+function recordDefinedEntry(input: MergeEntryInput): void {
+  const event: ProvenanceEvent = {
+    path: input.entryPath,
+    action: "defined",
+    sourceId: input.descriptor.id,
+    message: `Path was defined by source ${input.descriptor.id}.`
+  };
+  appendMergeProvenance(input, event);
+  setResolvedPath(input.resolvedIndex, {
+    path: input.entryPath,
+    status: "resolved",
+    winningSourceId: input.descriptor.id,
+    winningPriority: input.descriptor.priority,
+    overriddenSourceIds: [],
+    ...(input.entryLocation === undefined ? {} : { winningLocation: input.entryLocation }),
+    overriddenLocations: []
+  });
+}
+
+function recordOverriddenEntry(
+  input: MergeEntryInput, existingResolved: MutableResolvedPath | undefined,
+  liveRelated: RelatedResolvedPaths, relatedResolved: RelatedResolvedPaths
+): void {
   const overriddenSourceIds = collectOverriddenSourceIds(relatedResolved, input.descriptor.id);
   const overriddenLocations = collectOverriddenLocations(relatedResolved, input.issues, input.limits, input.locationBudget);
   for (const { key, resolved } of liveRelated) {
     if (resolved.path.length < input.entryPath.length) setResolvedPath(input.displacedParents, resolved);
     deleteResolvedPath(input.resolvedIndex, key);
   }
-  // History is oldest-first; the previous winner must come from current owners.
-  // A parent replacement can overlap several owners: select the highest priority,
-  // retaining traversal order for ties rather than inventing a historical owner.
-  const previousWinner = existingResolved ?? relatedResolved.reduce<MutableResolvedPath | undefined>(
-    (winner, { resolved }) => winner === undefined || resolved.winningPriority > winner.winningPriority ? resolved : winner,
-    undefined
-  );
-  const previousSourceId = previousWinner?.winningSourceId === input.descriptor.id
-    ? undefined : previousWinner?.winningSourceId;
+  const previousSourceId = previousSourceIdForOverwrite(existingResolved, relatedResolved, input.descriptor.id);
   const event: ProvenanceEvent = {
     path: input.entryPath,
     action: "overridden",
@@ -371,16 +364,7 @@ function applyEntry(input: {
         ? `Source ${input.descriptor.id} replaced an overlapping config shape.`
         : `Source ${input.descriptor.id} overrode source ${previousSourceId}.`
   };
-  if (input.provenance.length < input.limits.maxProvenanceEvents) {
-    input.provenance.push(event);
-  } else {
-    pushResourceLimitIssueOnce(
-      input.issues,
-      "max_provenance_events_exceeded",
-      input.limits.maxProvenanceEvents,
-      input.limits
-    );
-  }
+  appendMergeProvenance(input, event);
   setResolvedPath(input.resolvedIndex, {
     path: input.entryPath,
     status: "resolved",
@@ -390,6 +374,29 @@ function applyEntry(input: {
     ...(input.entryLocation === undefined ? {} : { winningLocation: input.entryLocation }),
     overriddenLocations
   });
+}
+
+function previousSourceIdForOverwrite(
+  existingResolved: MutableResolvedPath | undefined, relatedResolved: RelatedResolvedPaths, sourceId: string
+): string | undefined {
+  // History is oldest-first; the previous winner must come from current owners.
+  // A parent replacement can overlap several owners: select the highest priority,
+  // retaining traversal order for ties rather than inventing a historical owner.
+  const previousWinner = existingResolved ?? relatedResolved.reduce<MutableResolvedPath | undefined>(
+    (winner, { resolved }) => winner === undefined || resolved.winningPriority > winner.winningPriority ? resolved : winner,
+    undefined
+  );
+  return previousWinner?.winningSourceId === sourceId ? undefined : previousWinner?.winningSourceId;
+}
+
+function appendMergeProvenance(
+  input: Pick<MergeEntryInput, "provenance" | "issues" | "limits">, event: ProvenanceEvent
+): void {
+  if (input.provenance.length < input.limits.maxProvenanceEvents) {
+    input.provenance.push(event);
+    return;
+  }
+  pushResourceLimitIssueOnce(input.issues, "max_provenance_events_exceeded", input.limits.maxProvenanceEvents, input.limits);
 }
 
 function isNonArrayObject(value: ConfigValue | undefined): value is { readonly [key: string]: ConfigValue } {

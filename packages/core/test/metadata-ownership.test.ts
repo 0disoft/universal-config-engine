@@ -3,13 +3,12 @@ import { buildDiagnosticReport, resolveConfig } from "../src/index.js";
 import { source } from "./helpers/source.js";
 
 describe("resolution metadata ownership", () => {
-  it.each(["success", "source-limit", "duplicate-id"])("owns source policy arrays on %s", failure => {
+  it.each(["success", "duplicate-id"])("owns source policy arrays on %s", failure => {
     const descriptor = { ...source("base", 0, {}).descriptor,
       redaction: { secretPaths: [["opaqueValue"]], secretNamePatterns: ["opaquePattern"] } };
     const first = { descriptor, value: { opaqueValue: 1, opaquePattern: 2 } };
     const result = resolveConfig({ sources: failure === "success" ? [first] : [first,
-      source(failure === "duplicate-id" ? "base" : "other", 1, {})],
-      ...(failure === "source-limit" ? { limits: { maxSources: 1 } } : {}) });
+      source("base", 1, {})] });
     expect(result.ok).toBe(failure === "success");
     descriptor.redaction.secretPaths[0]![0] = "changed";
     descriptor.redaction.secretNamePatterns.length = 0;
