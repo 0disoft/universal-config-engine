@@ -75,8 +75,38 @@ test("transient registry failures retry; authorization and malformed responses f
   for (const status of [404, 408, 429, 503]) {
     assert.equal(await lookupPublishedPackage(...args, async () => new Response("", { status })), undefined);
   }
-  assert.equal(await lookupPublishedPackage(...args, async () => { throw new TypeError("offline"); }), undefined);
+  assert.equal(await lookupPublishedPackage(...args, async () => { throw new TypeError("offline", { cause: { code: "ECONNRESET" } }); }), undefined);
   await assert.rejects(lookupPublishedPackage(...args, async () => new Response("", { status: 403 })), /HTTP 403/);
   await assert.rejects(lookupPublishedPackage(...args, async () => new Response("not JSON")), /invalid JSON/);
   await assert.rejects(lookupPublishedPackage(...args, async () => Response.json({})), /invalid publication metadata/);
+});
+
+test("permanent transport failures retain causes and never become publication propagation waits", async () => {
+  const cause = new TypeError("fetch failed", { cause: { code: "CERT_HAS_EXPIRED" } });
+  await assert.rejects(lookupPublishedPackage(WORKSPACE_PACKAGE_NAMES[0], "1.0.1", 1000,
+    async () => { throw cause; }), error => error.cause === cause && error.retryable === false);
+});
+
+test("transient polling backs off under the total budget and preserves the final cause", async () => {
+  const timing = clock();
+  const failure = new Error("temporary dependency failure");
+  const delays = [];
+  await assert.rejects(waitForPublishedPackages("1.0.1", {
+    ...timing, timeoutMs: 300, intervalMs: 100, random: () => 0.5,
+    sleep: async ms => { delays.push(ms); await timing.sleep(ms); },
+    lookup: async (_name, _version, _timeout, _fetch, options) => { options.onTransient(failure); }
+  }), error => error.cause === failure);
+  assert.deepEqual(delays, [50, 100, 150]);
+  assert.equal(timing.now(), 300);
+});
+
+test("cancellation stops publication backoff without starting another round", async () => {
+  const controller = new AbortController();
+  const reason = new Error("cancelled");
+  let calls = 0;
+  await assert.rejects(waitForPublishedPackages("1.0.1", { signal: controller.signal, intervalMs: 60_000,
+    lookup: async () => { calls++; return undefined; },
+    sleep: async (_ms, _value, options) => { assert.equal(options.signal, controller.signal); controller.abort(reason); }
+  }), error => error === reason);
+  assert.equal(calls, WORKSPACE_PACKAGE_NAMES.length);
 });

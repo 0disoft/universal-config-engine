@@ -3,33 +3,32 @@ import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { WORKSPACE_PACKAGE_NAMES } from "./lib/workspace-packages.mjs";
 import { parseReleaseVersion } from "./release-version.mjs";
+import { HttpReadError, readJson } from "./lib/http-read.mjs";
 
 const REGISTRY = "https://registry.npmjs.org/";
 
-async function registryJson(url, signal, fetchImpl) {
-  let response;
-  try {
-    response = await fetchImpl(url, { signal });
-  } catch {
-    return undefined;
-  }
-  if ([404, 408, 429].includes(response.status) || response.status >= 500) return undefined;
-  if (!response.ok) throw new Error(`npm registry lookup failed with HTTP ${response.status}.`);
-  try {
-    return await response.json();
-  } catch {
-    if (signal.aborted) return undefined;
-    throw new Error("npm registry returned invalid JSON.");
-  }
-}
-
-export async function lookupPublishedPackage(name, version, timeoutMs = 10_000, fetchImpl = fetch) {
+export async function lookupPublishedPackage(name, version, timeoutMs = 10_000, fetchImpl = fetch, { signal, onTransient } = {}) {
   const url = `${REGISTRY}${encodeURIComponent(name)}`;
-  const signal = AbortSignal.timeout(timeoutMs);
-  const [metadata, packument] = await Promise.all([
-    registryJson(`${url}/${version}`, signal, fetchImpl),
-    registryJson(url, signal, fetchImpl)
-  ]);
+  const controller = new AbortController();
+  const abort = () => controller.abort(signal.reason);
+  signal?.addEventListener("abort", abort, { once: true });
+  if (signal?.aborted) abort();
+  let metadata, packument;
+  try {
+    const options = { signal: controller.signal, timeoutMs, fetchImpl, allowNotFound: true, maxRetries: 0 };
+    [metadata, packument] = await Promise.all([
+      readJson(`${url}/${version}`, options), readJson(url, options)
+    ]);
+  } catch (error) {
+    if (!signal?.aborted && error instanceof HttpReadError && error.retryable) {
+      onTransient?.(error);
+      return undefined;
+    }
+    throw error;
+  } finally {
+    signal?.removeEventListener("abort", abort);
+    controller.abort();
+  }
   if (metadata === undefined || packument === undefined) return undefined;
   if (
     metadata?.name !== name || metadata.version !== version ||
@@ -47,7 +46,9 @@ export async function waitForPublishedPackages(version, {
   lookup = lookupPublishedPackage,
   now = () => performance.now(),
   sleep = delay,
-  log = console.log
+  log = console.log,
+  signal,
+  random = Math.random
 } = {}) {
   const release = parseReleaseVersion(version);
   if (![timeoutMs, intervalMs].every((value) => Number.isSafeInteger(value) && value > 0)) {
@@ -55,10 +56,15 @@ export async function waitForPublishedPackages(version, {
   }
   const deadline = now() + timeoutMs;
   let pending = WORKSPACE_PACKAGE_NAMES;
+  let lastTransient;
+  let transientRounds = 0;
   while (now() < deadline) {
+    signal?.throwIfAborted();
+    let roundFailure;
     const requestTimeout = Math.max(1, Math.min(10_000, Math.floor(deadline - now())));
     const states = await Promise.all(WORKSPACE_PACKAGE_NAMES.map(async (name) => {
-      const state = await lookup(name, version, requestTimeout);
+      const state = await lookup(name, version, requestTimeout, undefined, { signal,
+        onTransient(error) { roundFailure = lastTransient = error; } });
       if (release.prerelease && state?.tags?.latest === version) {
         throw new Error(`Prerelease unexpectedly replaced npm latest for ${name}.`);
       }
@@ -72,9 +78,13 @@ export async function waitForPublishedPackages(version, {
     const remaining = deadline - now();
     if (remaining <= 0) break;
     log(`Waiting for npm propagation: ${pending.join(", ")} (${Math.ceil(remaining / 1000)}s remaining).`);
-    await sleep(Math.min(intervalMs, remaining));
+    transientRounds = roundFailure === undefined ? 0 : transientRounds + 1;
+    const backoff = roundFailure === undefined ? intervalMs
+      : Math.max(roundFailure.retryAfterMs ?? 0,
+        Math.max(1, Math.floor(random() * Math.min(120_000, intervalMs * 2 ** Math.min(transientRounds - 1, 4)))));
+    await sleep(Math.min(backoff, remaining), undefined, { signal });
   }
-  throw new Error(`npm publication did not become visible within ${timeoutMs / 1000}s: ${pending.join(", ")}.`);
+  throw new Error(`npm publication did not become visible within ${timeoutMs / 1000}s: ${pending.join(", ")}.`, { cause: lastTransient });
 }
 
 if (process.argv[1] !== undefined && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {

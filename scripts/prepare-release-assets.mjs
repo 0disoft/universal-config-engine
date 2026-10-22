@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { WORKSPACE_PACKAGE_NAMES, packageTarballName } from "./lib/workspace-packages.mjs";
 import { parseReleaseVersion } from "./release-version.mjs";
+import { readJson } from "./lib/http-read.mjs";
 
 export function planReleaseAssets(version, release) {
   const parsed = parseReleaseVersion(version);
@@ -62,13 +63,10 @@ export function prepareReleaseAssets({ version, repository, packDir, notesFile, 
 }
 
 export async function lookupRelease(repository, version, token, fetchImpl = fetch) {
-  const response = await fetchImpl(`https://api.github.com/repos/${repository}/releases/tags/v${version}`, {
+  return readJson(`https://api.github.com/repos/${repository}/releases/tags/v${version}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
-    signal: AbortSignal.timeout(10_000)
+    fetchImpl, allowNotFound: true
   });
-  if (response.status === 404) return undefined;
-  if (!response.ok) throw new Error(`GitHub release lookup failed with HTTP ${response.status}.`);
-  return response.json();
 }
 
 async function main() {

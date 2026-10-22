@@ -185,6 +185,33 @@ package contents from drifting beyond the next published, explicitly authorized
 candidate. RC4 promotion is withdrawn; published and verified RC5 is the baseline
 for the separate stable 1.0.0 release.
 
+## External failure isolation
+
+External metadata reads use the GET-only `scripts/lib/http-read.mjs` boundary.
+Each call has a 10-second total budget including response-body parsing and up to
+two retries with exponential full jitter (200 ms base, 2-second cap). Only explicit
+temporary transport codes and HTTP 408/429/500/502/503/504 are retryable. Retry-After
+is respected within the remaining budget. Authentication, certificate failures,
+unknown transport errors and invalid JSON fail immediately with original causes.
+Stable candidate readiness additionally shares a 120-second overall deadline.
+
+Registry propagation has one retry owner: its existing 10-minute polling loop.
+Individual lookups never retry internally. A missing version remains propagation
+pending; temporary failures back off with jitter, preserve the latest cause and
+remain under the same total budget. Polling accepts an optional cancellation
+signal and aborts pending HTTP work/backoff. A fatal sibling lookup cancels the
+other request. Permanent failures never become propagation waits.
+
+Publication-state npm queries terminate after 30 seconds and preserve process
+timeout causes. Shared packaging/install commands terminate after 120 seconds;
+installed CLI commands terminate after 30 seconds. These are local process bounds,
+not claims that cancellation rolls back a completed external operation.
+
+GitHub release creation/upload and npm publication do not receive automatic
+application retries. On an ambiguous write failure, inspect remote state and
+resume through existing publication/asset checks. Never republish blindly or
+replace an existing immutable artifact. No hosted workflow or runner is added.
+
 ## Stop Conditions
 
 - Any required validation fails.

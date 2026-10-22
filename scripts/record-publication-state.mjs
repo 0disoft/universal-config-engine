@@ -40,6 +40,9 @@ export function collectPublicationState(input) {
 }
 
 export function classifyNpmViewResult(result, expectedVersion) {
+  if (result.error || result.signal) {
+    throw new Error("npm registry publication lookup failed.", { cause: result.error ?? new Error(`npm exited with signal ${result.signal}.`) });
+  }
   if (result.status === 0) {
     let actualVersion;
     try {
@@ -78,11 +81,13 @@ function lookupPublication(name, version) {
   const result = spawnSync(
     command,
     commandArgs,
-    { encoding: "utf8" }
+    { encoding: "utf8", timeout: 30_000, maxBuffer: 1024 * 1024, windowsHide: true }
   );
 
   return classifyNpmViewResult({
     status: result.status,
+    error: result.error,
+    signal: result.signal,
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? ""
   }, version);

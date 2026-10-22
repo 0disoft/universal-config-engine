@@ -4,6 +4,9 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { WORKSPACE_PACKAGE_NAMES, packageDirectory, packageTarballName } from "./workspace-packages.mjs";
 
+const PACKAGE_MANAGER_TIMEOUT_MS = 120_000;
+const INSTALLED_CLI_TIMEOUT_MS = 30_000;
+
 export { WORKSPACE_PACKAGE_NAMES, packageDirectory };
 
 export function packageTarballPath(root, packDir, packageName) {
@@ -45,6 +48,8 @@ export function runPnpm(args, cwd = process.cwd()) {
   execFileSync(isJavaScriptCli ? process.execPath : command, isJavaScriptCli ? [command, ...args] : args, {
     cwd,
     stdio: "inherit",
+    timeout: PACKAGE_MANAGER_TIMEOUT_MS,
+    windowsHide: true,
     shell: !isJavaScriptCli && process.platform === "win32" && /\.(?:bat|cmd)$/i.test(command)
   });
 }
@@ -60,13 +65,17 @@ export function runNpm(args, cwd) {
   const env = npmCompatibleEnvironment();
   const cliPath = join(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
   if (existsSync(cliPath)) {
-    execFileSync(process.execPath, [cliPath, ...args], { cwd, env, stdio: "inherit" });
+    execFileSync(process.execPath, [cliPath, ...args], {
+      cwd, env, stdio: "inherit", timeout: PACKAGE_MANAGER_TIMEOUT_MS, windowsHide: true
+    });
     return;
   }
   execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", args, {
     cwd,
     env,
     stdio: "inherit",
+    timeout: PACKAGE_MANAGER_TIMEOUT_MS,
+    windowsHide: true,
     shell: process.platform === "win32"
   });
 }
@@ -77,10 +86,14 @@ export function runInstalledCli(directory) {
   return process.platform === "win32"
     ? execFileSync("cmd.exe", ["/d", "/c", ".\\node_modules\\.bin\\uce.cmd validate --config uce.json --json"], {
         cwd: directory,
-        encoding: "utf8"
+        encoding: "utf8",
+        timeout: INSTALLED_CLI_TIMEOUT_MS,
+        windowsHide: true
       })
     : execFileSync(join(directory, "node_modules", ".bin", "uce"), ["validate", "--config", "uce.json", "--json"], {
         cwd: directory,
-        encoding: "utf8"
+        encoding: "utf8",
+        timeout: INSTALLED_CLI_TIMEOUT_MS,
+        windowsHide: true
       });
 }

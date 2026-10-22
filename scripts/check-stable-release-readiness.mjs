@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { WORKSPACE_PACKAGE_NAMES, packageTarballName } from "./lib/workspace-packages.mjs";
 import { parseReleaseVersion } from "./release-version.mjs";
 import { collectReleaseCommitEvidence, evaluateReleaseCommitEvidence } from "./release-commit-evidence.mjs";
+import { readJson } from "./lib/http-read.mjs";
 
 const PROVENANCE_PREDICATE = "https://slsa.dev/provenance/v1";
 const policyPath = new URL("../release-policy.json", import.meta.url);
@@ -132,6 +133,7 @@ async function collectRemoteReadinessInput(version, repository, policy, preparat
   }
 
   const candidateTag = `v${requirement.candidateVersion}`;
+  const signal = AbortSignal.timeout(120_000);
   const githubHeaders = {
     Authorization: `Bearer ${token}`,
     Accept: "application/vnd.github+json",
@@ -139,7 +141,7 @@ async function collectRemoteReadinessInput(version, repository, policy, preparat
   };
   const commitEvidence = await collectReleaseCommitEvidence({
     candidateTag, preparationSha,
-    fetchGitHub: (path) => fetchJson(`https://api.github.com/repos/${repository}/${path}`, githubHeaders)
+    fetchGitHub: (path) => fetchJson(`https://api.github.com/repos/${repository}/${path}`, githubHeaders, signal)
   });
   const release = await fetchJson(
     `https://api.github.com/repos/${repository}/releases/tags/${encodeURIComponent(candidateTag)}`,
@@ -147,7 +149,7 @@ async function collectRemoteReadinessInput(version, repository, policy, preparat
       Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28"
-    }
+    }, signal
   );
 
   const afterAssets = release.assets.filter((asset) => /^publication-state-.+-after\.json$/.test(asset.name));
@@ -155,14 +157,14 @@ async function collectRemoteReadinessInput(version, repository, policy, preparat
     afterAssets.map((asset) => fetchJson(asset.browser_download_url, {
       Authorization: `Bearer ${token}`,
       Accept: "application/octet-stream"
-    }))
+    }, signal))
   );
 
   const packageStates = await Promise.all(WORKSPACE_PACKAGE_NAMES.map(async (name) => {
     const encodedName = encodeURIComponent(name);
     const [metadata, packument] = await Promise.all([
-      fetchJson(`https://registry.npmjs.org/${encodedName}/${requirement.candidateVersion}`),
-      fetchJson(`https://registry.npmjs.org/${encodedName}`)
+      fetchJson(`https://registry.npmjs.org/${encodedName}/${requirement.candidateVersion}`, undefined, signal),
+      fetchJson(`https://registry.npmjs.org/${encodedName}`, undefined, signal)
     ]);
     return {
       name,
@@ -189,12 +191,8 @@ async function collectRemoteReadinessInput(version, repository, policy, preparat
   };
 }
 
-async function fetchJson(url, headers = {}) {
-  const response = await fetch(url, { headers });
-  if (!response.ok) {
-    throw new Error(`Release readiness lookup failed with HTTP ${response.status}.`);
-  }
-  return response.json();
+async function fetchJson(url, headers = {}, signal) {
+  return readJson(url, { headers, signal });
 }
 
 function parseArguments(args) {

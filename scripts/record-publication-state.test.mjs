@@ -63,6 +63,12 @@ test("rejects an unexpected registry version", () => {
   }, "0.5.0"), /unexpected package version/);
 });
 
+test("process timeouts retain causes and cannot be mistaken for npm 404", () => {
+  const cause = Object.assign(new Error("timed out"), { code: "ETIMEDOUT" });
+  assert.throws(() => classifyNpmViewResult({ status: null, stdout: "", stderr: "E404", error: cause }, "1.0.1"),
+    error => error.cause === cause);
+});
+
 test("classifies stable and prerelease npm tags", () => {
   assert.deepEqual(parseReleaseVersion("1.0.0"), {
     version: "1.0.0",
