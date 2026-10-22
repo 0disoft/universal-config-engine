@@ -1,9 +1,8 @@
 import type { LoadedSource } from "@0disoft/universal-config-engine-core";
 import { createScanner } from "jsonc-parser";
+import { JSON_TOKEN } from "./jsonc-tokens.js";
 
-// Stable scanner token IDs; the parser owns syntax validation.
-const TOKEN = { objectBegin: 1, objectEnd: 2, arrayBegin: 3, arrayEnd: 4,
-  comma: 5, colon: 6, string: 10, eof: 17 } as const;
+export const DEFAULT_MAX_LOCATION_BYTES = 4 * 1024 * 1024;
 
 export function collectJsonLocations(
   sourceId: string, sourcePath: string, raw: string, maxLocationBytes: number
@@ -35,30 +34,30 @@ export function collectJsonLocations(
   };
   // JSON.parse already owns syntax validation. Scan positions without the
   // recursive visitor, and skip array contents: they have no retained locations.
-  for (let token = scanner.scan(); token !== TOKEN.eof; token = scanner.scan()) {
-    const open = token === TOKEN.objectBegin || token === TOKEN.arrayBegin;
-    const close = token === TOKEN.objectEnd || token === TOKEN.arrayEnd;
+  for (let token = scanner.scan(); token !== JSON_TOKEN.EOF; token = scanner.scan()) {
+    const open = token === JSON_TOKEN.OpenBraceToken || token === JSON_TOKEN.OpenBracketToken;
+    const close = token === JSON_TOKEN.CloseBraceToken || token === JSON_TOKEN.CloseBracketToken;
     if (skippedArrayDepth > 0) {
       if (open) skippedArrayDepth += 1;
       if (close) skippedArrayDepth -= 1;
       if (skippedArrayDepth === 0 && expectingKeys.length > 0) path.pop();
       continue;
     }
-    if (token === TOKEN.string && expectingKeys[expectingKeys.length - 1] === true) {
+    if (token === JSON_TOKEN.StringLiteral && expectingKeys[expectingKeys.length - 1] === true) {
       path.push(scanner.getTokenValue());
       expectingKeys[expectingKeys.length - 1] = false;
-    } else if (token === TOKEN.objectBegin) {
+    } else if (token === JSON_TOKEN.OpenBraceToken) {
       add();
       expectingKeys.push(true);
-    } else if (token === TOKEN.objectEnd) {
+    } else if (token === JSON_TOKEN.CloseBraceToken) {
       expectingKeys.pop();
       if (expectingKeys.length > 0) path.pop();
-    } else if (token === TOKEN.arrayBegin) {
+    } else if (token === JSON_TOKEN.OpenBracketToken) {
       add();
       skippedArrayDepth = 1;
-    } else if (token === TOKEN.comma) {
+    } else if (token === JSON_TOKEN.CommaToken) {
       expectingKeys[expectingKeys.length - 1] = true;
-    } else if (token !== TOKEN.colon) {
+    } else if (token !== JSON_TOKEN.ColonToken) {
       add();
       if (expectingKeys.length > 0) path.pop();
     }

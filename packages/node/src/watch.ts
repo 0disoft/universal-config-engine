@@ -19,6 +19,14 @@ const nativeDependencies: ConfigWatchDependencies = { realpath, stat, watch,
   schedule(callback, delayMs) { const timer = setTimeout(callback, delayMs); return () => clearTimeout(timer); }
 };
 
+const WATCH_LIMITS = {
+  defaultDebounceMs: 25,
+  maxDebounceMs: 1000,
+  maxWaitMs: 1000,
+  maxPaths: 64,
+  maxPathChars: 4096
+} as const;
+
 export interface WatchConfigFilesInput extends CreateConfigReloaderInput {
   readonly workspacePath: string;
   readonly paths: readonly string[];
@@ -32,14 +40,14 @@ export type WatchConfigFilesResult =
 /** Watches selected basenames in their parent directories, including atomic replacements. */
 export async function watchConfigFiles(input: WatchConfigFilesInput, dependencies: ConfigWatchDependencies = nativeDependencies): Promise<WatchConfigFilesResult> {
   if (input.signal?.aborted) return { ok: false, code: "watch_setup_failed" };
-  const delay = input.debounceMs ?? 25;
-  if (!Array.isArray(input.paths) || input.paths.length === 0 || input.paths.length > 64 ||
-      !Number.isSafeInteger(delay) || delay < 0 || delay > 1000) return { ok: false, code: "watch_input_invalid" };
+  const delay = input.debounceMs ?? WATCH_LIMITS.defaultDebounceMs;
+  if (!Array.isArray(input.paths) || input.paths.length === 0 || input.paths.length > WATCH_LIMITS.maxPaths ||
+      !Number.isSafeInteger(delay) || delay < 0 || delay > WATCH_LIMITS.maxDebounceMs) return { ok: false, code: "watch_input_invalid" };
   const count = input.paths.length;
   const paths: string[] = [];
   for (let index = 0; index < count; index++) {
     const path = input.paths[index];
-    if (typeof path !== "string" || path.length === 0 || path.length > 4096) return { ok: false, code: "watch_input_invalid" };
+    if (typeof path !== "string" || path.length === 0 || path.length > WATCH_LIMITS.maxPathChars) return { ok: false, code: "watch_input_invalid" };
     paths.push(path);
   }
   let root: string;
@@ -100,7 +108,7 @@ export async function watchConfigFiles(input: WatchConfigFilesInput, dependencie
         timer = dependencies.schedule(flush, delay);
         // Continuous writes must not postpone refresh indefinitely. Both timers
         // feed the reload state's single active / single queued refresh boundary.
-        if (maxWaitTimer === undefined) maxWaitTimer = dependencies.schedule(flush, 1000);
+        if (maxWaitTimer === undefined) maxWaitTimer = dependencies.schedule(flush, WATCH_LIMITS.maxWaitMs);
       });
       handles.set(directory, { handle, filter });
       handle.on("error", () => {

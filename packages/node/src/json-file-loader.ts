@@ -1,10 +1,8 @@
 import type { ConfigSourceDescriptor, LoadedSource } from "@0disoft/universal-config-engine-core";
-import { collectJsonLocations } from "./json-locations.js";
+import { collectJsonLocations, DEFAULT_MAX_LOCATION_BYTES } from "./json-locations.js";
 import type { FileReadPolicy } from "./file.js";
 import { loadTextFileSource } from "./file-source.js";
 import { positiveSafeIntegerLimit } from "./limits.js";
-
-const DEFAULT_MAX_LOCATION_BYTES = 4 * 1024 * 1024;
 
 export interface LoadJsonFileSourceInput extends FileReadPolicy {
   readonly descriptor: ConfigSourceDescriptor;

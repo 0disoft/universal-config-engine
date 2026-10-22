@@ -4,10 +4,13 @@ import {
 } from "@0disoft/universal-config-engine-core";
 import { loadTextFileSource } from "./file-source.js";
 import { loadJsonFileSource, type LoadJsonFileSourceInput } from "./json-file-loader.js";
-import { collectJsonLocations } from "./json-locations.js";
+import { JSON_TOKEN, JSON_SCAN_ERROR_NONE } from "./jsonc-tokens.js";
+import { collectJsonLocations, DEFAULT_MAX_LOCATION_BYTES } from "./json-locations.js";
 import { positiveSafeIntegerLimit } from "./limits.js";
 
 export type ConfigFileFormat = "json" | "jsonc" | "yaml" | "toml" | "json5";
+
+const MAX_RECURSIVE_PARSE_DEPTH = 256;
 
 export interface LoadConfigFileSourceInput extends LoadJsonFileSourceInput {
   readonly format: ConfigFileFormat;
@@ -30,7 +33,7 @@ export async function loadConfigFileSource(input: LoadConfigFileSourceInput): Pr
       // The recursive dialect parsers must not consume unbounded nesting before
       // core can validate their output. JSON uses its existing iterative boundary.
       if ((input.format === "jsonc" || input.format === "json5") &&
-          exceedsJsonLikeDepth(raw, Math.min(limits.maxDepth + 1, 256))) {
+          exceedsJsonLikeDepth(raw, Math.min(limits.maxDepth + 1, MAX_RECURSIVE_PARSE_DEPTH))) {
         return failure(input, { category: "resource-limit", code: "max_parse_depth_exceeded",
           message: "Configuration nesting exceeds the parser depth budget." });
       }
@@ -41,7 +44,7 @@ export async function loadConfigFileSource(input: LoadConfigFileSourceInput): Pr
       }
       const locations = input.format === "jsonc" ? collectJsonLocations(
         input.descriptor.id, canonicalPath, raw,
-        positiveSafeIntegerLimit(input.maxLocationBytes, 4 * 1024 * 1024)) : {};
+        positiveSafeIntegerLimit(input.maxLocationBytes, DEFAULT_MAX_LOCATION_BYTES)) : {};
       return { descriptor: input.descriptor, value, ...locations };
     }
   });
@@ -58,13 +61,13 @@ async function parseDialect(raw: string, input: LoadConfigFileSourceInput): Prom
       const commas: number[] = [];
       const uncommented: string[] = [];
       let commentStart = 0;
-      let previous = 0;
+      let previous: number = JSON_TOKEN.Unknown;
       let previousOffset = 0;
       for (let token = scanner.scan(); ; token = scanner.scan()) {
-        if (scanner.getTokenError() !== 0) throw new Error("Invalid JSONC token.");
-        if (token === 17) break;
+        if (scanner.getTokenError() !== JSON_SCAN_ERROR_NONE) throw new Error("Invalid JSONC token.");
+        if (token === JSON_TOKEN.EOF) break;
         // Comments and whitespace do not separate a trailing comma from its close.
-        if (token === 12 || token === 13) {
+        if (token === JSON_TOKEN.LineCommentTrivia || token === JSON_TOKEN.BlockCommentTrivia) {
           const offset = scanner.getTokenOffset();
           const end = offset + scanner.getTokenLength();
           // Use actual source slices: scanner token values are not guaranteed
@@ -73,8 +76,9 @@ async function parseDialect(raw: string, input: LoadConfigFileSourceInput): Prom
           commentStart = end;
           continue;
         }
-        if (token === 14 || token === 15) continue;
-        if (input.allowTrailingComma === true && previous === 5 && (token === 2 || token === 4)) commas.push(previousOffset);
+        if (token === JSON_TOKEN.LineBreakTrivia || token === JSON_TOKEN.Trivia) continue;
+        if (input.allowTrailingComma === true && previous === JSON_TOKEN.CommaToken &&
+            (token === JSON_TOKEN.CloseBraceToken || token === JSON_TOKEN.CloseBracketToken)) commas.push(previousOffset);
         previous = token;
         previousOffset = scanner.getTokenOffset();
       }
