@@ -6,8 +6,10 @@ import { WORKSPACE_PACKAGE_NAMES, packageTarballName } from "./lib/workspace-pac
 import { parseReleaseVersion } from "./release-version.mjs";
 import { collectReleaseCommitEvidence, evaluateReleaseCommitEvidence } from "./release-commit-evidence.mjs";
 import { readJson } from "./lib/http-read.mjs";
+import { mapConcurrent } from "./lib/map-concurrent.mjs";
 
 const PROVENANCE_PREDICATE = "https://slsa.dev/provenance/v1";
+const RELEASE_EVIDENCE_CONCURRENCY = 4;
 const policyPath = new URL("../release-policy.json", import.meta.url);
 
 export function resolveStableReleaseRequirement(version, policy) {
@@ -153,11 +155,11 @@ async function collectRemoteReadinessInput(version, repository, policy, preparat
   );
 
   const afterAssets = release.assets.filter((asset) => /^publication-state-.+-after\.json$/.test(asset.name));
-  const publicationStates = await Promise.all(
-    afterAssets.map((asset) => fetchJson(asset.browser_download_url, {
+  const publicationStates = await mapConcurrent(
+    afterAssets, RELEASE_EVIDENCE_CONCURRENCY, (asset, _index, readSignal) => fetchJson(asset.browser_download_url, {
       Authorization: `Bearer ${token}`,
       Accept: "application/octet-stream"
-    }, signal))
+    }, readSignal), { signal }
   );
 
   const packageStates = await Promise.all(WORKSPACE_PACKAGE_NAMES.map(async (name) => {

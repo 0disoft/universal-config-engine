@@ -212,6 +212,11 @@ application retries. On an ambiguous write failure, inspect remote state and
 resume through existing publication/asset checks. Never republish blindly or
 replace an existing immutable artifact. No hosted workflow or runner is added.
 
+Stable-readiness evidence downloads use at most four concurrent reads, preserve
+asset order, and stop queued work on cancellation or the first failure. Active
+siblings receive the owned cancellation signal. The existing per-request and
+overall deadlines still apply; write operations receive no new retries.
+
 ## Stop Conditions
 
 - Any required validation fails.
