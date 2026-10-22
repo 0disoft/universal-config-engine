@@ -44,3 +44,5 @@ export { createConfigReloader } from "./reload.js";
 export type { ReloadFailure, ConfigReloadOutcome, ConfigReloadEvent, CreateConfigReloaderInput, ConfigReloader } from "./reload.js";
 export { watchConfigFiles } from "./watch.js";
 export type { ConfigWatchHandle, ConfigWatchDependencies, WatchConfigFilesInput, WatchConfigFilesResult } from "./watch.js";
+export { createConfigFileReadLimiter, DEFAULT_MAX_CONCURRENT_FILE_READS } from "./file-read-limiter.js";
+export type { ConfigFileReadLimiter } from "./file-read-limiter.js";

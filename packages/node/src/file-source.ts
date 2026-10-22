@@ -25,6 +25,7 @@ export async function loadTextFileSource(input: FileSourceInput, options: FileSo
       encoding: input.encoding ?? "utf8",
       ...(input.signal === undefined ? {} : { signal: input.signal }),
       ...(input.fileSystem === undefined ? {} : { fileSystem: input.fileSystem }),
+      ...(input.readLimiter === undefined ? {} : { readLimiter: input.readLimiter }),
       ...(input.allowedRootPath === undefined ? {} : { allowedRootPath: input.allowedRootPath })
     });
   } catch {

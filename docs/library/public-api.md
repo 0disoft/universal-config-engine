@@ -87,6 +87,8 @@ aliases and omitting values, names, locations, codes and prose. See
 Node `createConfigReloader` serializes explicitly requested pipeline refreshes,
 coalesces queued work, owns immutable last-good snapshots and suppresses late
 publication after close. Failure/event data excludes values and provider prose.
+Asynchronous observers run serially with one latest pending notification, and
+receive an optional second operation-options argument for cooperative cancellation.
 See [reload lifecycle](../adapters/reload.md); snapshots themselves contain secrets.
 
 `buildConfigInspection(result, options?)` is the opt-in `inspection-1` value
@@ -567,10 +569,24 @@ successful typed output; listeners are removed and late rejections are observed.
 Callback I/O must cooperate with the signal to actually stop its external work.
 Synchronous resolution and provider execution cannot be preempted by this signal.
 
-Node file policies accept optional `signal` and `fileSystem` fields. The latter
+Node file policies accept optional `signal`, `fileSystem` and `readLimiter` fields. The filesystem
 implements only `open`, `realpath`, `stat` and a bounded file handle's `stat/read/close`
-operations, so tests can reproduce I/O races without global module mocks. Signals
+operations, so tests can reproduce I/O races without global module mocks. Optional
+`fileSystem.withSignal(signal)` binds a cancellation-aware implementation for the
+operation without acquiring resources. Existing I/O method signatures and native
+filesystem implementations remain compatible. Signals
 are checked before opening and after asynchronous boundaries; native in-flight reads
 must finish before their handle can be cleaned up. Cancellation uses `operation_aborted`.
 Handles close once on every path, and a cleanup exception does not replace an
 existing operation exception or policy failure. Successful reads still report close failures.
+
+File reads share an admission budget of `DEFAULT_MAX_CONCURRENT_FILE_READS` (64)
+per loaded Node adapter instance. Capacity includes pending open/read/close work,
+even after a caller stops waiting or cancels. Excess calls fail before opening with
+`resource-limit/max_concurrent_file_reads_exceeded`; they do not create a waiting queue.
+An unconfirmed close failure keeps its lease reserved rather than assuming a
+resource was released. `createConfigFileReadLimiter(maxConcurrent?)` creates an
+explicit application-owned budget; share it across loaders through `readLimiter`.
+Leases release idempotently. Invalid capacities throw `RangeError`.
+Native in-flight operations still cannot be force-stopped; the budget bounds their
+accumulation rather than claiming that request cancellation closes them immediately.

@@ -2,9 +2,11 @@ import { open, realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, sep } from "node:path";
 import type { ConfigIssue, ConfigOperationOptions, ConfigAbortSignal } from "@0disoft/universal-config-engine-core";
 import { positiveSafeIntegerLimit } from "./limits.js";
+import { createConfigFileReadLimiter, type ConfigFileReadLimiter } from "./file-read-limiter.js";
 
 export const DEFAULT_MAX_FILE_BYTES = 1024 * 1024;
 const READ_CHUNK_BYTES = 64 * 1024;
+const defaultReadLimiter = createConfigFileReadLimiter();
 
 export interface ConfigFileStats { readonly dev: bigint; readonly ino: bigint; readonly size: bigint; }
 export interface ConfigFileHandle {
@@ -16,12 +18,16 @@ export interface ConfigFileSystem {
   open(path: string, flags: "r"): Promise<ConfigFileHandle>;
   realpath(path: string): Promise<string>;
   stat(path: string, options: { bigint: true }): Promise<ConfigFileStats>;
+  /** Optional cancellation-aware view; binding itself must not acquire resources. */
+  withSignal?(signal: ConfigAbortSignal): ConfigFileSystem;
 }
 const nativeFileSystem: ConfigFileSystem = { open, realpath, stat };
 
 export interface FileReadPolicy extends ConfigOperationOptions {
   /** Optional I/O boundary for deterministic tests; defaults to Node filesystem. */
   readonly fileSystem?: ConfigFileSystem;
+  /** Shared admission budget; defaults to 64 active reads per loaded adapter instance. */
+  readonly readLimiter?: ConfigFileReadLimiter;
   readonly maxFileBytes?: number;
   readonly encoding?: BufferEncoding;
   readonly allowedRootPath?: string;
@@ -35,9 +41,26 @@ export async function readTextFileWithinLimit(input: FileReadPolicy & {
   readonly filePath: string;
   readonly sourceId: string;
 }): Promise<BoundedTextFileReadResult> {
+  if (input.signal?.aborted) return { ok: false, issues: [fileAbortedIssue(input.sourceId)] };
+  const release = (input.readLimiter ?? defaultReadLimiter).tryAcquire();
+  if (release === undefined) return { ok: false, issues: [{
+    category: "resource-limit", code: "max_concurrent_file_reads_exceeded", severity: "error", sourceId: input.sourceId,
+    message: "Configuration file reading capacity is exhausted. Retry after active I/O finishes."
+  }] };
+  let cleanupFailed = false;
+  try { return await readOwnedTextFile(input, () => { cleanupFailed = true; }); }
+  finally { if (!cleanupFailed) release(); }
+}
+
+async function readOwnedTextFile(input: FileReadPolicy & {
+  readonly filePath: string;
+  readonly sourceId: string;
+}, onCleanupFailure: () => void): Promise<BoundedTextFileReadResult> {
   const maxFileBytes = positiveSafeIntegerLimit(input.maxFileBytes, DEFAULT_MAX_FILE_BYTES);
   const encoding = input.encoding ?? "utf8";
-  const fileSystem = input.fileSystem ?? nativeFileSystem;
+  const providedFileSystem = input.fileSystem ?? nativeFileSystem;
+  const fileSystem = input.signal === undefined ? providedFileSystem
+    : providedFileSystem.withSignal?.(input.signal) ?? providedFileSystem;
   if (input.signal?.aborted) return { ok: false, issues: [fileAbortedIssue(input.sourceId)] };
   const fileHandle = await fileSystem.open(input.filePath, "r");
   let completedSuccessfully = false;
@@ -83,11 +106,14 @@ export async function readTextFileWithinLimit(input: FileReadPolicy & {
           })
         };
   } catch (error) {
-    if (error instanceof FileReadAborted) return { ok: false, issues: [fileAbortedIssue(input.sourceId)] };
+    if (error instanceof FileReadAborted || input.signal?.aborted) return { ok: false, issues: [fileAbortedIssue(input.sourceId)] };
     throw error;
   } finally {
     try { await fileHandle.close(); }
-    catch (error) { if (completedSuccessfully) throw error; }
+    catch (error) {
+      onCleanupFailure();
+      if (completedSuccessfully) throw error;
+    }
   }
 }
 
