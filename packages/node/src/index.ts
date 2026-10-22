@@ -43,4 +43,4 @@ export type { DiscoverPipelineInput, DiscoverPipelineResult } from "./discovery.
 export { createConfigReloader } from "./reload.js";
 export type { ReloadFailure, ConfigReloadOutcome, ConfigReloadEvent, CreateConfigReloaderInput, ConfigReloader } from "./reload.js";
 export { watchConfigFiles } from "./watch.js";
-export type { WatchConfigFilesInput, WatchConfigFilesResult } from "./watch.js";
+export type { ConfigWatchHandle, ConfigWatchDependencies, WatchConfigFilesInput, WatchConfigFilesResult } from "./watch.js";

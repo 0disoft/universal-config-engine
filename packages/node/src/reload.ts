@@ -1,4 +1,4 @@
-import { buildConfigDiff, cloneConfigValue, type ConfigChange, type ConfigPath, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
+import { buildConfigDiff, cloneConfigValue, type ConfigOperationOptions, type ConfigChange, type ConfigPath, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
 
 export type ReloadFailure = "load_failed" | "validation_failed" | "snapshot_failed" | "closed";
 export type ConfigReloadOutcome =
@@ -13,8 +13,8 @@ export interface ConfigReloadEvent {
   readonly changedPathCount?: number;
 }
 
-export interface CreateConfigReloaderInput {
-  readonly load: () => Promise<RunConfigPipelineResult>;
+export interface CreateConfigReloaderInput extends ConfigOperationOptions {
+  readonly load: (options?: ConfigOperationOptions) => Promise<RunConfigPipelineResult>;
   readonly onChange?: (event: ConfigReloadEvent) => void | Promise<void>;
 }
 
@@ -33,6 +33,8 @@ export function createConfigReloader(input: CreateConfigReloaderInput): ConfigRe
 /** Internal notification boundary shared with the filesystem watcher. */
 export function createReloadState(input: CreateConfigReloaderInput) {
   let closed = false;
+  const cancellation = new AbortController();
+  let cancelActive: (() => void) | undefined;
   let revision = 0;
   let snapshot: RunConfigPipelineResult | undefined;
   let running: Promise<ConfigReloadOutcome> | undefined;
@@ -48,7 +50,7 @@ export function createReloadState(input: CreateConfigReloaderInput) {
   }
   async function perform(): Promise<ConfigReloadOutcome> {
     let loaded: RunConfigPipelineResult;
-    try { loaded = await input.load(); }
+    try { loaded = await input.load({ signal: cancellation.signal }); }
     catch { return closed ? failed("closed") : reject("load_failed"); }
     if (closed) return failed("closed");
     if (!loaded?.result?.ok || loaded.report?.status !== "ok") return reject("validation_failed");
@@ -77,8 +79,10 @@ export function createReloadState(input: CreateConfigReloaderInput) {
     // The application callback can synchronously request another refresh.
     // Claim the running slot before invoking it so that request joins the queue.
     running = task;
+    cancelActive = () => complete(failed("closed"));
     void task.then(() => {
       running = undefined;
+      cancelActive = undefined;
       const waiting = queued;
       queued = undefined;
       if (waiting !== undefined) {
@@ -102,11 +106,18 @@ export function createReloadState(input: CreateConfigReloaderInput) {
     },
     getSnapshot: () => snapshot,
     close() {
+      if (closed) return;
       closed = true;
+      cancellation.abort();
+      input.signal?.removeEventListener("abort", abort);
+      cancelActive?.();
       queued?.resolve(failed("closed"));
       queued = undefined;
     }
   };
+  function abort() { controller.close(); }
+  input.signal?.addEventListener("abort", abort, { once: true });
+  if (input.signal?.aborted) controller.close();
   return { controller, watchFailed: () => notify({ status: "rejected", revision, reason: "watch_failed" }) };
 }
 

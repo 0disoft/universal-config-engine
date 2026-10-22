@@ -1,7 +1,23 @@
-import { watch, type FSWatcher } from "node:fs";
+import { watch } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { createReloadState, type ConfigReloader, type ConfigReloadOutcome, type CreateConfigReloaderInput } from "./reload.js";
+
+export interface ConfigWatchHandle {
+  close(): void;
+  on(event: "error", listener: () => void): unknown;
+}
+export interface ConfigWatchDependencies {
+  realpath(path: string): Promise<string>;
+  stat(path: string): Promise<{ isDirectory(): boolean }>;
+  watch(directory: string, options: { persistent: false },
+    listener: (event: string, filename: string | null) => void): ConfigWatchHandle;
+  /** Schedule once and return an idempotent cancellation function. */
+  schedule(callback: () => void, delayMs: number): () => void;
+}
+const nativeDependencies: ConfigWatchDependencies = { realpath, stat, watch,
+  schedule(callback, delayMs) { const timer = setTimeout(callback, delayMs); return () => clearTimeout(timer); }
+};
 
 export interface WatchConfigFilesInput extends CreateConfigReloaderInput {
   readonly workspacePath: string;
@@ -14,7 +30,8 @@ export type WatchConfigFilesResult =
   | { readonly ok: false; readonly code: "watch_input_invalid" | "watch_path_outside_workspace" | "watch_setup_failed" };
 
 /** Watches selected basenames in their parent directories, including atomic replacements. */
-export async function watchConfigFiles(input: WatchConfigFilesInput): Promise<WatchConfigFilesResult> {
+export async function watchConfigFiles(input: WatchConfigFilesInput, dependencies: ConfigWatchDependencies = nativeDependencies): Promise<WatchConfigFilesResult> {
+  if (input.signal?.aborted) return { ok: false, code: "watch_setup_failed" };
   const delay = input.debounceMs ?? 25;
   if (!Array.isArray(input.paths) || input.paths.length === 0 || input.paths.length > 64 ||
       !Number.isSafeInteger(delay) || delay < 0 || delay > 1000) return { ok: false, code: "watch_input_invalid" };
@@ -28,37 +45,38 @@ export async function watchConfigFiles(input: WatchConfigFilesInput): Promise<Wa
   let root: string;
   let groups: Map<string, Set<string>>;
   try {
-    root = await realpath(input.workspacePath);
-    if (!(await stat(root)).isDirectory()) return { ok: false, code: "watch_setup_failed" };
-    const selected = await resolveWatchGroups(root, paths);
+    root = await dependencies.realpath(input.workspacePath);
+    if (!(await dependencies.stat(root)).isDirectory()) return { ok: false, code: "watch_setup_failed" };
+    const selected = await resolveWatchGroups(root, paths, dependencies);
     if (selected === undefined) return { ok: false, code: "watch_path_outside_workspace" };
     groups = selected;
   } catch { return { ok: false, code: "watch_setup_failed" }; }
-  const handles = new Map<string, { handle: FSWatcher; filter: { names: Set<string> } }>();
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let maxWaitTimer: ReturnType<typeof setTimeout> | undefined;
+  const handles = new Map<string, { handle: ConfigWatchHandle; filter: { names: Set<string> } }>();
+  let timer: (() => void) | undefined;
+  let maxWaitTimer: (() => void) | undefined;
   let closed = false;
   let watchFailed = false;
-  const state = createReloadState({ ...input, async load() {
+  const state = createReloadState({ ...input, async load(options) {
     // Refresh is serialized by the reload state, including watch rebinding.
-    const selected = await resolveWatchGroups(root, paths);
+    const selected = await resolveWatchGroups(root, paths, dependencies);
     if (closed) throw new Error("Watcher is closed.");
     if (selected === undefined) throw new Error("Watch target left the workspace.");
     try { reconcile(selected); }
     catch (error) { watchFailed = true; state.watchFailed(); close(); throw error; }
-    return input.load();
+    return input.load(options);
   } });
   function close() {
     if (closed) return;
     closed = true;
     clearTimers();
+    input.signal?.removeEventListener("abort", close);
     for (const { handle } of handles.values()) handle.close();
     handles.clear();
     state.controller.close();
   }
   function clearTimers() {
-    if (timer !== undefined) clearTimeout(timer);
-    if (maxWaitTimer !== undefined) clearTimeout(maxWaitTimer);
+    if (timer !== undefined) timer();
+    if (maxWaitTimer !== undefined) maxWaitTimer();
     timer = undefined;
     maxWaitTimer = undefined;
   }
@@ -76,13 +94,13 @@ export async function watchConfigFiles(input: WatchConfigFilesInput): Promise<Wa
       const existing = handles.get(directory);
       if (existing !== undefined) { existing.filter.names = names; continue; }
       const filter = { names };
-      const handle = watch(directory, { persistent: false }, (_event, filename) => {
+      const handle = dependencies.watch(directory, { persistent: false }, (_event, filename) => {
         if (closed || filename !== null && !filter.names.has(filename)) return;
-        if (timer !== undefined) clearTimeout(timer);
-        timer = setTimeout(flush, delay);
+        if (timer !== undefined) timer();
+        timer = dependencies.schedule(flush, delay);
         // Continuous writes must not postpone refresh indefinitely. Both timers
         // feed the reload state's single active / single queued refresh boundary.
-        if (maxWaitTimer === undefined) maxWaitTimer = setTimeout(flush, 1000);
+        if (maxWaitTimer === undefined) maxWaitTimer = dependencies.schedule(flush, 1000);
       });
       handles.set(directory, { handle, filter });
       handle.on("error", () => {
@@ -91,17 +109,19 @@ export async function watchConfigFiles(input: WatchConfigFilesInput): Promise<Wa
       });
     }
   }
+  input.signal?.addEventListener("abort", close, { once: true });
   try {
+    if (input.signal?.aborted) { close(); return { ok: false, code: "watch_setup_failed" }; }
     reconcile(groups);
     // Install watches before the first load so a change during loading is queued.
     const initial = await state.controller.refresh();
-    if (watchFailed) return { ok: false, code: "watch_setup_failed" };
+    if (watchFailed || input.signal?.aborted) { close(); return { ok: false, code: "watch_setup_failed" }; }
     return { ok: true, watcher: { ...state.controller, close }, initial };
   } catch { close(); return { ok: false, code: "watch_setup_failed" }; }
 }
 
 /** At most two parent-directory selections per bounded input path. */
-async function resolveWatchGroups(root: string, paths: readonly string[]): Promise<Map<string, Set<string>> | undefined> {
+async function resolveWatchGroups(root: string, paths: readonly string[], dependencies: ConfigWatchDependencies): Promise<Map<string, Set<string>> | undefined> {
   const groups = new Map<string, Set<string>>();
   function add(directory: string, name: string) {
     const names = groups.get(directory) ?? new Set<string>();
@@ -109,11 +129,11 @@ async function resolveWatchGroups(root: string, paths: readonly string[]): Promi
   }
   for (const path of paths) {
     const absolute = resolve(root, path);
-    const directory = await realpath(dirname(absolute));
+    const directory = await dependencies.realpath(dirname(absolute));
     if (!inside(root, directory)) return undefined;
     add(directory, basename(absolute));
     try {
-      const target = await realpath(absolute);
+      const target = await dependencies.realpath(absolute);
       if (!inside(root, target)) return undefined;
       add(dirname(target), basename(target));
     } catch (error) {

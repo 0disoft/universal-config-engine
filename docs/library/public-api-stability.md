@@ -33,6 +33,7 @@ candidate may be removed solely because a higher-level facade is preferred.
 - `RunValidatorsInput`, `RunValidatorsResult`
 - `ValidatorAdapter`, `ValidatorInput`, `ValidatorIssue`, `ValidatorResult`
 - `ConfigLoader`, `ConfigLoaderResult`, `LoadedSource`
+- `ConfigAbortSignal`, `ConfigOperationOptions`
 - `ConfigSourceDescriptor`, `SourceKind`, `SourceLocation`, `ValueLocation`
 - `ConfigValue`, `ConfigScalar`, `ConfigPath`, `ConfigPathSegment`
 - `ConfigIssue`, `ConfigIssueCategory`, `ConfigIssueSeverity`
@@ -69,6 +70,8 @@ contracts accepted in ADR 0016.
 - `DEFAULT_MAX_FILE_BYTES`, `DEFAULT_MAX_ENV_ENTRIES`,
   `DEFAULT_MAX_ARGV_ENTRIES`
 - `BoundedTextFileReadResult`, `FileReadPolicy`
+- `ConfigFileStats`, `ConfigFileHandle`, `ConfigFileSystem`
+- `ConfigWatchHandle`, `ConfigWatchDependencies`
 - `LoadJsonFileSourceInput`, `LoadDotenvFileSourceInput`
 - `CreateProcessEnvSourceInput`, `CreateArgvSourceInput`
 - `UnmappedInputBehavior`

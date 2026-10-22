@@ -44,6 +44,7 @@ export async function readTextFileWithinLimit(input: FileReadPolicy & {
   try {
     assertFileActive(input.signal);
     const stats = await fileHandle.stat({ bigint: true });
+    assertFileActive(input.signal);
     const boundaryResult = await openedFileBoundaryResult({
       filePath: input.filePath,
       sourceId: input.sourceId,

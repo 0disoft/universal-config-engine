@@ -7,6 +7,33 @@ const pipeline = (port = 80) => runConfigPipeline({ context: undefined, loaders:
 }] });
 
 describe("serialized config reload", () => {
+  it("settles active and queued refreshes on cancellation even when load ignores it", async () => {
+    const controller = new AbortController();
+    let signal: { readonly aborted: boolean } | undefined;
+    let reject!: (error: Error) => void;
+    const events: ConfigReloadEvent[] = [];
+    const reloader = createConfigReloader({ signal: controller.signal, load: options => {
+      signal = options?.signal;
+      return new Promise((_resolve, fail) => { reject = fail; });
+    }, onChange: event => { events.push(event); } });
+    const active = reloader.refresh(); const queued = reloader.refresh();
+    controller.abort();
+    expect(await active).toMatchObject({ ok: false, reason: "closed" });
+    expect(await queued).toMatchObject({ ok: false, reason: "closed" });
+    expect(signal?.aborted).toBe(true);
+    reject(new Error("late callback rejection")); await Promise.resolve();
+    expect(reloader.getSnapshot()).toBeUndefined(); expect(events).toEqual([]);
+    reloader.close();
+  });
+
+  it("does not call load with an already aborted lifetime", async () => {
+    const controller = new AbortController(); controller.abort();
+    let calls = 0;
+    const reloader = createConfigReloader({ signal: controller.signal, load: () => { calls++; return pipeline(); } });
+    expect(await reloader.refresh()).toMatchObject({ ok: false, reason: "closed" });
+    expect(calls).toBe(0);
+  });
+
   it.each([
     { added: false, opaque: { a: 1 } }, { added: true, opaque: { a: 1 } },
     { added: false, opaque: { inner: { a: 1 } } }, { added: true, opaque: { inner: { a: 1 } } }

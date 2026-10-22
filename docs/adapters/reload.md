@@ -27,10 +27,14 @@ The event omits `changedPathCount` in that case, including opaque object additio
 or deletion, while still publishing the successful snapshot and revision.
 Unambiguous scalar secret changes and independent public changes retain counts.
 
-`close()` is idempotent, resolves queued work as `closed`, prevents late snapshots
-or notifications and retains the last good snapshot for reading. It cannot cancel
-an arbitrary application callback already running; that callback owns its timeout
-and external resources. Do not await another refresh from inside `load`.
+`close()` is idempotent, resolves active and queued refresh promises as `closed`,
+prevents late snapshots or notifications and retains the last good snapshot.
+An optional lifetime `signal` closes the reloader on abort. Each `load` callback
+receives optional `{ signal }` options backed by an owned controller; closing
+aborts that controller. Existing zero-argument callbacks remain supported. A
+callback that ignores the signal may continue its external work, but no longer
+holds the refresh promise open and its late rejection is observed. Do not await
+another refresh from inside `load`.
 
 ## Selected file watching
 
@@ -67,3 +71,32 @@ snapshot; callers needing transactions must provide that in `load`.
 filesystem problem. A failed initial load still returns a watcher so a later
 file correction can recover. Watch handles are non-persistent and do not keep an
 otherwise finished Node process alive. No process/global listeners are installed.
+
+## Deterministic test dependencies
+
+`watchConfigFiles(input, dependencies?)` optionally accepts `ConfigWatchDependencies`
+for canonicalization, directory stats, watching and one-shot scheduling. Each
+scheduled job returns its cancellation function; no timer handle or wall clock is
+required by the state machine. Omitting dependencies preserves native Node I/O
+and timers. Lifetime cancellation during setup closes installed handles and fails
+setup; after setup it closes the watcher and clears both timers. Core and Node
+cancellation does not add process/global listeners or force-stop synchronous code.
+
+For cooperative I/O cancellation, forward each callback's options rather than
+closing over the original lifetime signal alone:
+
+```ts
+const reloader = createConfigReloader({
+  signal: lifetime.signal,
+  load: options => runConfigPipeline({
+    ...pipeline,
+    ...options,
+    loaders: [{
+      descriptor: file.descriptor,
+      load: (_context, ioOptions) => loadJsonFileSource({ ...file, ...ioOptions })
+    }]
+  })
+});
+```
+
+Closing aborts the owned signal even when no external lifetime signal was passed.
