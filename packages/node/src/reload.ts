@@ -15,7 +15,7 @@ export interface ConfigReloadEvent {
 
 export interface CreateConfigReloaderInput extends ConfigOperationOptions {
   readonly load: (options?: ConfigOperationOptions) => Promise<RunConfigPipelineResult>;
-  readonly onChange?: (event: ConfigReloadEvent) => void | Promise<void>;
+  readonly onChange?: (event: ConfigReloadEvent, options?: ConfigOperationOptions) => void | Promise<void>;
 }
 
 export interface ConfigReloader {
@@ -39,10 +39,32 @@ export function createReloadState(input: CreateConfigReloaderInput) {
   let snapshot: RunConfigPipelineResult | undefined;
   let running: Promise<ConfigReloadOutcome> | undefined;
   let queued: { promise: Promise<ConfigReloadOutcome>; resolve: (outcome: ConfigReloadOutcome) => void } | undefined;
+  let notifying = false;
+  let pendingNotification: ConfigReloadEvent | undefined;
   const failed = (reason: ReloadFailure): ConfigReloadOutcome => ({ ok: false, revision, reason });
   function notify(event: ConfigReloadEvent) {
     if (closed || input.onChange === undefined) return;
-    try { void Promise.resolve(input.onChange(Object.freeze(event))).catch(() => {}); } catch { /* Observers cannot break loading. */ }
+    if (notifying) {
+      // A count relative to an omitted intermediate snapshot would be misleading.
+      const { changedPathCount: _count, ...coalesced } = event;
+      pendingNotification = pendingNotification === undefined ? event : coalesced;
+      return;
+    }
+    notifying = true;
+    try {
+      const result = input.onChange(Object.freeze(event), { signal: cancellation.signal });
+      if (result !== undefined) {
+        void Promise.resolve(result).then(finishNotification, finishNotification);
+        return;
+      }
+    } catch { /* Observers cannot break loading. */ }
+    finishNotification();
+  }
+  function finishNotification() {
+    notifying = false;
+    const next = pendingNotification;
+    pendingNotification = undefined;
+    if (next !== undefined) notify(next);
   }
   function reject(reason: Exclude<ReloadFailure, "closed">) {
     notify({ status: "rejected", revision, reason });
@@ -108,6 +130,7 @@ export function createReloadState(input: CreateConfigReloaderInput) {
     close() {
       if (closed) return;
       closed = true;
+      pendingNotification = undefined;
       cancellation.abort();
       input.signal?.removeEventListener("abort", abort);
       cancelActive?.();

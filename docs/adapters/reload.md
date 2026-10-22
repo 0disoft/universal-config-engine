@@ -16,7 +16,20 @@ valid deep configurations when the application explicitly increases its limits.
 Snapshots contain application config, including secret values, and must not be
 logged. Failure retains the previous snapshot and revision. Failed outcomes expose
 only `load_failed`, `validation_failed` or `snapshot_failed`, never exceptions.
-Observer failures are contained. Updated events expose revision and, when a safe
+Observer failures are contained. Observers run separately
+from refresh completion: at most one asynchronous observer runs and only the latest
+pending notification is retained. Superseded notifications are coalesced, and their
+replacement omits `changedPathCount` because intermediate snapshots were skipped.
+Synchronous observers still receive each event immediately. An observer may await
+`refresh()` without blocking the load queue. This is a latest-state notification
+surface, not an audit log with guaranteed delivery of every intermediate event.
+
+Observers receive an optional second `{ signal }` argument. Closing drops pending
+notifications and aborts that signal; cooperative observers must check cancellation
+before external writes and release their own resources in `finally`. An observer
+that ignores cancellation may finish its already-started external work after close.
+
+Updated events expose revision and, when a safe
 comparison fits its budget, a public-path change count. Secret-only changes are
 not counted; no value, fingerprint or diagnostic prose is emitted by these events.
 Comparison retains redacted paths from both reports, including policies supplied
