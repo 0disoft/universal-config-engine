@@ -153,6 +153,50 @@ it("does not truncate varied-length policies after overflow", () => {
   expect(match(["q".repeat(16_384) + candidates.at(-1)!])).toEqual({ redacted: true, reason: "secret-name" });
 });
 
+it("retains suffix-gated Unicode matches and ordered reasons with default patterns", () => {
+  const padding = Array.from({ length: 8192 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_marker");
+  const prefix = "q".repeat(256);
+  const sources: ConfigSourceDescriptor[] = [
+    { id: "names", displayName: "names", kind: "object", priority: 0,
+      redaction: { secretNamePatterns: [...padding, "σ", "\ud83d", "bc", "a~"] } },
+    { id: "paths", displayName: "paths", kind: "object", priority: 1,
+      redaction: { secretPaths: [[prefix, "A", "Σ"]], secretNamePatterns: ["tail"] } }
+  ];
+  const match = compileRedaction(sources, {}, DEFAULT_SECRET_NAME_PATTERNS, []);
+  const text = fc.array(fc.constantFrom("a", "b", "c", "Σ", "A", ".", "\ud83d", "\ude00"), { maxLength: 8 }).map(units => units.join(""));
+  fc.assert(fc.property(fc.array(text, { maxLength: 3 }), suffix => {
+    const query = [prefix, ...suffix];
+    expect(match(query)).toEqual(reference(sources, {}, [], query));
+  }), { numRuns: 100 });
+  for (const query of [[prefix, "A", "Σ"], [prefix + "😀"], [prefix + "tail"], [prefix], [prefix + "token"]]) {
+    expect(match(query)).toEqual(reference(sources, {}, [], query));
+  }
+});
+
+it("falls back without dropping patterns at the suffix-list capacity", () => {
+  const padding = Array.from({ length: 8192 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_marker");
+  for (const count of [31, 32, 33]) {
+    const patterns = Array.from({ length: count }, (_, index) => "marker-" + String(index).padStart(4, "0"));
+    const match = compileRedaction([], { secretNamePatterns: [...padding, ...patterns] }, [], []);
+    expect(match(["q".repeat(256) + patterns.at(-1)!])).toEqual({ redacted: true, reason: "secret-name" });
+    expect(match(["q".repeat(256) + "0001"])).toEqual({ redacted: false });
+  }
+});
+
+it("preserves matches across the suffix-work budget boundary and with empty patterns", () => {
+  const patterns = Array.from({ length: 8192 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_marker");
+  const match = compileRedaction([], { secretNamePatterns: patterns }, [], []);
+  for (const length of [65_535, 65_536, 65_537]) {
+    expect(match(["q".repeat(length)])).toEqual({ redacted: false });
+    expect(match(["q".repeat(length - patterns[0]!.length) + patterns[0]!])).toEqual({ redacted: true, reason: "secret-name" });
+  }
+  const empty = compileRedaction([
+    { id: "early", displayName: "early", kind: "object", priority: 0, redaction: { secretNamePatterns: patterns } },
+    { id: "later", displayName: "later", kind: "object", priority: 1, redaction: { secretNamePatterns: [""] } }
+  ], {}, [], []);
+  expect(empty(["q".repeat(256)])).toEqual({ redacted: true, reason: "secret-name" });
+});
+
 function reference(sources: readonly ConfigSourceDescriptor[], options: BuildDiagnosticReportOptions,
   owned: readonly ConfigPath[], path: ConfigPath) {
   if (owned.some(prefix => isPathPrefix(prefix, path))) return { redacted: true, reason: "secret-source" };

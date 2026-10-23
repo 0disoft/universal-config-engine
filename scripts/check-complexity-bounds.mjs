@@ -1,6 +1,7 @@
 import { resolveConfig, checkConfigChanges, buildDiagnosticReport } from "../packages/core/dist/index.js";
 import { createArgvSource } from "../packages/node/dist/index.js";
 import { compileRedaction } from "../packages/core/dist/compiled-redaction.js";
+import { DEFAULT_SECRET_NAME_PATTERNS } from "../packages/core/dist/redaction.js";
 
 const mergeResults = [512, 1024].map((size) => ({
   size,
@@ -82,7 +83,8 @@ const overflowNameResults = [512, 1024].map(size => {
 assertLinearGrowth("overflow name pattern query operations", overflowNameResults, "queryOperations");
 
 const longNameResults = [4096, 8192].map(size => {
-  const patterns = Array.from({ length: size * 2 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_marker");
+  // Distinct suffixes bypass the bounded suffix gate and exercise pair filtering.
+  const patterns = Array.from({ length: size * 2 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_" + String(index).padStart(5, "0"));
   const match = compileRedaction([], { secretNamePatterns: patterns }, [], []);
   const charCodeAt = String.prototype.charCodeAt;
   const includes = String.prototype.includes;
@@ -107,6 +109,32 @@ const longNameResults = [4096, 8192].map(size => {
   return { size, patterns: patterns.length, paths: 4, bufferBytes, substringChecks, charReads: { total: charReads } };
 });
 assertLinearGrowth("streaming long name character reads", longNameResults, "charReads");
+
+const suffixGateResults = [512, 1024].map(size => {
+  const patterns = Array.from({ length: size * 16 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_marker");
+  const match = compileRedaction([], { secretNamePatterns: patterns }, DEFAULT_SECRET_NAME_PATTERNS, []);
+  const includes = String.prototype.includes;
+  const charCodeAt = String.prototype.charCodeAt;
+  const NativeUint32Array = globalThis.Uint32Array;
+  let total = 0; let charReads = 0; let bytes = 0;
+  String.prototype.includes = function (...args) { total++; return Reflect.apply(includes, this, args); };
+  String.prototype.charCodeAt = function (...args) { charReads++; return Reflect.apply(charCodeAt, this, args); };
+  globalThis.Uint32Array = new Proxy(NativeUint32Array, {
+    construct(target, args) { const result = Reflect.construct(target, args); bytes += result.byteLength; return result; }
+  });
+  try {
+    for (let index = 0; index < 4; index++) assertEqual(match(["service", "q".repeat(size) + index]).redacted, false, "suffix-gated miss");
+  } finally {
+    String.prototype.includes = includes;
+    String.prototype.charCodeAt = charCodeAt;
+    globalThis.Uint32Array = NativeUint32Array;
+  }
+  assertEqual(bytes, 0, "suffix rejection must not allocate the lazy query filter");
+  assertEqual(charReads, 0, "suffix rejection must not visit pattern units");
+  if (total > 4 * 32 * 2) throw new Error("Suffix checks exceeded the bounded gate size.");
+  return { size, patterns: patterns.length, bytes, charReads, suffixChecks: { total } };
+});
+assertLinearGrowth("bounded suffix checks", suffixGateResults, "suffixChecks");
 
 const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-positives"].map(kind => {
   const results = [256, 512].map(size => {
@@ -161,6 +189,7 @@ process.stdout.write(`${JSON.stringify({
   namePatternResults,
   overflowNameResults,
   longNameResults,
+  suffixGateResults,
   adversarialNameResults,
   argvResults
 }, null, 2)}\n`);

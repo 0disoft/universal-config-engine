@@ -80,6 +80,18 @@ filter collisions still require an exact dictionary match and cannot redact an
 unmatched name. Compilation is per report, with no global cache or new public
 resource-limit error.
 
+Overflow compilation also collects at most 32 distinct literal suffixes, each
+at most four UTF-16 units. If a 33rd suffix occurs, the optional suffix list is
+discarded; all patterns remain in the exact dictionary. Before allocating or
+running the pair filter, an impossible query can return immediately when none of
+these suffixes occurs in either normalized string. Empty-pattern rank still
+applies, and contextual Unicode lowercasing retains the separate final-segment
+check. The gate is bypassed when suffix count times the sum of normalized name
+lengths exceeds 16 times the pattern count, bounding extra scans on long names.
+The fixed list holds at most 128 UTF-16 units plus bounded container overhead;
+filter buffers retain the existing 136 KiB ceiling. A rejected query needs only
+the already compiled 8 KiB length buffer, with no lazy 128 KiB query allocation.
+
 Overflow query planning has a 4,096-unit budget covering length scans, candidate
 probes and candidate UTF-16 lengths. Names exceeding that budget lazily build a
 128 KiB query Bloom filter. Each query inserts its adjacent UTF-16 pairs once;
@@ -115,12 +127,20 @@ Running the benchmark directly with
 heap and ArrayBuffer deltas; GC-dependent memory deltas are observations, not CI
 thresholds. The added length-filter buffer is fixed at 8,192 bytes.
 
-Long-name benchmarks use 8,192 patterns and 32 paths. At 4,096 / 16,384 / 65,536
-UTF-16 units, current query medians are about 7 / 13 / 33 ms, compared with
-2 / 21 / 61 ms for the previous rolling filter in the same local comparison.
-Inspecting pattern metadata on each query can cost more for shorter names with
-few candidate lengths. Doubling patterns and name length in the deterministic
-guard produces 95,976 to 177,896 character reads, zero unnecessary exact searches,
+Long-name benchmarks use 8,192 patterns and 32 paths. Earlier pair-filter query
+medians were about 7 / 13 / 33 ms at 4,096 / 16,384 / 65,536 UTF-16 units. The
+bounded suffix gate avoids pattern-metadata visits for impossible shorter queries.
+A separate benchmark includes the actual default patterns: at 256 / 1,024 / 4,096
+units, local query medians changed from about 6.3 / 6.5 / 11.7 ms to
+0.2 / 0.4 / 0.4 ms; first batches took about 0.5 / 0.3 / 0.4 ms. Suffixes that
+occur coincidentally, a discarded list, or an excessive gate work estimate retain
+the exact pair-filter fallback rather than promising a speedup on every policy.
+
+The deterministic gate guard doubles patterns from 8,192 to 16,384 and name
+length from 512 to 1,024. Four queries retain 64 suffix searches, zero pattern
+character reads and zero lazy query-buffer allocations. A separate fixture with
+more than 32 suffixes still exercises the fallback: doubling patterns and name
+length produces 95,976 to 177,896 character reads, zero unnecessary exact searches,
 and exactly one 131,072-byte query buffer per matcher.
 
 Two additional eight-path fixtures use 16,384-unit names: 512 distinct candidate

@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Reject impossible overflow name queries with a bounded literal-suffix gate,
+  avoiding per-query pattern scans and lazy buffer allocation for short paths
+  while preserving the existing filter-memory ceiling and exact fallback.
 - Replace overflow name-pattern window hashing with a fixed-memory query-pair
   filter, avoiding repeated length scans and collision-driven substring copies
   while preserving literal matches and source-rank precedence.

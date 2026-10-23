@@ -1,5 +1,6 @@
 import { performance } from "node:perf_hooks";
 import { compileRedaction } from "../packages/core/dist/compiled-redaction.js";
+import { DEFAULT_SECRET_NAME_PATTERNS } from "../packages/core/dist/redaction.js";
 
 // Report-local compilation is included. These synthetic paths deliberately miss
 // every pattern, so early successful matches cannot hide exhaustive scans.
@@ -52,6 +53,21 @@ for (const length of [4096, 16_384, 65_536]) {
   const times = Array.from({ length: 3 }, run).sort((left, right) => left - right);
   console.log(JSON.stringify({ name: "overflow-long-names", patterns: patterns.length, paths: paths.length,
     nameUnits: length, firstQueryBatchMs, queryMedianMs: times[1] }));
+}
+
+// Include the real default policy, and report the lazy first-query cost as well.
+for (const length of [256, 1024, 4096]) {
+  const patterns = Array.from({ length: 8192 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_marker");
+  const match = compileRedaction([], { secretNamePatterns: patterns }, DEFAULT_SECRET_NAME_PATTERNS, []);
+  const run = () => {
+    const start = performance.now();
+    for (let index = 0; index < 32; index++) if (match(["service", "q".repeat(length) + index]).redacted) throw new Error("Unexpected short-name match.");
+    return performance.now() - start;
+  };
+  const firstQueryBatchMs = run();
+  const times = Array.from({ length: 5 }, run).sort((left, right) => left - right);
+  console.log(JSON.stringify({ name: "overflow-short-names-with-defaults", nameUnits: length, paths: 32,
+    firstQueryBatchMs, queryMedianMs: times[2] }));
 }
 
 // Distinct lengths multiply rolling-window passes; equal polynomial hashes

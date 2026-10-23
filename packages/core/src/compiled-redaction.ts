@@ -138,15 +138,26 @@ function compileNameMatcher(patterns: ReadonlyMap<string, number>): (name: strin
 
 const NAME_LENGTH_FILTER_BITS = 65_536;
 const MAX_OVERFLOW_QUERY_WORK = 4_096;
+const MAX_NAME_SUFFIXES = 32;
+const NAME_SUFFIX_UNITS = 4;
+const MAX_SUFFIX_WORK_PER_PATTERN = 16;
 
 /** Reuse the dictionary with an 8 KiB filter; long names add a lazy 128 KiB query filter. */
 function compileOverflowNameMatcher(patterns: ReadonlyMap<string, number>): (name: string, last: string) => number {
   const lengths = new Uint32Array(NAME_LENGTH_FILTER_BITS / 32);
   let minimum = Infinity;
   let maximum = 0;
+  let suffixes: string[] | undefined = [];
   const emptyRank = patterns.get("") ?? Infinity;
   for (const pattern of patterns.keys()) {
     if (pattern.length === 0) continue;
+    if (suffixes !== undefined) {
+      const suffix = pattern.slice(-NAME_SUFFIX_UNITS);
+      if (!suffixes.includes(suffix)) {
+        if (suffixes.length === MAX_NAME_SUFFIXES) suffixes = undefined;
+        else suffixes.push(suffix);
+      }
+    }
     minimum = Math.min(minimum, pattern.length);
     maximum = Math.max(maximum, pattern.length);
     const bit = pattern.length % NAME_LENGTH_FILTER_BITS;
@@ -179,6 +190,11 @@ function compileOverflowNameMatcher(patterns: ReadonlyMap<string, number>): (nam
   }
   let stream: ((name: string, last: string) => number) | undefined;
   function streamQuery(name: string, last: string): number {
+    // A pattern cannot match unless its suffix occurs. Keep the gate bounded,
+    // and bypass it when repeated native scans would cost more than filtering.
+    if (suffixes !== undefined
+      && suffixes.length * (name.length + last.length) <= patterns.size * MAX_SUFFIX_WORK_PER_PATTERN
+      && !suffixes.some(suffix => name.includes(suffix) || (name !== last && last.includes(suffix)))) return emptyRank;
     stream ??= compileStreamingNameMatcher(patterns, emptyRank);
     return stream(name, last);
   }
