@@ -54,6 +54,24 @@ for (const length of [4096, 16_384, 65_536]) {
     nameUnits: length, firstQueryBatchMs, queryMedianMs: times[1] }));
 }
 
+// Distinct lengths multiply rolling-window passes; equal polynomial hashes
+// multiply exact substring probes even when no literal pattern matches.
+for (const fixture of [
+  { name: "overflow-many-lengths", candidates: Array.from({ length: 512 }, (_, index) => "a".repeat(index + 2) + "b"), value: "q".repeat(16_384) },
+  { name: "overflow-hash-collisions", candidates: Array.from({ length: 128 }, (_, index) => "a~".repeat(index + 2)), value: "b_".repeat(8192) }
+]) {
+  const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+  const match = compileRedaction([], { secretNamePatterns: [...padding, ...fixture.candidates] }, [], []);
+  const run = () => {
+    const start = performance.now();
+    for (let index = 0; index < 8; index++) if (match(["service", fixture.value + index]).redacted) throw new Error("Unexpected adversarial match.");
+    return performance.now() - start;
+  };
+  const firstQueryBatchMs = run();
+  const times = Array.from({ length: 3 }, run).sort((left, right) => left - right);
+  console.log(JSON.stringify({ name: fixture.name, paths: 8, firstQueryBatchMs, queryMedianMs: times[1] }));
+}
+
 function measureRetained(patterns) {
   // Keep each measured matcher in its own call frame so a prior iteration's
   // matcher cannot remain live across the next before/after GC pair.

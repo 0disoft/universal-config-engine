@@ -139,7 +139,7 @@ function compileNameMatcher(patterns: ReadonlyMap<string, number>): (name: strin
 const NAME_LENGTH_FILTER_BITS = 65_536;
 const MAX_OVERFLOW_QUERY_WORK = 4_096;
 
-/** Reuse the dictionary with an 8 KiB filter; long names add a lazy 128 KiB filter. */
+/** Reuse the dictionary with an 8 KiB filter; long names add a lazy 128 KiB query filter. */
 function compileOverflowNameMatcher(patterns: ReadonlyMap<string, number>): (name: string, last: string) => number {
   const lengths = new Uint32Array(NAME_LENGTH_FILTER_BITS / 32);
   let minimum = Infinity;
@@ -179,7 +179,7 @@ function compileOverflowNameMatcher(patterns: ReadonlyMap<string, number>): (nam
   }
   let stream: ((name: string, last: string) => number) | undefined;
   function streamQuery(name: string, last: string): number {
-    stream ??= compileStreamingNameMatcher(patterns, lengths, minimum, maximum, emptyRank);
+    stream ??= compileStreamingNameMatcher(patterns, emptyRank);
     return stream(name, last);
   }
   return (name, last) => {
@@ -193,18 +193,15 @@ function compileOverflowNameMatcher(patterns: ReadonlyMap<string, number>): (nam
 
 const STREAM_FILTER_BITS = 1_048_576;
 const STREAM_FILTER_PROBES = 3;
-const ROLLING_HASH_BASE = 31;
 
-/** Long names scan once per candidate length, without copying every window. */
+/** Scan each query once, then reject patterns by their UTF-16 bigrams. */
 function compileStreamingNameMatcher(
-  patterns: ReadonlyMap<string, number>, lengths: Uint32Array, minimum: number, maximum: number, emptyRank: number
+  patterns: ReadonlyMap<string, number>, emptyRank: number
 ): (name: string, last: string) => number {
   const filter = new Uint32Array(STREAM_FILTER_BITS / 32);
-  let bestPossibleRank = Infinity;
-  function probe(hash: number, length: number, insert: boolean): boolean {
-    const key = hash ^ Math.imul(length, 0x9e3779b1);
-    const first = Math.imul(key ^ (key >>> 16), 0x85ebca6b);
-    const step = Math.imul(key ^ (key >>> 13), 0xc2b2ae35) | 1;
+  function probe(pair: number, insert: boolean): boolean {
+    const first = Math.imul(pair ^ (pair >>> 16), 0x85ebca6b);
+    const step = Math.imul(pair ^ (pair >>> 13), 0xc2b2ae35) | 1;
     for (let index = 0; index < STREAM_FILTER_PROBES; index++) {
       const bit = (first + Math.imul(index, step)) & (STREAM_FILTER_BITS - 1);
       const word = bit >>> 5;
@@ -214,39 +211,42 @@ function compileStreamingNameMatcher(
     }
     return true;
   }
-  for (const [pattern, rank] of patterns) {
-    bestPossibleRank = Math.min(bestPossibleRank, rank);
-    let hash = 0;
-    for (let index = 0; index < pattern.length; index++) hash = (Math.imul(hash, ROLLING_HASH_BASE) + pattern.charCodeAt(index)) | 0;
-    probe(hash, pattern.length, true);
-  }
-  function scan(name: string, rank: number): number {
-    const upper = Math.min(maximum, name.length);
-    for (let length = minimum; length <= upper && rank !== bestPossibleRank; length++) {
-      const bit = length % NAME_LENGTH_FILTER_BITS;
-      if ((lengths[bit >>> 5]! & (1 << (bit & 31))) === 0) continue;
-      let hash = 0;
-      let power = 1;
-      for (let index = 0; index < length; index++) {
-        hash = (Math.imul(hash, ROLLING_HASH_BASE) + name.charCodeAt(index)) | 0;
-        if (index !== length - 1) power = Math.imul(power, ROLLING_HASH_BASE);
-      }
-      for (let start = 0; start <= name.length - length; start++) {
-        if (probe(hash, length, false)) {
-          // Hash/Bloom collisions can only cause extra probes, never redaction.
-          rank = Math.min(rank, patterns.get(name.slice(start, start + length)) ?? Infinity);
-          if (rank === bestPossibleRank) return rank;
-        }
-        if (start !== name.length - length) {
-          hash = (Math.imul(hash - Math.imul(name.charCodeAt(start), power), ROLLING_HASH_BASE)
-            + name.charCodeAt(start + length)) | 0;
-        }
-      }
+  function add(name: string): void {
+    let previous = name.charCodeAt(0);
+    let previousPair = NaN;
+    for (let index = 1; index < name.length; index++) {
+      const current = name.charCodeAt(index);
+      const pair = (previous << 16) | current;
+      if (pair !== previousPair) probe(pair, true);
+      previousPair = pair;
+      previous = current;
     }
-    return rank;
+  }
+  function possibleAt(pattern: string, offset: number): boolean {
+    return probe((pattern.charCodeAt(offset) << 16) | pattern.charCodeAt(offset + 1), false);
+  }
+  function possible(pattern: string): boolean {
+    // Samples bound work per pattern, including very long policy strings.
+    return possibleAt(pattern, 0) && possibleAt(pattern, (pattern.length - 2) >>> 1) && possibleAt(pattern, pattern.length - 2);
   }
   return (name, last) => {
-    const rank = scan(name, emptyRank);
-    return rank === bestPossibleRank || name === last ? rank : scan(last, rank);
+    let rank = emptyRank;
+    if (rank === 0) return rank;
+    // Usually last is already a suffix; contextual Unicode lowercasing can
+    // make the independently normalized segment differ from the joined name.
+    const separate = !name.endsWith(last);
+    filter.fill(0);
+    add(name);
+    if (separate) add(last);
+    const upper = Math.max(name.length, last.length);
+    for (const [pattern, candidate] of patterns) {
+      if (candidate >= rank || pattern.length > upper) continue;
+      if (pattern.length >= 2 && !possible(pattern)) continue;
+      // Bloom collisions only schedule native exact searches. Do not allocate
+      // substrings at every window, even for adversarial polynomial collisions.
+      if (name.includes(pattern) || (separate && last.includes(pattern))) rank = candidate;
+      if (rank === 0) break;
+    }
+    return rank;
   };
 }

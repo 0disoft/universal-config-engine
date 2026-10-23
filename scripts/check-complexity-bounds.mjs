@@ -102,11 +102,46 @@ const longNameResults = [4096, 8192].map(size => {
     String.prototype.includes = includes;
     globalThis.Uint32Array = NativeUint32Array;
   }
-  assertEqual(substringChecks, 0, "long names must not rescan the entire pattern list");
+  assertEqual(substringChecks, 0, "long names must reject absent pattern grams before exact searches");
   assertEqual(bufferBytes, 131_072, "one fixed streaming filter per matcher");
   return { size, patterns: patterns.length, paths: 4, bufferBytes, substringChecks, charReads: { total: charReads } };
 });
 assertLinearGrowth("streaming long name character reads", longNameResults, "charReads");
+
+const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-positives"].map(kind => {
+  const results = [256, 512].map(size => {
+    const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+    const candidates = Array.from({ length: size }, (_, index) => kind === "many-lengths" ? "a".repeat(index + 2) + "b"
+      : kind === "hash-collisions" ? "a~".repeat(index + 2) : "ab" + "x".repeat(index + 8) + "cd");
+    const name = kind === "many-lengths" ? "q".repeat(size * 32)
+      : kind === "hash-collisions" ? "b_".repeat(size * 16) : "abxxcd".repeat(size * 8);
+    const match = compileRedaction([], { secretNamePatterns: [...padding, ...candidates] }, [], []);
+    const charCodeAt = String.prototype.charCodeAt;
+    const includes = String.prototype.includes;
+    const slice = String.prototype.slice;
+    const NativeUint32Array = globalThis.Uint32Array;
+    let total = 0; let searches = 0; let slices = 0; let bytes = 0;
+    String.prototype.charCodeAt = function (...args) { total++; return Reflect.apply(charCodeAt, this, args); };
+    String.prototype.includes = function (...args) { searches++; return Reflect.apply(includes, this, args); };
+    String.prototype.slice = function (...args) { slices++; return Reflect.apply(slice, this, args); };
+    globalThis.Uint32Array = new Proxy(NativeUint32Array, {
+      construct(target, args) { const result = Reflect.construct(target, args); bytes += result.byteLength; return result; }
+    });
+    try { assertEqual(match([name]).redacted, false, `${kind} literal miss`); }
+    finally {
+      String.prototype.charCodeAt = charCodeAt;
+      String.prototype.includes = includes;
+      String.prototype.slice = slice;
+      globalThis.Uint32Array = NativeUint32Array;
+    }
+    assertEqual(bytes, 131_072, `${kind} fixed query filter`);
+    assertEqual(slices, 0, `${kind} must not allocate substring windows`);
+    assertEqual(searches, kind === "filter-positives" ? size : 0, `${kind} exact searches limited to surviving patterns`);
+    return { size, searches, slices, bytes, charReads: { total } };
+  });
+  assertLinearGrowth(kind, results, "charReads");
+  return { kind, results };
+});
 
 const argvResults = [128, 4096].flatMap((mappingCount) =>
   [undefined, "warning"].map((unmappedBehavior) =>
@@ -126,6 +161,7 @@ process.stdout.write(`${JSON.stringify({
   namePatternResults,
   overflowNameResults,
   longNameResults,
+  adversarialNameResults,
   argvResults
 }, null, 2)}\n`);
 

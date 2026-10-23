@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Replace overflow name-pattern window hashing with a fixed-memory query-pair
+  filter, avoiding repeated length scans and collision-driven substring copies
+  while preserving literal matches and source-rank precedence.
 - Inherit base declaration limits during profile preflight, retaining explicit
   profile overrides, malformed-limit diagnostics and combined source checks.
 - Bound Zod issue conversion with optional `maxIssues` (default 200, cap 10,000),

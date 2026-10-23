@@ -82,14 +82,19 @@ resource-limit error.
 
 Overflow query planning has a 4,096-unit budget covering length scans, candidate
 probes and candidate UTF-16 lengths. Names exceeding that budget lazily build a
-128 KiB rolling-hash Bloom filter and scan windows once per candidate length.
-Only filter-positive windows create substrings for exact dictionary verification;
-hash collisions never change redaction. The length filter and streaming filter
-together retain 136 KiB of fixed auxiliary buffers, independent of pattern count
-and name length, in addition to the existing normalized-pattern dictionary.
-Long names no longer trigger a full-pattern native scan. No policy is truncated
-and no secret rule is skipped. Cost still depends on distinct candidate lengths
-and filter collisions; this is not a constant-time matcher for arbitrary policies.
+128 KiB query Bloom filter. Each query inserts its adjacent UTF-16 pairs once;
+patterns are rejected by up to three pair samples (start, middle, end) before
+native literal verification. Repeated pairs avoid repeated insertions. A separately
+lowercased final segment is inserted only when it is not already a joined-name
+suffix. Hash collisions or out-of-order samples can only schedule exact searches;
+they cannot change redaction. Each surviving pattern gets at most one search per
+distinct normalized string, without allocating candidate substring windows.
+The length and query filters retain 136 KiB of fixed auxiliary buffers, independent
+of pattern count and name length, in addition to the existing normalized-pattern
+dictionary. The query buffer is cleared and reused per call; there is no global
+cache. No policy is truncated and no secret rule is skipped. Query filtering costs
+one name scan plus constant work per pattern; saturated filters can still require
+native searches for every pattern. This is not a universal linear-time guarantee.
 
 `pnpm run benchmark:name-patterns` includes compilation plus 4,096 nonmatching
 paths and reports five-run medians after warmup. Local measurements with 4,096
@@ -111,12 +116,21 @@ heap and ArrayBuffer deltas; GC-dependent memory deltas are observations, not CI
 thresholds. The added length-filter buffer is fixed at 8,192 bytes.
 
 Long-name benchmarks use 8,192 patterns and 32 paths. At 4,096 / 16,384 / 65,536
-UTF-16 units, query medians changed from about 133 / 408 / 2,195 ms to
-2 / 12 / 51 ms. The first batch, including lazy filter construction, took about
-17 / 31 / 60 ms. These are local synthetic measurements, not production SLAs.
-Doubling patterns and name length in the deterministic guard produces
-245,744 to 491,504 character reads. The guard also requires zero full-pattern
-`includes` calls and exactly one 131,072-byte streaming buffer per matcher.
+UTF-16 units, current query medians are about 7 / 13 / 33 ms, compared with
+2 / 21 / 61 ms for the previous rolling filter in the same local comparison.
+Inspecting pattern metadata on each query can cost more for shorter names with
+few candidate lengths. Doubling patterns and name length in the deterministic
+guard produces 95,976 to 177,896 character reads, zero unnecessary exact searches,
+and exactly one 131,072-byte query buffer per matcher.
+
+Two additional eight-path fixtures use 16,384-unit names: 512 distinct candidate
+lengths, and 128 lengths of `a~` repetitions against `b_` repetitions (equal
+base-31 polynomial hashes). Query medians fell from about 1,688 / 5,962 ms to
+3 / 3 ms. These are local synthetic measurements, not production SLAs. Guards
+double both name length and pattern count, require linear filter work and zero
+substring-window allocations, and also cover frequent filter positives: when all
+sampled pairs occur but the literal pattern does not, exact searches grow from
+256 to 512 rather than multiplying by the number of windows.
 
 ## Consumer Matrix
 

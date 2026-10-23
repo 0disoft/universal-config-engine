@@ -126,6 +126,33 @@ it("verifies rolling-hash collisions rather than redacting false candidates", ()
   expect(lateMatch(["q".repeat(5000) + "a~"])).toEqual({ redacted: true, reason: "secret-name" });
 });
 
+it("keeps exact ranked matches when all sampled bigrams occur out of order", () => {
+  const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+  const sources: ConfigSourceDescriptor[] = [
+    { id: "first", displayName: "first", kind: "object", priority: 0,
+      redaction: { secretNamePatterns: [...padding, "abxxxxxxcd", "\ud83d", "σ"] } },
+    { id: "later", displayName: "later", kind: "object", priority: 1,
+      redaction: { secretPaths: [["abxxcd".repeat(1000) + "abxxxxxxcd"]], secretNamePatterns: ["tail"] } }
+  ];
+  const match = compileRedaction(sources, {}, DEFAULT_SECRET_NAME_PATTERNS, []);
+  const prefix = "abxxcd".repeat(1000);
+  for (const suffix of ["", "abxxxxxxcd", "tail", "😀", "Σ"]) {
+    for (const query of [[prefix + suffix], [prefix, "A", suffix]]) {
+      expect(match(query)).toEqual(reference(sources, {}, [], query));
+    }
+  }
+  // Reusing the fixed query buffer must not retain a prior query's matches.
+  expect(match([prefix])).toEqual({ redacted: false });
+});
+
+it("does not truncate varied-length policies after overflow", () => {
+  const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+  const candidates = Array.from({ length: 512 }, (_, index) => "a".repeat(index + 2) + "b");
+  const match = compileRedaction([], { secretNamePatterns: [...padding, ...candidates] }, [], []);
+  expect(match(["q".repeat(16_384)])).toEqual({ redacted: false });
+  expect(match(["q".repeat(16_384) + candidates.at(-1)!])).toEqual({ redacted: true, reason: "secret-name" });
+});
+
 function reference(sources: readonly ConfigSourceDescriptor[], options: BuildDiagnosticReportOptions,
   owned: readonly ConfigPath[], path: ConfigPath) {
   if (owned.some(prefix => isPathPrefix(prefix, path))) return { redacted: true, reason: "secret-source" };
