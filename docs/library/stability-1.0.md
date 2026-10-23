@@ -73,18 +73,37 @@ policies share a ranked Aho-Corasick automaton: a path query scans its normalize
 UTF-16 units, including a separate final-segment scan for contextual Unicode
 lowercasing. Failure links inherit the earliest source rank without retaining
 lists of suffix matches. Empty patterns and literal matching remain supported.
-The automaton is limited to 65,536 states; policies exceeding this optimization
-budget fall back to complete native matching rather than dropping patterns or
-retaining unbounded per-character maps. Compilation is per report, with no global
-cache or new public resource-limit error.
+The automaton is limited to 65,536 states. On overflow it releases its partial
+states and reuses the exact normalized-pattern dictionary with an 8 KiB length
+filter. Queries enumerate candidate substrings only for possible pattern lengths;
+filter collisions still require an exact dictionary match and cannot redact an
+unmatched name. Compilation is per report, with no global cache or new public
+resource-limit error.
+
+Overflow query planning has a 4,096-unit budget covering length scans, candidate
+probes and candidate UTF-16 lengths. Names exceeding that budget use complete
+native matching, so long names with many candidate lengths cannot trigger
+unbounded substring enumeration. This case retains the original pattern-by-path
+search cost; no policy is truncated and no secret rule is skipped.
 
 `pnpm run benchmark:name-patterns` includes compilation plus 4,096 nonmatching
 paths and reports five-run medians after warmup. Local measurements with 4,096
 distinct patterns fell from about 1,280 ms to 18 ms; this synthetic workload does
 not establish a production latency SLA. The deterministic guard doubles both
 patterns and paths (512 to 1,024), requiring query operations to grow linearly;
-the measured counts are 19,460 and 38,916. Very large policies using the bounded
-fallback retain the original pattern-by-path search cost.
+the measured counts are 19,460 and 38,916.
+
+The benchmark also forces overflow with 8,192 distinct patterns and 40 long
+patterns. For 4,096 nonmatching paths, the former's query median fell from about
+1,227 ms to 12 ms (compilation about 15 ms in both runs). The long-pattern case
+fell from about 14 ms to 6 ms. The overflow complexity guard doubles patterns and
+paths together and enforces linear query-operation growth, while limiting trie
+insertions to the existing state budget. Doubling from 8,192 patterns/512 paths
+to 16,384 patterns/1,024 paths produces 4,100 to 8,196 query operations.
+Running the benchmark directly with
+`node --expose-gc scripts/benchmark-name-patterns.mjs` additionally reports retained
+heap and ArrayBuffer deltas; GC-dependent memory deltas are observations, not CI
+thresholds. The added length-filter buffer is fixed at 8,192 bytes.
 
 ## Consumer Matrix
 

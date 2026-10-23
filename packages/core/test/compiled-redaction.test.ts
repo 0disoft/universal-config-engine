@@ -62,6 +62,35 @@ it("falls back without truncating oversized policies or changing their matches",
   expect(match(["public"])).toEqual({ redacted: false });
 });
 
+it("retains ordered reasons and Unicode matches after the automaton overflows", () => {
+  const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+  const sources: ConfigSourceDescriptor[] = [
+    { id: "first", displayName: "first", kind: "object", priority: 0,
+      redaction: { secretNamePatterns: [...padding, "bc", "σ", "\ud83d"] } },
+    { id: "second", displayName: "second", kind: "object", priority: 1,
+      redaction: { secretPaths: [["abcd"], ["A", "Σ"], ["z"]], secretNamePatterns: ["tail-marker", ""] } }
+  ];
+  const match = compileRedaction(sources, {}, DEFAULT_SECRET_NAME_PATTERNS, []);
+  const text = fc.array(fc.constantFrom("a", "b", "c", "Σ", "A", ".", "\ud83d", "\ude00", "[", "*"), { maxLength: 10 }).map(units => units.join(""));
+  fc.assert(fc.property(fc.array(text, { maxLength: 5 }), query => {
+    expect(match(query)).toEqual(reference(sources, {}, [], query));
+  }), { numRuns: 300 });
+  for (const query of [["abcd"], ["A", "Σ"], ["z"], ["q".repeat(5000)], ["q".repeat(1000) + "bc"]]) {
+    expect(match(query)).toEqual(reference(sources, {}, [], query));
+  }
+});
+
+it("verifies exact patterns despite length-filter collisions and long-name work limits", () => {
+  const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+  const patterns = [...padding, "z", "b".repeat(65_537), "c".repeat(31), "d".repeat(32)];
+  const match = compileRedaction([], { secretNamePatterns: patterns }, [], []);
+  expect(match(["a"])).toEqual({ redacted: false });
+  expect(match(["z"])).toEqual({ redacted: true, reason: "secret-name" });
+  expect(match([patterns[41]!])).toEqual({ redacted: true, reason: "secret-name" });
+  expect(match(["a".repeat(2000)])).toEqual({ redacted: false });
+  expect(match(["a".repeat(2000) + "c".repeat(31)])).toEqual({ redacted: true, reason: "secret-name" });
+});
+
 function reference(sources: readonly ConfigSourceDescriptor[], options: BuildDiagnosticReportOptions,
   owned: readonly ConfigPath[], path: ConfigPath) {
   if (owned.some(prefix => isPathPrefix(prefix, path))) return { redacted: true, reason: "secret-source" };

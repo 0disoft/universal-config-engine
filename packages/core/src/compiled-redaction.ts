@@ -91,7 +91,10 @@ function compileNameMatcher(patterns: ReadonlyMap<string, number>): (name: strin
       let child = states[current]!.next.get(unit);
       if (child === undefined) {
         // An optimization must not retain an unbounded number of per-unit maps.
-        if (states.length === MAX_NAME_MATCHER_STATES) { states.length = 0; return direct; }
+        if (states.length === MAX_NAME_MATCHER_STATES) {
+          states.length = 0;
+          return compileOverflowNameMatcher(patterns, direct);
+        }
         child = states.length;
         states.push(nameState());
         states[current]!.next.set(unit, child);
@@ -130,5 +133,57 @@ function compileNameMatcher(patterns: ReadonlyMap<string, number>): (name: strin
   return (name, last) => {
     const rank = match(name);
     return rank === 0 ? rank : Math.min(rank, match(last));
+  };
+}
+
+const NAME_LENGTH_FILTER_BITS = 65_536;
+const MAX_OVERFLOW_QUERY_WORK = 4_096;
+
+/** Reuse the exact pattern dictionary, with only an 8 KiB length filter. */
+function compileOverflowNameMatcher(
+  patterns: ReadonlyMap<string, number>, direct: (name: string, last: string) => number
+): (name: string, last: string) => number {
+  const lengths = new Uint32Array(NAME_LENGTH_FILTER_BITS / 32);
+  let minimum = Infinity;
+  let maximum = 0;
+  const emptyRank = patterns.get("") ?? Infinity;
+  for (const pattern of patterns.keys()) {
+    if (pattern.length === 0) continue;
+    minimum = Math.min(minimum, pattern.length);
+    maximum = Math.max(maximum, pattern.length);
+    const bit = pattern.length % NAME_LENGTH_FILTER_BITS;
+    const word = bit >>> 5;
+    lengths[word] = lengths[word]! | (1 << (bit & 31));
+  }
+  function query(name: string): number | undefined {
+    let rank = emptyRank;
+    if (rank === 0) return rank;
+    const upper = Math.min(maximum, name.length);
+    if (minimum > upper) return rank;
+    let work = upper - minimum + 1;
+    if (work > MAX_OVERFLOW_QUERY_WORK) return undefined;
+    // Plan first so a long, mixed-length name never starts an unbounded
+    // substring enumeration. Filter collisions only add exact dictionary probes.
+    for (let length = minimum; length <= upper; length++) {
+      const bit = length % NAME_LENGTH_FILTER_BITS;
+      if ((lengths[bit >>> 5]! & (1 << (bit & 31))) !== 0) work += (name.length - length + 1) * (length + 1);
+      if (work > MAX_OVERFLOW_QUERY_WORK) return undefined;
+    }
+    for (let length = minimum; length <= upper; length++) {
+      const bit = length % NAME_LENGTH_FILTER_BITS;
+      if ((lengths[bit >>> 5]! & (1 << (bit & 31))) === 0) continue;
+      for (let start = 0; start <= name.length - length; start++) {
+        rank = Math.min(rank, patterns.get(name.slice(start, start + length)) ?? Infinity);
+        if (rank === 0) return rank;
+      }
+    }
+    return rank;
+  }
+  return (name, last) => {
+    const rank = query(name);
+    if (rank === undefined) return direct(name, last);
+    if (rank === 0 || name === last) return rank;
+    const lastRank = query(last);
+    return lastRank === undefined ? direct(name, last) : Math.min(rank, lastRank);
   };
 }

@@ -58,6 +58,29 @@ const namePatternResults = [512, 1024].map(size => {
 });
 assertLinearGrowth("name pattern query operations", namePatternResults, "queryOperations");
 
+const overflowNameResults = [512, 1024].map(size => {
+  const patterns = Array.from({ length: size * 16 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_marker");
+  let match;
+  const compilation = measureMapOperations(() => { match = compileRedaction([], { secretNamePatterns: patterns }, [], []); });
+  if (compilation.set > patterns.length + 65_536) throw new Error("Overflow matcher exceeded its automaton state budget.");
+  const includes = String.prototype.includes;
+  let substringChecks = 0;
+  const transitions = measureMapOperations(() => {
+    String.prototype.includes = function (...args) {
+      substringChecks++;
+      return Reflect.apply(includes, this, args);
+    };
+    try {
+      for (let index = 0; index < size; index++) {
+        assertEqual(match(["service", `public_field_${String(index).padStart(6, "0")}`]).redacted, false, "overflow pattern miss");
+      }
+    } finally { String.prototype.includes = includes; }
+  });
+  return { size, patterns: patterns.length, compilationSets: compilation.set,
+    queryOperations: { ...transitions, substringChecks, total: transitions.total + substringChecks } };
+});
+assertLinearGrowth("overflow name pattern query operations", overflowNameResults, "queryOperations");
+
 const argvResults = [128, 4096].flatMap((mappingCount) =>
   [undefined, "warning"].map((unmappedBehavior) =>
     measureArgvAccesses(128, mappingCount, unmappedBehavior)
@@ -74,6 +97,7 @@ process.stdout.write(`${JSON.stringify({
   policyResults,
   redactionResults,
   namePatternResults,
+  overflowNameResults,
   argvResults
 }, null, 2)}\n`);
 
