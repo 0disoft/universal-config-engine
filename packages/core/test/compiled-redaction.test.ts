@@ -91,6 +91,41 @@ it("verifies exact patterns despite length-filter collisions and long-name work 
   expect(match(["a".repeat(2000) + "c".repeat(31)])).toEqual({ redacted: true, reason: "secret-name" });
 });
 
+it("preserves ranked literal and Unicode matches while streaming long names", () => {
+  const prefix = "q".repeat(2500);
+  const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+  const sources: ConfigSourceDescriptor[] = [
+    { id: "padding", displayName: "padding", kind: "object", priority: 0, redaction: { secretNamePatterns: padding } },
+    { id: "names", displayName: "names", kind: "object", priority: 1,
+      redaction: { secretNamePatterns: ["bc", "σ", "\ud83d", "a~", "baba"] } },
+    { id: "paths", displayName: "paths", kind: "object", priority: 2,
+      redaction: { secretPaths: [[prefix + "bc"], [prefix, "A", "Σ"]], secretNamePatterns: ["tail-marker"] } }
+  ];
+  const match = compileRedaction(sources, {}, DEFAULT_SECRET_NAME_PATTERNS, []);
+  const text = fc.array(fc.constantFrom("a", "b", "c", "Σ", "A", ".", "\ud83d", "\ude00", "[", "*"), { maxLength: 20 }).map(units => units.join(""));
+  fc.assert(fc.property(fc.array(text, { maxLength: 4 }), suffix => {
+    const query = [prefix, ...suffix];
+    expect(match(query)).toEqual(reference(sources, {}, [], query));
+  }), { numRuns: 200 });
+  for (const query of [[prefix + "bc"], [prefix, "A", "Σ"], [prefix + "😀"], ["ab".repeat(3000)], [prefix + "token"]]) {
+    expect(match(query)).toEqual(reference(sources, {}, [], query));
+  }
+});
+
+it("verifies rolling-hash collisions rather than redacting false candidates", () => {
+  // Both lowercase strings have the same base-31 polynomial hash.
+  expect("a".charCodeAt(0) * 31 + "~".charCodeAt(0)).toBe("b".charCodeAt(0) * 31 + "_".charCodeAt(0));
+  const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+  const match = compileRedaction([], { secretNamePatterns: [...padding, "a~"] }, [], []);
+  expect(match(["q".repeat(5000) + "b_"])).toEqual({ redacted: false });
+  expect(match(["q".repeat(5000) + "a~"])).toEqual({ redacted: true, reason: "secret-name" });
+  const lateMatch = compileRedaction([
+    { id: "empty", displayName: "empty", kind: "object", priority: 0 },
+    { id: "late", displayName: "late", kind: "object", priority: 1, redaction: { secretNamePatterns: [...padding, "a~"] } }
+  ], {}, [], []);
+  expect(lateMatch(["q".repeat(5000) + "a~"])).toEqual({ redacted: true, reason: "secret-name" });
+});
+
 function reference(sources: readonly ConfigSourceDescriptor[], options: BuildDiagnosticReportOptions,
   owned: readonly ConfigPath[], path: ConfigPath) {
   if (owned.some(prefix => isPathPrefix(prefix, path))) return { redacted: true, reason: "secret-source" };

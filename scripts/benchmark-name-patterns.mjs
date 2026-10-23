@@ -39,6 +39,21 @@ for (const fixture of [
   if (global.gc !== undefined) console.log(JSON.stringify({ name: fixture.name, ...measureRetained(fixture.patterns) }));
 }
 
+for (const length of [4096, 16_384, 65_536]) {
+  const patterns = Array.from({ length: 8192 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_marker");
+  const paths = Array.from({ length: 32 }, (_, index) => ["service", "q".repeat(length) + String(index).padStart(6, "0")]);
+  const match = compileRedaction([], { secretNamePatterns: patterns }, [], []);
+  const run = () => {
+    const start = performance.now();
+    for (const path of paths) if (match(path).redacted) throw new Error("Unexpected long-name match.");
+    return performance.now() - start;
+  };
+  const firstQueryBatchMs = run();
+  const times = Array.from({ length: 3 }, run).sort((left, right) => left - right);
+  console.log(JSON.stringify({ name: "overflow-long-names", patterns: patterns.length, paths: paths.length,
+    nameUnits: length, firstQueryBatchMs, queryMedianMs: times[1] }));
+}
+
 function measureRetained(patterns) {
   // Keep each measured matcher in its own call frame so a prior iteration's
   // matcher cannot remain live across the next before/after GC pair.

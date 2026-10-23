@@ -81,10 +81,15 @@ unmatched name. Compilation is per report, with no global cache or new public
 resource-limit error.
 
 Overflow query planning has a 4,096-unit budget covering length scans, candidate
-probes and candidate UTF-16 lengths. Names exceeding that budget use complete
-native matching, so long names with many candidate lengths cannot trigger
-unbounded substring enumeration. This case retains the original pattern-by-path
-search cost; no policy is truncated and no secret rule is skipped.
+probes and candidate UTF-16 lengths. Names exceeding that budget lazily build a
+128 KiB rolling-hash Bloom filter and scan windows once per candidate length.
+Only filter-positive windows create substrings for exact dictionary verification;
+hash collisions never change redaction. The length filter and streaming filter
+together retain 136 KiB of fixed auxiliary buffers, independent of pattern count
+and name length, in addition to the existing normalized-pattern dictionary.
+Long names no longer trigger a full-pattern native scan. No policy is truncated
+and no secret rule is skipped. Cost still depends on distinct candidate lengths
+and filter collisions; this is not a constant-time matcher for arbitrary policies.
 
 `pnpm run benchmark:name-patterns` includes compilation plus 4,096 nonmatching
 paths and reports five-run medians after warmup. Local measurements with 4,096
@@ -104,6 +109,14 @@ Running the benchmark directly with
 `node --expose-gc scripts/benchmark-name-patterns.mjs` additionally reports retained
 heap and ArrayBuffer deltas; GC-dependent memory deltas are observations, not CI
 thresholds. The added length-filter buffer is fixed at 8,192 bytes.
+
+Long-name benchmarks use 8,192 patterns and 32 paths. At 4,096 / 16,384 / 65,536
+UTF-16 units, query medians changed from about 133 / 408 / 2,195 ms to
+2 / 12 / 51 ms. The first batch, including lazy filter construction, took about
+17 / 31 / 60 ms. These are local synthetic measurements, not production SLAs.
+Doubling patterns and name length in the deterministic guard produces
+245,744 to 491,504 character reads. The guard also requires zero full-pattern
+`includes` calls and exactly one 131,072-byte streaming buffer per matcher.
 
 ## Consumer Matrix
 

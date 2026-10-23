@@ -81,6 +81,33 @@ const overflowNameResults = [512, 1024].map(size => {
 });
 assertLinearGrowth("overflow name pattern query operations", overflowNameResults, "queryOperations");
 
+const longNameResults = [4096, 8192].map(size => {
+  const patterns = Array.from({ length: size * 2 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_marker");
+  const match = compileRedaction([], { secretNamePatterns: patterns }, [], []);
+  const charCodeAt = String.prototype.charCodeAt;
+  const includes = String.prototype.includes;
+  const NativeUint32Array = globalThis.Uint32Array;
+  let charReads = 0; let substringChecks = 0; let bufferBytes = 0;
+  String.prototype.charCodeAt = function (...args) { charReads++; return Reflect.apply(charCodeAt, this, args); };
+  String.prototype.includes = function (...args) { substringChecks++; return Reflect.apply(includes, this, args); };
+  globalThis.Uint32Array = new Proxy(NativeUint32Array, {
+    construct(target, args) { const result = Reflect.construct(target, args); bufferBytes += result.byteLength; return result; }
+  });
+  try {
+    for (let index = 0; index < 4; index++) {
+      assertEqual(match(["service", "q".repeat(size) + String(index).padStart(6, "0")]).redacted, false, "long name miss");
+    }
+  } finally {
+    String.prototype.charCodeAt = charCodeAt;
+    String.prototype.includes = includes;
+    globalThis.Uint32Array = NativeUint32Array;
+  }
+  assertEqual(substringChecks, 0, "long names must not rescan the entire pattern list");
+  assertEqual(bufferBytes, 131_072, "one fixed streaming filter per matcher");
+  return { size, patterns: patterns.length, paths: 4, bufferBytes, substringChecks, charReads: { total: charReads } };
+});
+assertLinearGrowth("streaming long name character reads", longNameResults, "charReads");
+
 const argvResults = [128, 4096].flatMap((mappingCount) =>
   [undefined, "warning"].map((unmappedBehavior) =>
     measureArgvAccesses(128, mappingCount, unmappedBehavior)
@@ -98,6 +125,7 @@ process.stdout.write(`${JSON.stringify({
   redactionResults,
   namePatternResults,
   overflowNameResults,
+  longNameResults,
   argvResults
 }, null, 2)}\n`);
 

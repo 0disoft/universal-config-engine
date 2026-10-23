@@ -93,7 +93,7 @@ function compileNameMatcher(patterns: ReadonlyMap<string, number>): (name: strin
         // An optimization must not retain an unbounded number of per-unit maps.
         if (states.length === MAX_NAME_MATCHER_STATES) {
           states.length = 0;
-          return compileOverflowNameMatcher(patterns, direct);
+          return compileOverflowNameMatcher(patterns);
         }
         child = states.length;
         states.push(nameState());
@@ -139,10 +139,8 @@ function compileNameMatcher(patterns: ReadonlyMap<string, number>): (name: strin
 const NAME_LENGTH_FILTER_BITS = 65_536;
 const MAX_OVERFLOW_QUERY_WORK = 4_096;
 
-/** Reuse the exact pattern dictionary, with only an 8 KiB length filter. */
-function compileOverflowNameMatcher(
-  patterns: ReadonlyMap<string, number>, direct: (name: string, last: string) => number
-): (name: string, last: string) => number {
+/** Reuse the dictionary with an 8 KiB filter; long names add a lazy 128 KiB filter. */
+function compileOverflowNameMatcher(patterns: ReadonlyMap<string, number>): (name: string, last: string) => number {
   const lengths = new Uint32Array(NAME_LENGTH_FILTER_BITS / 32);
   let minimum = Infinity;
   let maximum = 0;
@@ -179,11 +177,76 @@ function compileOverflowNameMatcher(
     }
     return rank;
   }
+  let stream: ((name: string, last: string) => number) | undefined;
+  function streamQuery(name: string, last: string): number {
+    stream ??= compileStreamingNameMatcher(patterns, lengths, minimum, maximum, emptyRank);
+    return stream(name, last);
+  }
   return (name, last) => {
     const rank = query(name);
-    if (rank === undefined) return direct(name, last);
+    if (rank === undefined) return streamQuery(name, last);
     if (rank === 0 || name === last) return rank;
     const lastRank = query(last);
-    return lastRank === undefined ? direct(name, last) : Math.min(rank, lastRank);
+    return lastRank === undefined ? streamQuery(name, last) : Math.min(rank, lastRank);
+  };
+}
+
+const STREAM_FILTER_BITS = 1_048_576;
+const STREAM_FILTER_PROBES = 3;
+const ROLLING_HASH_BASE = 31;
+
+/** Long names scan once per candidate length, without copying every window. */
+function compileStreamingNameMatcher(
+  patterns: ReadonlyMap<string, number>, lengths: Uint32Array, minimum: number, maximum: number, emptyRank: number
+): (name: string, last: string) => number {
+  const filter = new Uint32Array(STREAM_FILTER_BITS / 32);
+  let bestPossibleRank = Infinity;
+  function probe(hash: number, length: number, insert: boolean): boolean {
+    const key = hash ^ Math.imul(length, 0x9e3779b1);
+    const first = Math.imul(key ^ (key >>> 16), 0x85ebca6b);
+    const step = Math.imul(key ^ (key >>> 13), 0xc2b2ae35) | 1;
+    for (let index = 0; index < STREAM_FILTER_PROBES; index++) {
+      const bit = (first + Math.imul(index, step)) & (STREAM_FILTER_BITS - 1);
+      const word = bit >>> 5;
+      const mask = 1 << (bit & 31);
+      if (insert) filter[word] = filter[word]! | mask;
+      else if ((filter[word]! & mask) === 0) return false;
+    }
+    return true;
+  }
+  for (const [pattern, rank] of patterns) {
+    bestPossibleRank = Math.min(bestPossibleRank, rank);
+    let hash = 0;
+    for (let index = 0; index < pattern.length; index++) hash = (Math.imul(hash, ROLLING_HASH_BASE) + pattern.charCodeAt(index)) | 0;
+    probe(hash, pattern.length, true);
+  }
+  function scan(name: string, rank: number): number {
+    const upper = Math.min(maximum, name.length);
+    for (let length = minimum; length <= upper && rank !== bestPossibleRank; length++) {
+      const bit = length % NAME_LENGTH_FILTER_BITS;
+      if ((lengths[bit >>> 5]! & (1 << (bit & 31))) === 0) continue;
+      let hash = 0;
+      let power = 1;
+      for (let index = 0; index < length; index++) {
+        hash = (Math.imul(hash, ROLLING_HASH_BASE) + name.charCodeAt(index)) | 0;
+        if (index !== length - 1) power = Math.imul(power, ROLLING_HASH_BASE);
+      }
+      for (let start = 0; start <= name.length - length; start++) {
+        if (probe(hash, length, false)) {
+          // Hash/Bloom collisions can only cause extra probes, never redaction.
+          rank = Math.min(rank, patterns.get(name.slice(start, start + length)) ?? Infinity);
+          if (rank === bestPossibleRank) return rank;
+        }
+        if (start !== name.length - length) {
+          hash = (Math.imul(hash - Math.imul(name.charCodeAt(start), power), ROLLING_HASH_BASE)
+            + name.charCodeAt(start + length)) | 0;
+        }
+      }
+    }
+    return rank;
+  }
+  return (name, last) => {
+    const rank = scan(name, emptyRank);
+    return rank === bestPossibleRank || name === last ? rank : scan(last, rank);
   };
 }
