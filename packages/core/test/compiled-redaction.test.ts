@@ -277,6 +277,30 @@ it("retains short-pattern boundaries and isolated UTF-16 units in extra pair sam
   }
 });
 
+it("retains exact decisions and source ranks across adaptive gram activation and query resets", () => {
+  const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+  const prefix = "abxxcd".repeat(2731);
+  for (const count of [127, 128, 129, 256]) {
+    const candidates = Array.from({ length: count }, (_, index) => "ab" + "x".repeat(index + 8) + "cd");
+    const sources: ConfigSourceDescriptor[] = [
+      { id: "misses", displayName: "misses", kind: "object", priority: 0,
+        redaction: { secretNamePatterns: [...padding, ...candidates] } },
+      { id: "unicode", displayName: "unicode", kind: "object", priority: 1,
+        redaction: { secretNamePatterns: ["___σ", "ab😀tail", "ab\ud83dtail", "abcd"] } },
+      { id: "paths", displayName: "paths", kind: "object", priority: 2,
+        redaction: { secretPaths: [[prefix, "A", "___Σ"]] } }
+    ];
+    const match = compileRedaction(sources, {}, DEFAULT_SECRET_NAME_PATTERNS, []);
+    for (let repeat = 0; repeat < 2; repeat++) {
+      for (const path of [[prefix], [prefix, "A", "___Σ"], [prefix + "ab😀tail"],
+        [prefix + "ab\ud83dtail"], [prefix + "abcd"],
+        ["abxxxxcd".repeat(2048) + "ab😀tail"], ["public"], ["abcd"]]) {
+        expect(match(path)).toEqual(reference(sources, {}, [], path));
+      }
+    }
+  }
+});
+
 function reference(sources: readonly ConfigSourceDescriptor[], options: BuildDiagnosticReportOptions,
   owned: readonly ConfigPath[], path: ConfigPath) {
   if (owned.some(prefix => isPathPrefix(prefix, path))) return { redacted: true, reason: "secret-source" };

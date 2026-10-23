@@ -74,7 +74,12 @@ for (const length of [256, 1024, 4096]) {
 // multiply exact substring probes even when no literal pattern matches.
 for (const fixture of [
   { name: "overflow-many-lengths", candidates: Array.from({ length: 512 }, (_, index) => "a".repeat(index + 2) + "b"), value: "q".repeat(16_384) },
-  { name: "overflow-hash-collisions", candidates: Array.from({ length: 128 }, (_, index) => "a~".repeat(index + 2)), value: "b_".repeat(8192) }
+  { name: "overflow-hash-collisions", candidates: Array.from({ length: 128 }, (_, index) => "a~".repeat(index + 2)), value: "b_".repeat(8192) },
+  ...[512, 2048].map(count => ({ name: `overflow-all-pair-hits-${count}`,
+    candidates: Array.from({ length: count }, (_, index) => "ab" + "x".repeat(index + 8) + "cd"),
+    value: "abxxcd".repeat(2731) })),
+  { name: "overflow-all-gram-hits", candidates: Array.from({ length: 512 }, (_, index) => "ab" + "x".repeat(index + 8) + "cd"),
+    value: "abxxxxcd".repeat(2048) }
 ]) {
   const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
   const match = compileRedaction([], { secretNamePatterns: [...padding, ...fixture.candidates] }, [], []);
@@ -84,8 +89,8 @@ for (const fixture of [
     return performance.now() - start;
   };
   const firstQueryBatchMs = run();
-  const times = Array.from({ length: 3 }, run).sort((left, right) => left - right);
-  console.log(JSON.stringify({ name: fixture.name, paths: 8, firstQueryBatchMs, queryMedianMs: times[1] }));
+  const times = Array.from({ length: 7 }, run).sort((left, right) => left - right);
+  console.log(JSON.stringify({ name: fixture.name, paths: 8, firstQueryBatchMs, queryMedianMs: times[3] }));
 }
 
 for (const fixture of [

@@ -212,6 +212,11 @@ const STREAM_FILTER_PROBES = 3;
 const PREFIX_UNITS = 4;
 const PREFIX_HASH_BASE = 257;
 const MAX_PREFIX_WORK_PER_PATTERN = 4;
+// Pay for a longer-gram query pass only after repeated native exact searches.
+const MAX_PAIR_ONLY_SEARCHES = 128;
+const MAX_UNPRODUCTIVE_GRAM_CHECKS = 32;
+const GRAM_UNITS = 4;
+const GRAM_HASH_BASE = 257;
 
 /** Gate impossible prefixes before checking patterns with a reusable UTF-16 pair filter. */
 function compileStreamingNameMatcher(
@@ -297,6 +302,28 @@ function compileStreamingNameMatcher(
     return possibleAt(pattern, 0) && (quarter === 0 || possibleAt(pattern, quarter))
       && possibleAt(pattern, (pattern.length - 2) >>> 1) && possibleAt(pattern, pattern.length - 2);
   }
+  function gramHash(value: string, offset: number): number {
+    let hash = 0;
+    for (let index = 0; index < GRAM_UNITS; index++) hash = (Math.imul(hash, GRAM_HASH_BASE) + value.charCodeAt(offset + index)) | 0;
+    return hash;
+  }
+  function addGrams(value: string): void {
+    if (value.length < GRAM_UNITS) return;
+    let hash = gramHash(value, 0);
+    const power = GRAM_HASH_BASE ** (GRAM_UNITS - 1);
+    let previous = NaN;
+    for (let offset = 0; offset <= value.length - GRAM_UNITS; offset++) {
+      if (hash !== previous) probe(hash, true);
+      previous = hash;
+      if (offset < value.length - GRAM_UNITS) hash = (Math.imul(hash - Math.imul(value.charCodeAt(offset), power), GRAM_HASH_BASE)
+        + value.charCodeAt(offset + GRAM_UNITS)) | 0;
+    }
+  }
+  function possibleGrams(pattern: string): boolean {
+    const end = pattern.length - GRAM_UNITS;
+    return probe(gramHash(pattern, 0), false) && probe(gramHash(pattern, end >>> 1), false)
+      && probe(gramHash(pattern, end), false);
+  }
   return (name, last) => {
     let rank = emptyRank;
     if (rank === 0) return rank;
@@ -311,11 +338,23 @@ function compileStreamingNameMatcher(
     add(name);
     if (separate) add(last);
     const upper = Math.max(name.length, last.length);
+    let searches = 0;
+    let gramsReady = false;
+    let gramHits = 0;
     for (const [pattern, candidate] of patterns) {
       if (candidate >= rank || pattern.length > upper) continue;
       if (pattern.length >= 2 && !possible(pattern)) continue;
+      if (pattern.length >= GRAM_UNITS && searches >= MAX_PAIR_ONLY_SEARCHES && gramHits < MAX_UNPRODUCTIVE_GRAM_CHECKS) {
+        // OR into the same query filter; extra bits only add false positives.
+        // Query-local state is reset along with the buffer on every call.
+        if (!gramsReady) { addGrams(name); if (separate) addGrams(last); gramsReady = true; }
+        if (!possibleGrams(pattern)) { gramHits = 0; continue; }
+        // A saturated/uninformative filter must not add probes indefinitely.
+        gramHits++;
+      }
       // Bloom collisions only schedule native exact searches. Do not allocate
       // substrings at every window, even for adversarial polynomial collisions.
+      searches++;
       if (name.includes(pattern) || (separate && last.includes(pattern))) rank = candidate;
       if (rank === 0) break;
     }

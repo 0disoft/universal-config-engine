@@ -136,20 +136,27 @@ const suffixGateResults = [512, 1024].map(size => {
 });
 assertLinearGrowth("bounded suffix checks", suffixGateResults, "suffixChecks");
 
-const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-positives"].map(kind => {
+const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-positives", "gram-positives"].map(kind => {
   const results = [256, 512].map(size => {
     const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
     const candidates = Array.from({ length: size }, (_, index) => kind === "many-lengths" ? "a".repeat(index + 2) + "b"
       : kind === "hash-collisions" ? "a~".repeat(index + 2) : "ab" + "x".repeat(index + 8) + "cd");
     const name = kind === "many-lengths" ? "q".repeat(size * 32)
-      : kind === "hash-collisions" ? "b_".repeat(size * 16) : "abxxcd".repeat(size * 8);
+      : kind === "hash-collisions" ? "b_".repeat(size * 16)
+      : (kind === "gram-positives" ? "abxxxxcd" : "abxxcd").repeat(size * 8);
     const match = compileRedaction([], { secretNamePatterns: [...padding, ...candidates] }, [], []);
     const charCodeAt = String.prototype.charCodeAt;
     const includes = String.prototype.includes;
     const slice = String.prototype.slice;
     const NativeUint32Array = globalThis.Uint32Array;
     let total = 0; let searches = 0; let slices = 0; let bytes = 0;
-    String.prototype.charCodeAt = function (...args) { total++; return Reflect.apply(charCodeAt, this, args); };
+    const candidateNames = kind === "gram-positives" ? new Set(candidates) : undefined;
+    let candidateReads = 0;
+    String.prototype.charCodeAt = function (...args) {
+      total++;
+      if (candidateNames?.has(String(this))) candidateReads++;
+      return Reflect.apply(charCodeAt, this, args);
+    };
     String.prototype.includes = function (...args) { searches++; return Reflect.apply(includes, this, args); };
     String.prototype.slice = function (...args) { slices++; return Reflect.apply(slice, this, args); };
     globalThis.Uint32Array = new Proxy(NativeUint32Array, {
@@ -164,10 +171,17 @@ const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-posit
     }
     assertEqual(bytes, 131_072, `${kind} fixed query filter`);
     assertEqual(slices, 0, `${kind} must not allocate substring windows`);
-    assertEqual(searches, kind === "filter-positives" ? size : 0, `${kind} exact searches limited to surviving patterns`);
+    assertEqual(searches, kind === "filter-positives" ? 128 : kind === "gram-positives" ? size : 0,
+      `${kind} exact searches limited to surviving patterns`);
+    // Four reads per prefix during lazy setup, eight per pair-sampled candidate,
+    // and only 32 candidates with three four-unit gram probes.
+    if (candidateNames !== undefined) assertEqual(candidateReads, size * (4 + 8) + 32 * 3 * 4,
+      "uninformative grams stop after 32 surviving candidates");
     return { size, searches, slices, bytes, charReads: { total } };
   });
-  assertLinearGrowth(kind, results, "charReads");
+  // The first 128 native searches omit three four-unit gram samples. Doubling
+  // candidates amortizes this fixed saving; allow that constant, not a new slope.
+  assertLinearGrowth(kind, results, "charReads", kind.endsWith("positives") ? 128 * 3 * 4 : 0);
   return { kind, results };
 });
 
@@ -237,7 +251,9 @@ const positivePrefixResults = [8192, 16_384].map(size => {
   if (exactSearches > size * paths.length / 32) throw new Error("Positive prefix candidates were not rejected before exact searches.");
   return { size, bytes, exactSearches, charReads: { total } };
 });
-assertLinearGrowth("positive prefix filter work", positivePrefixResults, "charReads");
+// Doubling this policy crosses the adaptive threshold: at most one extra
+// four-gram pass over each query and the fixed initial search saving apply.
+assertLinearGrowth("positive prefix filter work", positivePrefixResults, "charReads", 4 * (2 * (4096 + 64) + 128 * 3 * 4));
 
 process.stdout.write(`${JSON.stringify({
   check: "deterministic-complexity-bounds",
@@ -304,12 +320,12 @@ function measureMapOperations(run) {
   };
 }
 
-function assertLinearGrowth(label, results, field) {
+function assertLinearGrowth(label, results, field, startupAllowance = 0) {
   const smaller = results[0];
   const larger = results[1];
   const smallOperations = smaller[field].total;
   const largeOperations = larger[field].total;
-  const maximum = smallOperations * 2 + 64;
+  const maximum = smallOperations * 2 + 64 + startupAllowance;
   if (largeOperations > maximum) {
     throw new Error(
       `${label} exceeded deterministic linear bound: ${largeOperations} > ${maximum}.`

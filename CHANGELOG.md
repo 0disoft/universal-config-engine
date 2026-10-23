@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Adapt repeated overflow exact searches with four-unit query grams in the same
+  filter buffer; activate after 128 searched candidates and stop probing after 32
+  consecutive survivors, preserving literal decisions, source rank and memory caps.
 - Reject overflow name-pattern candidates whose shared prefix and suffix pass the
   existing pair samples but whose quarter pair is absent, reducing exact searches
   without increasing filter buffers or changing literal matches and source rank.
