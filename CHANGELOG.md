@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Reject overflow name-pattern candidates whose shared prefix and suffix pass the
+  existing pair samples but whose quarter pair is absent, reducing exact searches
+  without increasing filter buffers or changing literal matches and source rank.
 - Reject impossible prefix matches before overflow policy scans, including diverse
   and incidental suffix hits; share the existing length filter without increasing
   the 136 KiB filter-buffer ceiling or changing literal semantics.

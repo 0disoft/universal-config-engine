@@ -109,8 +109,9 @@ Existing length bits can only cause extra prefix positives, never missed matches
 Both sets of bits remain unchanged after initialization. No additional buffer or
 per-pattern index is retained, and the query Bloom filter keeps its full 128 KiB
 capacity. Each query inserts its adjacent UTF-16 pairs once;
-patterns are rejected by up to three pair samples (start, middle, end) before
-native literal verification. Repeated pairs avoid repeated insertions. A separately
+patterns are rejected by up to four pair samples (start, quarter, middle, end)
+before native literal verification. The quarter sample is skipped when it repeats
+the start offset on short patterns. Repeated pairs avoid repeated insertions. A separately
 lowercased final segment is inserted only when it is not already a joined-name
 suffix. Hash collisions or out-of-order samples can only schedule exact searches;
 they cannot change redaction. Each surviving pattern gets at most one search per
@@ -170,10 +171,20 @@ collisions and excessive gate work still use exact pair filtering and native
 search. Sharing prefix and length bits can increase false positives in either gate;
 the optimization does not promise a speedup or universal linear time for every
 policy, and no pattern is discarded to meet the memory budget.
-For example, with 8,192 `0000`-prefixed numeric patterns and four 4,096-unit
-queries beginning with `0000` and ending with the common literal suffix, exact
-search still dominates: a local three-run median changed from 17.0 to 17.9 ms.
-This is a measured tradeoff, not a claim that positive-prefix workloads improve.
+With 8,192 `0000`-prefixed numeric patterns and four queries beginning with
+`0000` and ending with the common literal suffix, start/middle/end pair samples
+all pass even though the numeric portion is absent. The additional quarter sample
+rejects these candidates before native searches, without another index or buffer.
+The permanent benchmark uses 4,096 / 16,384 repeated interior UTF-16 units with
+fixtures allocated outside timing. Local seven-run query medians changed from
+17.2 / 28.6 ms to 2.2 / 2.8 ms; first batches including lazy setup changed from
+21.7 / 38.4 ms to 4.7 / 5.4 ms. These are synthetic measurements, not production
+latency guarantees. The deterministic guard reduces exact searches for four
+4,096-unit queries from 32,768 to 360; doubling patterns to 16,384 requires 680
+searches, with character reads growing from 149,096 to 281,448. Both sizes retain
+exactly 139,264 bytes of filter buffers. If all four sampled pairs occur or the
+Bloom filter collides, exact searches remain necessary; the extra sample adds a
+bounded probe and does not promise a speedup on every positive-prefix input.
 
 Two additional eight-path fixtures use 16,384-unit names: 512 distinct candidate
 lengths, and 128 lengths of `a~` repetitions against `b_` repetitions (equal

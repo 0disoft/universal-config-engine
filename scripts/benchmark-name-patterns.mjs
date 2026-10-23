@@ -103,6 +103,24 @@ for (const fixture of [
   console.log(JSON.stringify({ name: fixture.name, paths: 128, firstQueryBatchMs, queryMedianMs: times[2] }));
 }
 
+// Every existing start/middle/end sample occurs, but the numeric portion does not.
+// Keep paths outside timing to isolate matching from fixture allocation.
+for (const length of [4096, 16_384]) {
+  const patterns = Array.from({ length: 8192 }, (_, index) => "0000" + String(index).padStart(5, "0") + "_sensitive_marker");
+  const paths = Array.from({ length: 4 }, (_, index) => ["service", "0000" + "q".repeat(length) + index + "_sensitive_marker"]);
+  const match = compileRedaction([], { secretNamePatterns: patterns }, [], []);
+  const run = () => {
+    const start = performance.now();
+    for (const path of paths) if (match(path).redacted) throw new Error("Unexpected positive-prefix match.");
+    return performance.now() - start;
+  };
+  const firstQueryBatchMs = run();
+  run();
+  const times = Array.from({ length: 7 }, run).sort((left, right) => left - right);
+  console.log(JSON.stringify({ name: "overflow-positive-prefix", nameUnits: length, paths: paths.length,
+    firstQueryBatchMs, queryMedianMs: times[3] }));
+}
+
 function measureRetained(patterns) {
   // Keep each measured matcher in its own call frame so a prior iteration's
   // matcher cannot remain live across the next before/after GC pair.

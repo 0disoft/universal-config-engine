@@ -209,6 +209,36 @@ for (const result of argvResults) {
   assertEqual(result.elementAccesses, result.argvEntries, `${result.mode} argv element accesses`);
 }
 
+const positivePrefixResults = [8192, 16_384].map(size => {
+  const patterns = Array.from({ length: size }, (_, index) => "0000" + String(index).padStart(5, "0") + "_sensitive_marker");
+  const paths = Array.from({ length: 4 }, (_, index) => ["service", "0000" + "q".repeat(4096) + index + "_sensitive_marker"]);
+  const NativeUint32Array = globalThis.Uint32Array;
+  const includes = String.prototype.includes;
+  const charCodeAt = String.prototype.charCodeAt;
+  let bytes = 0; let exactSearches = 0; let total = 0;
+  globalThis.Uint32Array = new Proxy(NativeUint32Array, {
+    construct(target, args) { const result = Reflect.construct(target, args); bytes += result.byteLength; return result; }
+  });
+  try {
+    const match = compileRedaction([], { secretNamePatterns: patterns }, [], []);
+    assertEqual(match(paths[0]).redacted, false, "positive prefix warmup");
+    String.prototype.includes = function (...args) {
+      if (String(args[0]).length > 4) exactSearches++;
+      return Reflect.apply(includes, this, args);
+    };
+    String.prototype.charCodeAt = function (...args) { total++; return Reflect.apply(charCodeAt, this, args); };
+    for (const path of paths) assertEqual(match(path).redacted, false, "positive prefix exact miss");
+  } finally {
+    globalThis.Uint32Array = NativeUint32Array;
+    String.prototype.includes = includes;
+    String.prototype.charCodeAt = charCodeAt;
+  }
+  assertEqual(bytes, 139_264, "positive prefix retains the 136 KiB filter-buffer ceiling");
+  if (exactSearches > size * paths.length / 32) throw new Error("Positive prefix candidates were not rejected before exact searches.");
+  return { size, bytes, exactSearches, charReads: { total } };
+});
+assertLinearGrowth("positive prefix filter work", positivePrefixResults, "charReads");
+
 process.stdout.write(`${JSON.stringify({
   check: "deterministic-complexity-bounds",
   mergeResults,
@@ -220,6 +250,7 @@ process.stdout.write(`${JSON.stringify({
   suffixGateResults,
   adversarialNameResults,
   prefixGateResults,
+  positivePrefixResults,
   argvResults
 }, null, 2)}\n`);
 

@@ -291,8 +291,11 @@ function compileStreamingNameMatcher(
     return probe((pattern.charCodeAt(offset) << 16) | pattern.charCodeAt(offset + 1), false);
   }
   function possible(pattern: string): boolean {
-    // Samples bound work per pattern, including very long policy strings.
-    return possibleAt(pattern, 0) && possibleAt(pattern, (pattern.length - 2) >>> 1) && possibleAt(pattern, pattern.length - 2);
+    // A shared prefix/suffix can make start/middle/end uninformative. One
+    // additional early sample rejects such candidates without allocating an index.
+    const quarter = (pattern.length - 2) >>> 2;
+    return possibleAt(pattern, 0) && (quarter === 0 || possibleAt(pattern, quarter))
+      && possibleAt(pattern, (pattern.length - 2) >>> 1) && possibleAt(pattern, pattern.length - 2);
   }
   return (name, last) => {
     let rank = emptyRank;

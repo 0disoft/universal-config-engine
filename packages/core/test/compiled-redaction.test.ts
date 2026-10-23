@@ -248,6 +248,35 @@ it("preserves exact decisions around the prefix-work budget", () => {
   }
 });
 
+it("preserves exact matches and source reasons when common prefixes and tails pass the filters", () => {
+  const patterns = Array.from({ length: 8192 }, (_, index) => "0000" + String(index).padStart(5, "0") + "_sensitive_marker");
+  const prefix = "q".repeat(256);
+  const sources: ConfigSourceDescriptor[] = [
+    { id: "names", displayName: "names", kind: "object", priority: 0, redaction: { secretNamePatterns: patterns } },
+    { id: "paths", displayName: "paths", kind: "object", priority: 1,
+      redaction: { secretPaths: [[prefix + patterns.at(-1)!]] } }
+  ];
+  const match = compileRedaction(sources, {}, DEFAULT_SECRET_NAME_PATTERNS, []);
+  for (const suffix of ["0000" + prefix + "_sensitive_marker", ...[0, 1, 999, 1000, 8191].map(index => patterns[index]!)]) {
+    const path = [prefix + suffix];
+    expect(match(path)).toEqual(reference(sources, {}, [], path));
+  }
+  expect(match([prefix + patterns.at(-1)!])).toEqual({ redacted: true, reason: "secret-name" });
+});
+
+it("retains short-pattern boundaries and isolated UTF-16 units in extra pair samples", () => {
+  const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+  const patterns = ["ab", "abc", "abcd", "abcde", "abcdef", "ab\ud83dcde", "ab😀cde"];
+  for (const pattern of patterns) {
+    const source: ConfigSourceDescriptor = { id: "names", displayName: "names", kind: "object", priority: 0,
+      redaction: { secretNamePatterns: [...padding, pattern] } };
+    const match = compileRedaction([source], {}, DEFAULT_SECRET_NAME_PATTERNS, []);
+    // Exceed the query-planning budget even for a two-unit pattern.
+    const path = ["q".repeat(1024) + pattern + "q".repeat(1024)];
+    expect(match(path)).toEqual(reference([source], {}, [], path));
+  }
+});
+
 function reference(sources: readonly ConfigSourceDescriptor[], options: BuildDiagnosticReportOptions,
   owned: readonly ConfigPath[], path: ConfigPath) {
   if (owned.some(prefix => isPathPrefix(prefix, path))) return { redacted: true, reason: "secret-source" };
