@@ -324,6 +324,16 @@ function compileStreamingNameMatcher(
     return probe(gramHash(pattern, 0), false) && probe(gramHash(pattern, end >>> 1), false)
       && probe(gramHash(pattern, end), false);
   }
+  function sampledGramsPresent(pattern: string, name: string, last: string, separate: boolean): boolean {
+    const end = pattern.length - GRAM_UNITS;
+    // At most three four-unit strings per query, never substring windows.
+    for (let sample = 0; sample < 3; sample++) {
+      const offset = sample === 0 ? 0 : sample === 1 ? end >>> 1 : end;
+      const gram = pattern.slice(offset, offset + GRAM_UNITS);
+      if (!name.includes(gram) && (!separate || !last.includes(gram))) return false;
+    }
+    return true;
+  }
   return (name, last) => {
     let rank = emptyRank;
     if (rank === 0) return rank;
@@ -347,10 +357,17 @@ function compileStreamingNameMatcher(
       if (pattern.length >= GRAM_UNITS && searches >= MAX_PAIR_ONLY_SEARCHES && gramHits < MAX_UNPRODUCTIVE_GRAM_CHECKS) {
         // OR into the same query filter; extra bits only add false positives.
         // Query-local state is reset along with the buffer on every call.
-        if (!gramsReady) { addGrams(name); if (separate) addGrams(last); gramsReady = true; }
-        if (!possibleGrams(pattern)) { gramHits = 0; continue; }
-        // A saturated/uninformative filter must not add probes indefinitely.
-        gramHits++;
+        if (!gramsReady) {
+          // Avoid a full query pass when this candidate's samples already occur.
+          // This is only an optimization decision; native exact search still runs.
+          if (sampledGramsPresent(pattern, name, last, separate)) gramHits = MAX_UNPRODUCTIVE_GRAM_CHECKS;
+          else { addGrams(name); if (separate) addGrams(last); gramsReady = true; }
+        }
+        if (gramsReady) {
+          if (!possibleGrams(pattern)) { gramHits = 0; continue; }
+          // A saturated/uninformative filter must not add probes indefinitely.
+          gramHits++;
+        }
       }
       // Bloom collisions only schedule native exact searches. Do not allocate
       // substrings at every window, even for adversarial polynomial collisions.

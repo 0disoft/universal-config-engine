@@ -149,7 +149,7 @@ const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-posit
     const includes = String.prototype.includes;
     const slice = String.prototype.slice;
     const NativeUint32Array = globalThis.Uint32Array;
-    let total = 0; let searches = 0; let slices = 0; let bytes = 0;
+    let total = 0; let searches = 0; let slices = 0; let bytes = 0; let gramSearches = 0;
     const candidateNames = kind === "gram-positives" ? new Set(candidates) : undefined;
     let candidateReads = 0;
     String.prototype.charCodeAt = function (...args) {
@@ -157,8 +157,16 @@ const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-posit
       if (candidateNames?.has(String(this))) candidateReads++;
       return Reflect.apply(charCodeAt, this, args);
     };
-    String.prototype.includes = function (...args) { searches++; return Reflect.apply(includes, this, args); };
-    String.prototype.slice = function (...args) { slices++; return Reflect.apply(slice, this, args); };
+    String.prototype.includes = function (...args) {
+      if (String(args[0]).length === 4) gramSearches++; else searches++;
+      return Reflect.apply(includes, this, args);
+    };
+    String.prototype.slice = function (...args) {
+      slices++;
+      const result = Reflect.apply(slice, this, args);
+      assertEqual(result.length, 4, "preview slices must remain four units");
+      return result;
+    };
     globalThis.Uint32Array = new Proxy(NativeUint32Array, {
       construct(target, args) { const result = Reflect.construct(target, args); bytes += result.byteLength; return result; }
     });
@@ -170,13 +178,16 @@ const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-posit
       globalThis.Uint32Array = NativeUint32Array;
     }
     assertEqual(bytes, 131_072, `${kind} fixed query filter`);
-    assertEqual(slices, 0, `${kind} must not allocate substring windows`);
+    assertEqual(slices, kind === "filter-positives" ? 2 : kind === "gram-positives" ? 3 : 0,
+      `${kind} bounded preview without substring windows`);
+    if (gramSearches > 6) throw new Error("Gram preview exceeded three samples in two normalized strings.");
     assertEqual(searches, kind === "filter-positives" ? 128 : kind === "gram-positives" ? size : 0,
       `${kind} exact searches limited to surviving patterns`);
-    // Four reads per prefix during lazy setup, eight per pair-sampled candidate,
-    // and only 32 candidates with three four-unit gram probes.
-    if (candidateNames !== undefined) assertEqual(candidateReads, size * (4 + 8) + 32 * 3 * 4,
-      "uninformative grams stop after 32 surviving candidates");
+    // Preview bypasses both the full gram query pass and all pattern gram probes.
+    if (candidateNames !== undefined) assertEqual(candidateReads, size * (4 + 8),
+      "uninformative preview skips gram probes");
+    if (candidateNames !== undefined && total > name.length + size * 12 + 1024)
+      throw new Error("Uninformative preview must skip the full gram query pass.");
     return { size, searches, slices, bytes, charReads: { total } };
   });
   // The first 128 native searches omit three four-unit gram samples. Doubling
@@ -251,9 +262,8 @@ const positivePrefixResults = [8192, 16_384].map(size => {
   if (exactSearches > size * paths.length / 32) throw new Error("Positive prefix candidates were not rejected before exact searches.");
   return { size, bytes, exactSearches, charReads: { total } };
 });
-// Doubling this policy crosses the adaptive threshold: at most one extra
-// four-gram pass over each query and the fixed initial search saving apply.
-assertLinearGrowth("positive prefix filter work", positivePrefixResults, "charReads", 4 * (2 * (4096 + 64) + 128 * 3 * 4));
+// The preview finds common grams at both policy sizes, avoiding an extra query pass.
+assertLinearGrowth("positive prefix filter work", positivePrefixResults, "charReads");
 
 process.stdout.write(`${JSON.stringify({
   check: "deterministic-complexity-bounds",

@@ -301,6 +301,19 @@ it("retains exact decisions and source ranks across adaptive gram activation and
   }
 });
 
+it("retains exact results when a missing preview gram activates an otherwise uninformative filter", () => {
+  const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+  const candidates = Array.from({ length: 256 }, (_, index) => "ab" + "x".repeat(index + 8) + "cd");
+  candidates.splice(128, 0, "ab" + "x".repeat(80) + "zz" + "x".repeat(80) + "cd");
+  const source: ConfigSourceDescriptor = { id: "names", displayName: "names", kind: "object", priority: 0,
+    redaction: { secretNamePatterns: [...padding, ...candidates, "ab😀tail"] } };
+  const match = compileRedaction([source], {}, DEFAULT_SECRET_NAME_PATTERNS, []);
+  for (const suffix of ["", "ab😀tail", ""]) {
+    const path = ["abxxxxcd".repeat(2048) + "zz" + suffix];
+    expect(match(path)).toEqual(reference([source], {}, [], path));
+  }
+});
+
 function reference(sources: readonly ConfigSourceDescriptor[], options: BuildDiagnosticReportOptions,
   owned: readonly ConfigPath[], path: ConfigPath) {
   if (owned.some(prefix => isPathPrefix(prefix, path))) return { redacted: true, reason: "secret-source" };

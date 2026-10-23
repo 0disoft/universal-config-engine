@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Preview up to three literal grams before adaptive query filtering, bypassing
+  its full query pass when the samples already occur; retain the 136 KiB buffer
+  ceiling with at most three temporary four-unit strings per query.
 - Adapt repeated overflow exact searches with four-unit query grams in the same
   filter buffer; activate after 128 searched candidates and stop probing after 32
   consecutive survivors, preserving literal decisions, source rank and memory caps.

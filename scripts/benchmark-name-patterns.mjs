@@ -79,7 +79,9 @@ for (const fixture of [
     candidates: Array.from({ length: count }, (_, index) => "ab" + "x".repeat(index + 8) + "cd"),
     value: "abxxcd".repeat(2731) })),
   { name: "overflow-all-gram-hits", candidates: Array.from({ length: 512 }, (_, index) => "ab" + "x".repeat(index + 8) + "cd"),
-    value: "abxxxxcd".repeat(2048) }
+    value: "abxxxxcd".repeat(2048) },
+  { name: "overflow-all-gram-hits-long", candidates: Array.from({ length: 512 }, (_, index) => "ab" + "x".repeat(index + 8) + "cd"),
+    value: "abxxxxcd".repeat(8192) }
 ]) {
   const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
   const match = compileRedaction([], { secretNamePatterns: [...padding, ...fixture.candidates] }, [], []);

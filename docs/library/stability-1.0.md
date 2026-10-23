@@ -125,14 +125,21 @@ one name scan plus constant work per pattern; saturated filters can still requir
 native searches for every pattern. This is not a universal linear-time guarantee.
 
 After 128 searched candidates in one query, patterns of at least four UTF-16 units
-can use an adaptive gram filter. It inserts rolling four-unit hashes of the query
+can use an adaptive gram filter. Before the full query pass, a preview checks the
+current candidate's start/middle/end grams with native literal searches. If all
+three occur in either normalized query string, adaptive filtering is bypassed
+for the rest of that query. The preview creates at most three temporary four-unit
+strings (12 UTF-16 units in total), with no retained index or extra filter buffer.
+This heuristic may forgo useful filtering of later candidates; only optimization
+selection changes, and every surviving candidate still receives exact checking.
+Otherwise, the filter inserts rolling four-unit hashes of the query
 into the same 128 KiB buffer and checks start/middle/end pattern grams. ORing these
 bits preserves every pair and gram match; collisions still require native literal
 verification. The additional pass runs at most once per normalized query string,
 including a separately lowercased last segment when needed. After 32 consecutive
 gram survivors, probing stops for that query because the filter is uninformative.
 Activation and survivor counters reset with each query. There is no new buffer,
-per-pattern metadata, substring window or persistent cache.
+per-pattern metadata, substring-window enumeration or persistent cache.
 
 `pnpm run benchmark:name-patterns` includes compilation plus 4,096 nonmatching
 paths and reports five-run medians after warmup. Local measurements with 4,096
@@ -191,9 +198,8 @@ fixtures allocated outside timing. Local seven-run query medians changed from
 21.7 / 38.4 ms to 4.7 / 5.4 ms. These are synthetic measurements, not production
 latency guarantees. The deterministic guard reduces exact searches for four
 4,096-unit queries from 32,768 to 360; doubling patterns to 16,384 requires 680
-searches, with character reads growing from 149,096 to 315,976 after adaptive gram
-filtering. The larger policy crosses its activation threshold; the guard allows
-one additional query pass and a fixed startup allowance. Both sizes retain
+searches, with character reads growing from 149,096 to 281,448. The preview avoids
+an unproductive extra query pass at the larger size. Both sizes retain
 exactly 139,264 bytes of filter buffers. If all four sampled pairs occur or the
 Bloom filter collides, exact searches remain necessary; the extra sample adds a
 bounded probe and does not promise a speedup on every positive-prefix input.
@@ -202,13 +208,17 @@ Two additional eight-path fixtures use 16,384-unit names: 512 distinct candidate
 lengths, and 128 lengths of `a~` repetitions against `b_` repetitions (equal
 base-31 polynomial hashes). Query medians fell from about 1,688 / 5,962 ms to
 3 / 3 ms. These are local synthetic measurements, not production SLAs. Guards
-double both name length and pattern count, require linear filter work and zero
-substring-window allocations, and also cover frequent filter positives. When all
+double both name length and pattern count, require linear filter work and bounded
+preview slices without substring-window enumeration, and cover frequent filter positives. When all
 sampled pairs occur but a sampled four-unit gram is absent, exact searches stay
 at 128 for both 256 and 512 candidate patterns. Query character reads are 41,196
 and 83,180; a constant allowance accounts for the first 128 searches skipping gram
 probes. A separate fixture has every sampled gram present too: all 256 / 512
-native searches remain necessary and the unproductive-probe cutoff applies.
+native searches remain necessary, but the preview skips both the full gram query
+pass and pattern gram probes. Guards require exactly three four-unit slices,
+at most six native gram searches across the two normalized strings, and one
+pair-query scan. A regression also activates the filter with an absent preview
+gram before exercising the existing 32-survivor cutoff and exact-match fallback.
 
 Permanent eight-path benchmarks use roughly 16,384-unit names and 512 / 2,048
 patterns of `ab` plus a long `x` run plus `cd` (with padding to force overflow).
@@ -219,6 +229,13 @@ from 18.8 to 22.2 ms, including the extra query pass and bounded probes. These
 synthetic timings show a tradeoff, not a speedup on every input or a production
 latency guarantee. Exact searching remains the correctness fallback, including
 when hashes collide or filters saturate; auxiliary filter buffers remain 136 KiB.
+
+With the preview, a local comparison against the preceding implementation used
+eight warmup batches followed by 15 alternating before/after batches. The
+uninformative 512-pattern case changed from 19.2 to 16.6 ms. Selective 512 / 2,048
+pattern cases changed from 8.8 / 10.9 ms to 9.0 / 11.2 ms. These local synthetic
+medians do not establish universal speedups or bounds on native search time.
+The benchmark also retains a 65,536-unit uninformative-query fixture.
 
 ## Consumer Matrix
 
