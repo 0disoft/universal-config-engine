@@ -335,6 +335,28 @@ it("preserves literal decisions at the run-sample cap and after query resets", (
   }
 });
 
+it("preserves alternating matches around the span cap, including UTF-16 pairs and query resets", () => {
+  const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+  const candidates = Array.from({ length: 256 }, (_, index) => "ab" + "xy".repeat(index + 20) + "cd");
+  const suffixes = ["kj".repeat(15) + "k", "😀".repeat(16), "k\ud83d".repeat(16)];
+  const sources: ConfigSourceDescriptor[] = [
+    { id: "misses", displayName: "misses", kind: "object", priority: 0,
+      redaction: { secretNamePatterns: [...padding, ...candidates] } },
+    { id: "later", displayName: "later", kind: "object", priority: 1,
+      redaction: { secretNamePatterns: suffixes } },
+    { id: "paths", displayName: "paths", kind: "object", priority: 2,
+      redaction: { secretPaths: [["public"]] } }
+  ];
+  const match = compileRedaction(sources, {}, DEFAULT_SECRET_NAME_PATTERNS, []);
+  for (const length of [31, 32, 33, 4, 32]) {
+    const span = "xy".repeat(Math.floor(length / 2)) + (length % 2 ? "x" : "");
+    const prefix = ("ab" + span + "cd").repeat(512);
+    for (const path of [[prefix], ...suffixes.map(suffix => [prefix + suffix]), [prefix, "A", "___Σ"], ["public"]]) {
+      expect(match(path)).toEqual(reference(sources, {}, [], path));
+    }
+  }
+});
+
 function reference(sources: readonly ConfigSourceDescriptor[], options: BuildDiagnosticReportOptions,
   owned: readonly ConfigPath[], path: ConfigPath) {
   if (owned.some(prefix => isPathPrefix(prefix, path))) return { redacted: true, reason: "secret-source" };

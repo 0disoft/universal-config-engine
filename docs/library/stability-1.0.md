@@ -152,6 +152,17 @@ The query summary is a local number reset on every call, without extra buffers,
 collections or retained pattern metadata. This bounds the added work rather than
 claiming every exact search is eliminated.
 
+If the uniform window cannot reject a candidate, the same run calculation can
+also check period-two spans such as `xyxyx`. Its maximum span in each normalized
+query is computed lazily once, with the same 32-unit cap and at most 33 pattern
+reads. A uniform span above the cap also exceeds the period-two cap, so that case
+skips the extra scan. Otherwise, a centered window repeating two UTF-16 units
+longer than either query's maximum period-two span is impossible. This includes
+isolated surrogates and surrogate pairs using literal UTF-16 semantics. The added
+summary is a local number; no buffers, collections or pattern metadata are added.
+There are at most two run scans per normalized query string, independent of policy
+size; general nonperiodic candidates still use native exact searching.
+
 `pnpm run benchmark:name-patterns` includes compilation plus 4,096 nonmatching
 paths and reports five-run medians after warmup. Local measurements with 4,096
 distinct patterns fell from about 1,280 ms to 18 ms; this synthetic workload does
@@ -229,7 +240,10 @@ run is four, so five-unit center windows now hold exact searches at 128 for both
 256 / 512 candidates. A run-cap fixture appends 33 equal units and retains all
 256 / 512 searches. Guards require exactly three four-unit slices, at most six
 native gram searches across the two normalized strings, one pair-query scan and
-at most one additional run scan. A regression also activates the filter with an absent preview
+at most two additional run scans. An alternating fixture also retains 128 native
+searches at 256 / 512 candidates, with 53,360 / 107,376 character reads. Its linear
+guard allows the fixed saving from the first 128 searches skipping seven sample
+reads each. A regression also activates the filter with an absent preview
 gram before exercising the existing 32-survivor cutoff and exact-match fallback.
 
 Permanent eight-path benchmarks use roughly 16,384-unit names and 512 / 2,048
@@ -259,6 +273,16 @@ boundaries, actual matches, source reasons, surrogate units and query resets.
 These synthetic measurements do not establish a production latency guarantee;
 patterns without impossible center runs still require exact checking. Filter
 buffers retain the existing 136 KiB ceiling.
+
+The alternating-pattern benchmark uses 512 patterns of `ab` plus long `xy`
+repetitions plus `cd`, against repeated `abxyxycd` with eight paths. Compared with
+the preceding implementation, eight warmups and 15 alternating before/after
+batches gave local medians of 23.4 to 6.8 ms at 16,384 units and 48.4 to 27.4 ms
+at 65,536 units. Appending a period-two span above the cap retained exact searching
+(25.5 to 26.2 ms). The uniform-run case changed from 7.4 to 7.6 ms. These synthetic
+timings show workload-specific gains and overhead, not universal speedups or
+production latency guarantees. Tests cover 31/32/33-unit alternating boundaries,
+actual UTF-16 matches, query resets and source-reason precedence.
 
 ## Consumer Matrix
 

@@ -136,14 +136,15 @@ const suffixGateResults = [512, 1024].map(size => {
 });
 assertLinearGrowth("bounded suffix checks", suffixGateResults, "suffixChecks");
 
-const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-positives", "gram-positives", "run-cap"].map(kind => {
+const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-positives", "gram-positives", "run-cap", "alternating"].map(kind => {
   const results = [256, 512].map(size => {
     const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
     const candidates = Array.from({ length: size }, (_, index) => kind === "many-lengths" ? "a".repeat(index + 2) + "b"
-      : kind === "hash-collisions" ? "a~".repeat(index + 2) : "ab" + "x".repeat(index + 8) + "cd");
+      : kind === "hash-collisions" ? "a~".repeat(index + 2)
+      : "ab" + (kind === "alternating" ? "xy" : "x").repeat(index + 8) + "cd");
     const name = kind === "many-lengths" ? "q".repeat(size * 32)
       : kind === "hash-collisions" ? "b_".repeat(size * 16)
-      : (kind === "gram-positives" || kind === "run-cap" ? "abxxxxcd" : "abxxcd").repeat(size * 8)
+      : (kind === "alternating" ? "abxyxycd" : kind === "gram-positives" || kind === "run-cap" ? "abxxxxcd" : "abxxcd").repeat(size * 8)
         + (kind === "run-cap" ? "q".repeat(33) : "");
     const match = compileRedaction([], { secretNamePatterns: [...padding, ...candidates] }, [], []);
     const charCodeAt = String.prototype.charCodeAt;
@@ -151,7 +152,7 @@ const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-posit
     const slice = String.prototype.slice;
     const NativeUint32Array = globalThis.Uint32Array;
     let total = 0; let searches = 0; let slices = 0; let bytes = 0; let gramSearches = 0;
-    const candidateNames = kind === "gram-positives" || kind === "run-cap" ? new Set(candidates) : undefined;
+    const candidateNames = ["gram-positives", "run-cap", "alternating"].includes(kind) ? new Set(candidates) : undefined;
     let candidateReads = 0;
     String.prototype.charCodeAt = function (...args) {
       total++;
@@ -182,18 +183,19 @@ const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-posit
     assertEqual(slices, kind === "filter-positives" ? 2 : candidateNames !== undefined ? 3 : 0,
       `${kind} bounded preview without substring windows`);
     if (gramSearches > 6) throw new Error("Gram preview exceeded three samples in two normalized strings.");
-    assertEqual(searches, kind === "filter-positives" || kind === "gram-positives" ? 128 : kind === "run-cap" ? size : 0,
+    assertEqual(searches, ["filter-positives", "gram-positives", "alternating"].includes(kind) ? 128 : kind === "run-cap" ? size : 0,
       `${kind} exact searches limited to surviving patterns`);
-    // The maximum query run is four; later candidates reject after five units.
-    if (candidateNames !== undefined) assertEqual(candidateReads, size * (4 + 8) + (kind === "run-cap" ? 0 : (size - 128) * 5),
+    // Query spans are at most four. Alternating candidates first fail the
+    // two-read uniform check, then reject after five period-two sample reads.
+    if (candidateNames !== undefined) assertEqual(candidateReads, size * (4 + 8) + (kind === "run-cap" ? 0 : (size - 128) * (kind === "alternating" ? 7 : 5)),
       "run samples reject impossible native searches");
-    if (candidateNames !== undefined && total > name.length * 2 + size * 17 + 1024)
+    if (candidateNames !== undefined && total > name.length * (kind === "alternating" ? 3 : 2) + size * 19 + 1024)
       throw new Error("Run rejection exceeded one extra query pass and bounded pattern samples.");
     return { size, searches, slices, bytes, charReads: { total } };
   });
-  // The first 128 native searches omit three four-unit gram samples. Doubling
-  // candidates amortizes this fixed saving; allow that constant, not a new slope.
-  assertLinearGrowth(kind, results, "charReads", kind.endsWith("positives") ? 128 * 3 * 4 : 0);
+  // The first 128 searches omit either three four-unit gram samples or the
+  // seven run-sample reads. Allow that fixed saving, not a new growth slope.
+  assertLinearGrowth(kind, results, "charReads", kind === "alternating" ? 128 * 7 : kind.endsWith("positives") ? 128 * 3 * 4 : 0);
   return { kind, results };
 });
 

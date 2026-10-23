@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Extend bounded repeated-run rejection to alternating UTF-16 pairs when uniform
+  runs cannot exclude a candidate, reducing overflow exact searches without new
+  buffers or pattern metadata and preserving the existing span cap.
 - Reject impossible repeated-unit patterns after uninformative gram filtering by
   comparing a bounded center run with the query's maximum run, avoiding repeated
   exact searches without new buffers or per-pattern metadata.

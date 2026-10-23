@@ -220,24 +220,27 @@ const GRAM_HASH_BASE = 257;
 const MAX_RUN_SAMPLE_UNITS = 32;
 
 /** A larger query run disables the bounded pattern sample. */
-function maximumRun(value: string): number {
-  let longest = 0; let run = 0; let previous = -1;
+function maximumRun(value: string, period: 1 | 2 = 1): number {
+  let longest = 0; let run = 0; let previous = -1; let twoBack = -1;
   for (let index = 0; index < value.length; index++) {
     const unit = value.charCodeAt(index);
-    run = unit === previous ? run + 1 : 1;
+    run = unit === (period === 1 ? previous : twoBack) ? run + 1 : Math.min(index + 1, period);
     longest = Math.max(longest, run);
     if (longest > MAX_RUN_SAMPLE_UNITS) return longest;
-    previous = unit;
+    twoBack = previous; previous = unit;
   }
   return longest;
 }
 
-/** A match cannot contain a repeated-unit run longer than either query string. */
-function hasImpossibleRun(pattern: string, limit: number): boolean {
+/** A match cannot contain a periodic span longer than either query string. */
+function hasImpossibleRun(pattern: string, limit: number, period: 1 | 2 = 1): boolean {
   if (limit > MAX_RUN_SAMPLE_UNITS || pattern.length <= limit) return false;
   const start = (pattern.length - limit - 1) >>> 1;
   const unit = pattern.charCodeAt(start);
-  for (let offset = 1; offset <= limit; offset++) if (pattern.charCodeAt(start + offset) !== unit) return false;
+  const other = period === 2 ? pattern.charCodeAt(start + 1) : unit;
+  for (let offset = period; offset <= limit; offset++) {
+    if (pattern.charCodeAt(start + offset) !== (period === 1 || offset % 2 === 0 ? unit : other)) return false;
+  }
   return true;
 }
 
@@ -375,6 +378,7 @@ function compileStreamingNameMatcher(
     let gramsReady = false;
     let gramHits = 0;
     let runLimit: number | undefined;
+    let alternatingLimit: number | undefined;
     for (const [pattern, candidate] of patterns) {
       if (candidate >= rank || pattern.length > upper) continue;
       if (pattern.length >= 2 && !possible(pattern)) continue;
@@ -396,6 +400,11 @@ function compileStreamingNameMatcher(
       if (gramHits === MAX_UNPRODUCTIVE_GRAM_CHECKS) {
         runLimit ??= Math.max(maximumRun(name), separate ? maximumRun(last) : 0);
         if (hasImpossibleRun(pattern, runLimit)) continue;
+        // A same-unit run above the cap also exceeds the period-two cap.
+        if (runLimit <= MAX_RUN_SAMPLE_UNITS) {
+          alternatingLimit ??= Math.max(maximumRun(name, 2), separate ? maximumRun(last, 2) : 0);
+          if (hasImpossibleRun(pattern, alternatingLimit, 2)) continue;
+        }
       }
       // Bloom collisions only schedule native exact searches. Do not allocate
       // substrings at every window, even for adversarial polynomial collisions.
