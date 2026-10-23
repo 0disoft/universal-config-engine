@@ -197,6 +197,57 @@ it("preserves matches across the suffix-work budget boundary and with empty patt
   expect(empty(["q".repeat(256)])).toEqual({ redacted: true, reason: "secret-name" });
 });
 
+it("preserves ranked UTF-16 matches with prefix lengths one through four", () => {
+  const padding = Array.from({ length: 8192 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_" + String(index).padStart(5, "0"));
+  const prefix = "q".repeat(256);
+  const sources: ConfigSourceDescriptor[] = [
+    { id: "padding", displayName: "padding", kind: "object", priority: 0, redaction: { secretNamePatterns: padding } },
+    { id: "names", displayName: "names", kind: "object", priority: 1,
+      redaction: { secretNamePatterns: ["a", "bc", "déf", "mark-end", "σ", "\ud83d"] } },
+    { id: "paths", displayName: "paths", kind: "object", priority: 2,
+      redaction: { secretPaths: [[prefix, "A", "Σ"]] } }
+  ];
+  const match = compileRedaction(sources, {}, DEFAULT_SECRET_NAME_PATTERNS, []);
+  const text = fc.array(fc.constantFrom("a", "b", "c", "d", "é", "f", "Σ", "A", "\ud83d", "\ude00"), { maxLength: 8 }).map(units => units.join(""));
+  fc.assert(fc.property(fc.array(text, { maxLength: 3 }), suffix => {
+    const query = [prefix, ...suffix];
+    expect(match(query)).toEqual(reference(sources, {}, [], query));
+  }), { numRuns: 100 });
+  for (const query of [[prefix, "A", "Σ"], [prefix + "déf"], [prefix + "mark-end"], [prefix + "😀"], [prefix]]) {
+    expect(match(query)).toEqual(reference(sources, {}, [], query));
+  }
+});
+
+it("verifies prefix hash collisions and retains static prefixes across query resets", () => {
+  expect(97 * 257 + 0xa000).toBe(98 * 257 + 0x9eff);
+  const padding = Array.from({ length: 8192 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_" + String(index).padStart(5, "0"));
+  const match = compileRedaction([], { secretNamePatterns: [...padding, "a\ua000", "anchor-complete"] }, [], []);
+  const prefix = "q".repeat(256);
+  for (let repeat = 0; repeat < 2; repeat++) {
+    expect(match([prefix + "anchor-incomplete"])).toEqual({ redacted: false });
+    expect(match([prefix + "a\ua000"])).toEqual({ redacted: true, reason: "secret-name" });
+    expect(match([prefix])).toEqual({ redacted: false });
+    expect(match([prefix + "b\u9eff"])).toEqual({ redacted: false });
+    expect(match([prefix + "anchor-complete"])).toEqual({ redacted: true, reason: "secret-name" });
+  }
+  // Prefix initialization adds only false candidate lengths to the shared
+  // length filter; subsequent short queries must still use exact verification.
+  expect(match(["public"])).toEqual({ redacted: false });
+  expect(match(["b\u9eff"])).toEqual({ redacted: false });
+  expect(match(["a\ua000"])).toEqual({ redacted: true, reason: "secret-name" });
+  expect(match(["anchor-complete"])).toEqual({ redacted: true, reason: "secret-name" });
+});
+
+it("preserves exact decisions around the prefix-work budget", () => {
+  const patterns = Array.from({ length: 8192 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_" + String(index).padStart(5, "0"));
+  const match = compileRedaction([], { secretNamePatterns: patterns }, [], []);
+  for (const length of [32_767, 32_768, 32_769]) {
+    expect(match(["q".repeat(length)])).toEqual({ redacted: false });
+    expect(match(["q".repeat(100) + patterns[0]! + "q".repeat(length - 100 - patterns[0]!.length)]))
+      .toEqual({ redacted: true, reason: "secret-name" });
+  }
+});
+
 function reference(sources: readonly ConfigSourceDescriptor[], options: BuildDiagnosticReportOptions,
   owned: readonly ConfigPath[], path: ConfigPath) {
   if (owned.some(prefix => isPathPrefix(prefix, path))) return { redacted: true, reason: "secret-source" };

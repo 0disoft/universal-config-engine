@@ -93,8 +93,22 @@ filter buffers retain the existing 136 KiB ceiling. A rejected query needs only
 the already compiled 8 KiB length buffer, with no lazy 128 KiB query allocation.
 
 Overflow query planning has a 4,096-unit budget covering length scans, candidate
-probes and candidate UTF-16 lengths. Names exceeding that budget lazily build a
-128 KiB query Bloom filter. Each query inserts its adjacent UTF-16 pairs once;
+probes and candidate UTF-16 lengths. Names exceeding that budget lazily initialize
+a prefix gate and allocate the existing 128 KiB query buffer. The prefix gate ORs
+length-salted hashes of each pattern's first one to four UTF-16 units into the
+existing 8 KiB length filter. Queries scan rolling
+windows of only the prefix lengths present in the policy. If neither normalized
+string has a possible prefix, the matcher returns the empty-pattern rank without
+iterating the dictionary. This gate is bypassed when prefix-length count times
+the combined lengths that need scanning exceeds four times the pattern count.
+Hash/Bloom collisions only select the exact fallback, never a redaction decision.
+
+Shared prefix bits can only add false candidate lengths to later short queries:
+the 4,096-unit planner budget and exact dictionary verification still apply.
+Existing length bits can only cause extra prefix positives, never missed matches.
+Both sets of bits remain unchanged after initialization. No additional buffer or
+per-pattern index is retained, and the query Bloom filter keeps its full 128 KiB
+capacity. Each query inserts its adjacent UTF-16 pairs once;
 patterns are rejected by up to three pair samples (start, middle, end) before
 native literal verification. Repeated pairs avoid repeated insertions. A separately
 lowercased final segment is inserted only when it is not already a joined-name
@@ -103,7 +117,8 @@ they cannot change redaction. Each surviving pattern gets at most one search per
 distinct normalized string, without allocating candidate substring windows.
 The length and query filters retain 136 KiB of fixed auxiliary buffers, independent
 of pattern count and name length, in addition to the existing normalized-pattern
-dictionary. The query buffer is cleared and reused per call; there is no global
+dictionary. Only the separate query buffer is cleared per call, preserving shared
+length/prefix bits across both successful and unsuccessful queries; there is no global
 cache. No policy is truncated and no secret rule is skipped. Query filtering costs
 one name scan plus constant work per pattern; saturated filters can still require
 native searches for every pattern. This is not a universal linear-time guarantee.
@@ -140,8 +155,25 @@ The deterministic gate guard doubles patterns from 8,192 to 16,384 and name
 length from 512 to 1,024. Four queries retain 64 suffix searches, zero pattern
 character reads and zero lazy query-buffer allocations. A separate fixture with
 more than 32 suffixes still exercises the fallback: doubling patterns and name
-length produces 95,976 to 177,896 character reads, zero unnecessary exact searches,
-and exactly one 131,072-byte query buffer per matcher.
+length produces 161,592 to 309,048 character reads including lazy prefix setup, zero unnecessary exact searches,
+and exactly one 131,072-byte shared filter buffer per matcher.
+
+The benchmark also covers 8,192 distinct four-unit suffixes and a shared suffix
+that occurs without a complete pattern. With the actual default policy and 128
+short paths, query medians changed from about 40 / 43 ms to 1.6 / 1.8 ms. First
+batches including lazy setup changed from about 94 / 52 ms to 7.5 / 5.4 ms. The
+deterministic guard doubles patterns from 8,192 to 16,384 with fixed queries:
+four warm queries visit zero dictionary entries in both cases and retain 4,144 /
+4,280 character reads respectively, independent of policy size. These are local
+synthetic workloads, not production latency guarantees. Real prefix hits, Bloom
+collisions and excessive gate work still use exact pair filtering and native
+search. Sharing prefix and length bits can increase false positives in either gate;
+the optimization does not promise a speedup or universal linear time for every
+policy, and no pattern is discarded to meet the memory budget.
+For example, with 8,192 `0000`-prefixed numeric patterns and four 4,096-unit
+queries beginning with `0000` and ending with the common literal suffix, exact
+search still dominates: a local three-run median changed from 17.0 to 17.9 ms.
+This is a measured tradeoff, not a claim that positive-prefix workloads improve.
 
 Two additional eight-path fixtures use 16,384-unit names: 512 distinct candidate
 lengths, and 128 lengths of `a~` repetitions against `b_` repetitions (equal

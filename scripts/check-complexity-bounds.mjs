@@ -177,6 +177,34 @@ const argvResults = [128, 4096].flatMap((mappingCount) =>
   )
 );
 
+const prefixGateResults = ["diverse-suffixes", "incidental-suffix"].map(kind => {
+  const results = [8192, 16_384].map(size => {
+    const patterns = Array.from({ length: size }, (_, index) => String(index).padStart(5, "0") + "_sensitive_"
+      + (kind === "diverse-suffixes" ? String(index).padStart(5, "0") : "marker"));
+    const match = compileRedaction([], { secretNamePatterns: patterns }, DEFAULT_SECRET_NAME_PATTERNS, []);
+    const path = ["service", "q".repeat(512) + (kind === "incidental-suffix" ? "_sensitive_marker" : "")];
+    assertEqual(match(path).redacted, false, "prefix gate warmup");
+    const iterator = Map.prototype[Symbol.iterator];
+    const charCodeAt = String.prototype.charCodeAt;
+    let patternVisits = 0; let total = 0;
+    Map.prototype[Symbol.iterator] = function* () {
+      for (const entry of Reflect.apply(iterator, this, [])) { patternVisits++; yield entry; }
+    };
+    String.prototype.charCodeAt = function (...args) { total++; return Reflect.apply(charCodeAt, this, args); };
+    try {
+      for (let index = 0; index < 4; index++) assertEqual(match(path).redacted, false, `${kind} prefix miss`);
+    } finally {
+      Map.prototype[Symbol.iterator] = iterator;
+      String.prototype.charCodeAt = charCodeAt;
+    }
+    assertEqual(patternVisits, 0, `${kind} must not revisit the policy dictionary`);
+    if (total > 8 * path.join(".").length) throw new Error("Prefix gate exceeded its query-length character bound.");
+    return { size, patternVisits, charReads: { total } };
+  });
+  assertEqual(results[0].charReads.total, results[1].charReads.total, `${kind} policy-independent warm queries`);
+  return { kind, results };
+});
+
 for (const result of argvResults) {
   assertEqual(result.elementAccesses, result.argvEntries, `${result.mode} argv element accesses`);
 }
@@ -191,6 +219,7 @@ process.stdout.write(`${JSON.stringify({
   longNameResults,
   suffixGateResults,
   adversarialNameResults,
+  prefixGateResults,
   argvResults
 }, null, 2)}\n`);
 

@@ -88,6 +88,21 @@ for (const fixture of [
   console.log(JSON.stringify({ name: fixture.name, paths: 8, firstQueryBatchMs, queryMedianMs: times[1] }));
 }
 
+for (const fixture of [
+  { name: "overflow-diverse-suffixes", patterns: Array.from({ length: 8192 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_" + String(index).padStart(5, "0")), tail: "" },
+  { name: "overflow-incidental-suffix", patterns: Array.from({ length: 8192 }, (_, index) => String(index).padStart(5, "0") + "_sensitive_marker"), tail: "_sensitive_marker" }
+]) {
+  const match = compileRedaction([], { secretNamePatterns: fixture.patterns }, DEFAULT_SECRET_NAME_PATTERNS, []);
+  const run = () => {
+    const start = performance.now();
+    for (let index = 0; index < 128; index++) if (match(["service", "q".repeat(256) + fixture.tail]).redacted) throw new Error("Unexpected suffix-fallback match.");
+    return performance.now() - start;
+  };
+  const firstQueryBatchMs = run();
+  const times = Array.from({ length: 5 }, run).sort((left, right) => left - right);
+  console.log(JSON.stringify({ name: fixture.name, paths: 128, firstQueryBatchMs, queryMedianMs: times[2] }));
+}
+
 function measureRetained(patterns) {
   // Keep each measured matcher in its own call frame so a prior iteration's
   // matcher cannot remain live across the next before/after GC pair.

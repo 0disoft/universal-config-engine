@@ -142,7 +142,7 @@ const MAX_NAME_SUFFIXES = 32;
 const NAME_SUFFIX_UNITS = 4;
 const MAX_SUFFIX_WORK_PER_PATTERN = 16;
 
-/** Reuse the dictionary with an 8 KiB filter; long names add a lazy 128 KiB query filter. */
+/** Reuse an 8 KiB length/prefix filter; long names add a lazy 128 KiB query filter. */
 function compileOverflowNameMatcher(patterns: ReadonlyMap<string, number>): (name: string, last: string) => number {
   const lengths = new Uint32Array(NAME_LENGTH_FILTER_BITS / 32);
   let minimum = Infinity;
@@ -195,7 +195,7 @@ function compileOverflowNameMatcher(patterns: ReadonlyMap<string, number>): (nam
     if (suffixes !== undefined
       && suffixes.length * (name.length + last.length) <= patterns.size * MAX_SUFFIX_WORK_PER_PATTERN
       && !suffixes.some(suffix => name.includes(suffix) || (name !== last && last.includes(suffix)))) return emptyRank;
-    stream ??= compileStreamingNameMatcher(patterns, emptyRank);
+    stream ??= compileStreamingNameMatcher(patterns, emptyRank, lengths);
     return stream(name, last);
   }
   return (name, last) => {
@@ -209,10 +209,13 @@ function compileOverflowNameMatcher(patterns: ReadonlyMap<string, number>): (nam
 
 const STREAM_FILTER_BITS = 1_048_576;
 const STREAM_FILTER_PROBES = 3;
+const PREFIX_UNITS = 4;
+const PREFIX_HASH_BASE = 257;
+const MAX_PREFIX_WORK_PER_PATTERN = 4;
 
-/** Scan each query once, then reject patterns by their UTF-16 bigrams. */
+/** Gate impossible prefixes before checking patterns with a reusable UTF-16 pair filter. */
 function compileStreamingNameMatcher(
-  patterns: ReadonlyMap<string, number>, emptyRank: number
+  patterns: ReadonlyMap<string, number>, emptyRank: number, prefixFilter: Uint32Array
 ): (name: string, last: string) => number {
   const filter = new Uint32Array(STREAM_FILTER_BITS / 32);
   function probe(pair: number, insert: boolean): boolean {
@@ -226,6 +229,52 @@ function compileStreamingNameMatcher(
       else if ((filter[word]! & mask) === 0) return false;
     }
     return true;
+  }
+  let prefixLengths = 0;
+  let prefixLengthCount = 0;
+  function prefixProbe(hash: number, length: number, insert: boolean): boolean {
+    const key = hash ^ Math.imul(length, 0x9e3779b1);
+    const first = Math.imul(key ^ (key >>> 16), 0x85ebca6b);
+    const step = Math.imul(key ^ (key >>> 13), 0xc2b2ae35) | 1;
+    for (let index = 0; index < STREAM_FILTER_PROBES; index++) {
+      const bit = (first + Math.imul(index, step)) & (NAME_LENGTH_FILTER_BITS - 1);
+      const word = bit >>> 5;
+      const mask = 1 << (bit & 31);
+      if (insert) prefixFilter[word] = prefixFilter[word]! | mask;
+      else if ((prefixFilter[word]! & mask) === 0) return false;
+    }
+    return true;
+  }
+  // OR prefix bits into the existing length filter. This can only add false
+  // candidate lengths; the length planner's work cap and exact lookup still apply.
+  for (const pattern of patterns.keys()) {
+    const length = Math.min(PREFIX_UNITS, pattern.length);
+    if (length === 0) continue;
+    if ((prefixLengths & (1 << length)) === 0) prefixLengthCount++;
+    prefixLengths |= 1 << length;
+    let hash = 0;
+    for (let index = 0; index < length; index++) hash = (Math.imul(hash, PREFIX_HASH_BASE) + pattern.charCodeAt(index)) | 0;
+    prefixProbe(hash, length, true);
+  }
+  function possiblePrefix(name: string): boolean {
+    for (let length = 1; length <= PREFIX_UNITS && length <= name.length; length++) {
+      if ((prefixLengths & (1 << length)) === 0) continue;
+      let hash = 0; let power = 1;
+      for (let index = 0; index < length; index++) {
+        hash = (Math.imul(hash, PREFIX_HASH_BASE) + name.charCodeAt(index)) | 0;
+        if (index !== length - 1) power = Math.imul(power, PREFIX_HASH_BASE);
+      }
+      let previousHash = NaN;
+      for (let start = 0; start <= name.length - length; start++) {
+        if (hash !== previousHash && prefixProbe(hash, length, false)) return true;
+        previousHash = hash;
+        if (start !== name.length - length) {
+          hash = (Math.imul(hash - Math.imul(name.charCodeAt(start), power), PREFIX_HASH_BASE)
+            + name.charCodeAt(start + length)) | 0;
+        }
+      }
+    }
+    return false;
   }
   function add(name: string): void {
     let previous = name.charCodeAt(0);
@@ -251,6 +300,10 @@ function compileStreamingNameMatcher(
     // Usually last is already a suffix; contextual Unicode lowercasing can
     // make the independently normalized segment differ from the joined name.
     const separate = !name.endsWith(last);
+    const prefixWork = prefixLengthCount * (name.length + (separate ? last.length : 0));
+    if (prefixWork <= patterns.size * MAX_PREFIX_WORK_PER_PATTERN
+      && !possiblePrefix(name) && (!separate || !possiblePrefix(last))) return rank;
+    // The shared length/prefix bits survive resets of the separate query buffer.
     filter.fill(0);
     add(name);
     if (separate) add(last);

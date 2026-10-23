@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Reject impossible prefix matches before overflow policy scans, including diverse
+  and incidental suffix hits; share the existing length filter without increasing
+  the 136 KiB filter-buffer ceiling or changing literal semantics.
 - Reject impossible overflow name queries with a bounded literal-suffix gate,
   avoiding per-query pattern scans and lazy buffer allocation for short paths
   while preserving the existing filter-memory ceiling and exact fallback.
