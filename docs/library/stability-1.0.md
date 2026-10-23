@@ -68,8 +68,23 @@ reads. These are operation counts, not end-to-end latency measurements.
 Policy prefix indexes and ownership/equality caches live for one comparison.
 They preserve typed path segments and rule order. Redaction policies compile once
 per report, retaining first-source and path-before-name reason precedence.
-Distinct custom name patterns still require substring checks per uncached path;
-this is not a constant-time matcher for arbitrarily large pattern sets.
+Up to 32 distinct normalized name patterns use native substring checks. Larger
+policies share a ranked Aho-Corasick automaton: a path query scans its normalized
+UTF-16 units, including a separate final-segment scan for contextual Unicode
+lowercasing. Failure links inherit the earliest source rank without retaining
+lists of suffix matches. Empty patterns and literal matching remain supported.
+The automaton is limited to 65,536 states; policies exceeding this optimization
+budget fall back to complete native matching rather than dropping patterns or
+retaining unbounded per-character maps. Compilation is per report, with no global
+cache or new public resource-limit error.
+
+`pnpm run benchmark:name-patterns` includes compilation plus 4,096 nonmatching
+paths and reports five-run medians after warmup. Local measurements with 4,096
+distinct patterns fell from about 1,280 ms to 18 ms; this synthetic workload does
+not establish a production latency SLA. The deterministic guard doubles both
+patterns and paths (512 to 1,024), requiring query operations to grow linearly;
+the measured counts are 19,460 and 38,916. Very large policies using the bounded
+fallback retain the original pattern-by-path search cost.
 
 ## Consumer Matrix
 

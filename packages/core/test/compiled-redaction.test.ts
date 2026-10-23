@@ -19,6 +19,49 @@ it("retains ordered policy reasons for typed prefixes, literal names, Unicode an
     }), { numRuns: 300 });
 });
 
+it("matches large policies exactly, including suffixes, empty strings and UTF-16 fragments", () => {
+  const text = fc.array(fc.constantFrom("a", "b", "c", "Σ", "A", ".", "\ud83d", "\ude00", "[", "*"), { minLength: 1, maxLength: 10 }).map(units => units.join(""));
+  const padding = Array.from({ length: 40 }, (_, index) => `unmatched-padding-${index}!`);
+  fc.assert(fc.property(fc.array(fc.array(text, { maxLength: 8 }), { minLength: 1, maxLength: 5 }),
+    fc.array(text, { maxLength: 4 }), (policies, query) => {
+      const sources: ConfigSourceDescriptor[] = policies.map((patterns, index) => ({
+        id: `source-${index}`, displayName: "source", kind: "object", priority: index,
+        redaction: { secretNamePatterns: [...padding, ...patterns], secretPaths: index === 1 ? [query] : [] }
+      }));
+      expect(compileRedaction(sources, {}, DEFAULT_SECRET_NAME_PATTERNS, [])(query))
+        .toEqual(reference(sources, {}, [], query));
+    }), { numRuns: 500 });
+});
+
+it("inherits the earliest suffix rank without expanding overlapping match lists", () => {
+  const padding = Array.from({ length: 40 }, (_, index) => `padding-${index}!`);
+  const source = (id: string, secretNamePatterns: string[], secretPaths: ConfigPath[] = []): ConfigSourceDescriptor => ({
+    id, displayName: id, kind: "object", priority: 0, redaction: { secretNamePatterns, secretPaths }
+  });
+  const sources = [source("first", [...padding, "bc", "\ud83d"]), source("second", ["abcd", ""], [["abcd"]])];
+  for (const query of [["abcd"], ["aabcx"], ["😀"], ["abc", "AΣ"], [], ["public"]]) {
+    expect(compileRedaction(sources, {}, [], [])(query)).toEqual(reference(sources, {}, [], query));
+  }
+  // Lowercasing the joined name can produce final sigma while the standalone
+  // last segment produces ordinary sigma. Its earlier source must still win.
+  const greekPath = ["A", "Σ"];
+  const greekSources = [source("greek", [...padding, "σ"]), source("path", [], [greekPath])];
+  expect(compileRedaction(greekSources, {}, [], [])(greekPath)).toEqual({ redacted: true, reason: "secret-name" });
+  const overlapping = source("overlapping", Array.from({ length: 128 }, (_, index) => "a".repeat(index + 1) + "b"));
+  expect(compileRedaction([overlapping], {}, [], [])(["a".repeat(4096) + "b"]))
+    .toEqual({ redacted: true, reason: "secret-name" });
+  expect(compileRedaction([overlapping], {}, [], [])(["a".repeat(4096)]))
+    .toEqual({ redacted: false });
+});
+
+it("falls back without truncating oversized policies or changing their matches", () => {
+  const patterns = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+  const match = compileRedaction([], { secretNamePatterns: [...patterns, "tail-marker"] }, [], []);
+  expect(match(["tail-marker"])).toEqual({ redacted: true, reason: "secret-name" });
+  expect(match([patterns.at(-1)!])).toEqual({ redacted: true, reason: "secret-name" });
+  expect(match(["public"])).toEqual({ redacted: false });
+});
+
 function reference(sources: readonly ConfigSourceDescriptor[], options: BuildDiagnosticReportOptions,
   owned: readonly ConfigPath[], path: ConfigPath) {
   if (owned.some(prefix => isPathPrefix(prefix, path))) return { redacted: true, reason: "secret-source" };

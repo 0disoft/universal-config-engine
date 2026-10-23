@@ -51,16 +51,84 @@ export function compileRedaction(
     addPatterns(source.redaction?.secretNamePatterns, rank);
     rank++;
   }
+  const matchName = compileNameMatcher(patterns);
   return path => {
     if (owned.match(path) !== Infinity) return { redacted: true, reason: "secret-source" };
     const pathRank = paths.match(path);
-    let nameRank = Infinity;
+    if (pathRank === 0) return { redacted: true, reason: "secret-path" };
     const name = path.map(String).join(".").toLowerCase();
     const last = String(path[path.length - 1] ?? "").toLowerCase();
-    for (const [pattern, rank] of patterns) {
-      if (rank < nameRank && (name.includes(pattern) || last.includes(pattern))) nameRank = rank;
-    }
+    const nameRank = matchName(name, last);
     if (pathRank !== Infinity && pathRank <= nameRank) return { redacted: true, reason: "secret-path" };
     return nameRank !== Infinity ? { redacted: true, reason: "secret-name" } : { redacted: false };
+  };
+}
+
+// Native substring checks are cheaper for small policies. Large policies share
+// an Aho-Corasick automaton rather than scanning every pattern for every path.
+const DIRECT_NAME_PATTERN_LIMIT = 32;
+const MAX_NAME_MATCHER_STATES = 65_536;
+interface NameState { readonly next: Map<string, number>; failure: number; rank: number; }
+const nameState = (): NameState => ({ next: new Map(), failure: 0, rank: Infinity });
+
+function compileNameMatcher(patterns: ReadonlyMap<string, number>): (name: string, last: string) => number {
+  const direct = (name: string, last: string): number => {
+    let rank = Infinity;
+    for (const [pattern, candidate] of patterns) {
+      if (candidate < rank && (name.includes(pattern) || last.includes(pattern))) rank = candidate;
+      if (rank === 0) break;
+    }
+    return rank;
+  };
+  if (patterns.size <= DIRECT_NAME_PATTERN_LIMIT) return direct;
+
+  const states = [nameState()];
+  for (const [pattern, rank] of patterns) {
+    let current = 0;
+    // String.includes matches UTF-16 units, including isolated surrogates.
+    for (let index = 0; index < pattern.length; index++) {
+      const unit = pattern.charAt(index);
+      let child = states[current]!.next.get(unit);
+      if (child === undefined) {
+        // An optimization must not retain an unbounded number of per-unit maps.
+        if (states.length === MAX_NAME_MATCHER_STATES) { states.length = 0; return direct; }
+        child = states.length;
+        states.push(nameState());
+        states[current]!.next.set(unit, child);
+      }
+      current = child;
+    }
+    states[current]!.rank = Math.min(states[current]!.rank, rank);
+  }
+
+  // Retain only the earliest matching source rank, not lists of suffix matches.
+  const queue = [...states[0]!.next.values()];
+  for (const child of queue) states[child]!.rank = Math.min(states[child]!.rank, states[0]!.rank);
+  for (let head = 0; head < queue.length; head++) {
+    const parent = states[queue[head]!]!;
+    for (const [unit, childIndex] of parent.next) {
+      let fallback = parent.failure;
+      while (fallback !== 0 && !states[fallback]!.next.has(unit)) fallback = states[fallback]!.failure;
+      const child = states[childIndex]!;
+      child.failure = states[fallback]!.next.get(unit) ?? 0;
+      child.rank = Math.min(child.rank, states[child.failure]!.rank);
+      queue.push(childIndex);
+    }
+  }
+
+  function match(name: string): number {
+    let current = 0;
+    let rank = states[0]!.rank;
+    for (let index = 0; index < name.length && rank !== 0; index++) {
+      const unit = name.charAt(index);
+      while (current !== 0 && !states[current]!.next.has(unit)) current = states[current]!.failure;
+      current = states[current]!.next.get(unit) ?? 0;
+      rank = Math.min(rank, states[current]!.rank);
+    }
+    return rank;
+  }
+  return (name, last) => {
+    const rank = match(name);
+    return rank === 0 ? rank : Math.min(rank, match(last));
   };
 }

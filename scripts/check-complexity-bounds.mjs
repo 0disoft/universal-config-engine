@@ -1,5 +1,6 @@
 import { resolveConfig, checkConfigChanges, buildDiagnosticReport } from "../packages/core/dist/index.js";
 import { createArgvSource } from "../packages/node/dist/index.js";
+import { compileRedaction } from "../packages/core/dist/compiled-redaction.js";
 
 const mergeResults = [512, 1024].map((size) => ({
   size,
@@ -38,6 +39,25 @@ const redactionResults = [512, 1024].map(size => {
 });
 assertLinearGrowth("redaction policy accesses", redactionResults, "policyAccesses");
 
+const namePatternResults = [512, 1024].map(size => {
+  const match = compileRedaction([], { secretNamePatterns: Array.from({ length: size }, (_, index) => `secret_marker_${index}_end`) }, [], []);
+  const includes = String.prototype.includes;
+  let substringChecks = 0;
+  const transitions = measureMapOperations(() => {
+    String.prototype.includes = function (...args) {
+      substringChecks++;
+      return Reflect.apply(includes, this, args);
+    };
+    try {
+      for (let index = 0; index < size; index++) {
+        assertEqual(match(["service", `public_${String(index).padStart(6, "0")}`]).redacted, false, "name pattern miss");
+      }
+    } finally { String.prototype.includes = includes; }
+  });
+  return { size, patterns: size, queryOperations: { ...transitions, substringChecks, total: transitions.total + substringChecks } };
+});
+assertLinearGrowth("name pattern query operations", namePatternResults, "queryOperations");
+
 const argvResults = [128, 4096].flatMap((mappingCount) =>
   [undefined, "warning"].map((unmappedBehavior) =>
     measureArgvAccesses(128, mappingCount, unmappedBehavior)
@@ -53,6 +73,7 @@ process.stdout.write(`${JSON.stringify({
   mergeResults,
   policyResults,
   redactionResults,
+  namePatternResults,
   argvResults
 }, null, 2)}\n`);
 
