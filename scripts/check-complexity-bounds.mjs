@@ -136,21 +136,22 @@ const suffixGateResults = [512, 1024].map(size => {
 });
 assertLinearGrowth("bounded suffix checks", suffixGateResults, "suffixChecks");
 
-const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-positives", "gram-positives"].map(kind => {
+const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-positives", "gram-positives", "run-cap"].map(kind => {
   const results = [256, 512].map(size => {
     const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
     const candidates = Array.from({ length: size }, (_, index) => kind === "many-lengths" ? "a".repeat(index + 2) + "b"
       : kind === "hash-collisions" ? "a~".repeat(index + 2) : "ab" + "x".repeat(index + 8) + "cd");
     const name = kind === "many-lengths" ? "q".repeat(size * 32)
       : kind === "hash-collisions" ? "b_".repeat(size * 16)
-      : (kind === "gram-positives" ? "abxxxxcd" : "abxxcd").repeat(size * 8);
+      : (kind === "gram-positives" || kind === "run-cap" ? "abxxxxcd" : "abxxcd").repeat(size * 8)
+        + (kind === "run-cap" ? "q".repeat(33) : "");
     const match = compileRedaction([], { secretNamePatterns: [...padding, ...candidates] }, [], []);
     const charCodeAt = String.prototype.charCodeAt;
     const includes = String.prototype.includes;
     const slice = String.prototype.slice;
     const NativeUint32Array = globalThis.Uint32Array;
     let total = 0; let searches = 0; let slices = 0; let bytes = 0; let gramSearches = 0;
-    const candidateNames = kind === "gram-positives" ? new Set(candidates) : undefined;
+    const candidateNames = kind === "gram-positives" || kind === "run-cap" ? new Set(candidates) : undefined;
     let candidateReads = 0;
     String.prototype.charCodeAt = function (...args) {
       total++;
@@ -178,16 +179,16 @@ const adversarialNameResults = ["many-lengths", "hash-collisions", "filter-posit
       globalThis.Uint32Array = NativeUint32Array;
     }
     assertEqual(bytes, 131_072, `${kind} fixed query filter`);
-    assertEqual(slices, kind === "filter-positives" ? 2 : kind === "gram-positives" ? 3 : 0,
+    assertEqual(slices, kind === "filter-positives" ? 2 : candidateNames !== undefined ? 3 : 0,
       `${kind} bounded preview without substring windows`);
     if (gramSearches > 6) throw new Error("Gram preview exceeded three samples in two normalized strings.");
-    assertEqual(searches, kind === "filter-positives" ? 128 : kind === "gram-positives" ? size : 0,
+    assertEqual(searches, kind === "filter-positives" || kind === "gram-positives" ? 128 : kind === "run-cap" ? size : 0,
       `${kind} exact searches limited to surviving patterns`);
-    // Preview bypasses both the full gram query pass and all pattern gram probes.
-    if (candidateNames !== undefined) assertEqual(candidateReads, size * (4 + 8),
-      "uninformative preview skips gram probes");
-    if (candidateNames !== undefined && total > name.length + size * 12 + 1024)
-      throw new Error("Uninformative preview must skip the full gram query pass.");
+    // The maximum query run is four; later candidates reject after five units.
+    if (candidateNames !== undefined) assertEqual(candidateReads, size * (4 + 8) + (kind === "run-cap" ? 0 : (size - 128) * 5),
+      "run samples reject impossible native searches");
+    if (candidateNames !== undefined && total > name.length * 2 + size * 17 + 1024)
+      throw new Error("Run rejection exceeded one extra query pass and bounded pattern samples.");
     return { size, searches, slices, bytes, charReads: { total } };
   });
   // The first 128 native searches omit three four-unit gram samples. Doubling

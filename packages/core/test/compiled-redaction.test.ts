@@ -314,6 +314,27 @@ it("retains exact results when a missing preview gram activates an otherwise uni
   }
 });
 
+it("preserves literal decisions at the run-sample cap and after query resets", () => {
+  const padding = Array.from({ length: 40 }, (_, index) => String(index).padStart(2, "0") + "x".repeat(2000));
+  const candidates = Array.from({ length: 256 }, (_, index) => "ab" + "x".repeat(index + 40) + "cd");
+  const sources: ConfigSourceDescriptor[] = [
+    { id: "misses", displayName: "misses", kind: "object", priority: 0,
+      redaction: { secretNamePatterns: [...padding, ...candidates] } },
+    { id: "later", displayName: "later", kind: "object", priority: 1,
+      redaction: { secretNamePatterns: ["k".repeat(31), "ab😀tail", "ab\ud83dtail"] } },
+    { id: "paths", displayName: "paths", kind: "object", priority: 2,
+      redaction: { secretPaths: [["public"]] } }
+  ];
+  const match = compileRedaction(sources, {}, DEFAULT_SECRET_NAME_PATTERNS, []);
+  for (const length of [31, 32, 33, 4, 32]) {
+    const prefix = ("ab" + "x".repeat(length) + "cd").repeat(512);
+    for (const path of [[prefix], [prefix + "k".repeat(31)], [prefix + "ab😀tail"],
+      [prefix + "ab\ud83dtail"], [prefix, "A", "___Σ"], ["public"]]) {
+      expect(match(path)).toEqual(reference(sources, {}, [], path));
+    }
+  }
+});
+
 function reference(sources: readonly ConfigSourceDescriptor[], options: BuildDiagnosticReportOptions,
   owned: readonly ConfigPath[], path: ConfigPath) {
   if (owned.some(prefix => isPathPrefix(prefix, path))) return { redacted: true, reason: "secret-source" };

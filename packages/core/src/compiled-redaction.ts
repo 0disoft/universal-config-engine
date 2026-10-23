@@ -217,6 +217,29 @@ const MAX_PAIR_ONLY_SEARCHES = 128;
 const MAX_UNPRODUCTIVE_GRAM_CHECKS = 32;
 const GRAM_UNITS = 4;
 const GRAM_HASH_BASE = 257;
+const MAX_RUN_SAMPLE_UNITS = 32;
+
+/** A larger query run disables the bounded pattern sample. */
+function maximumRun(value: string): number {
+  let longest = 0; let run = 0; let previous = -1;
+  for (let index = 0; index < value.length; index++) {
+    const unit = value.charCodeAt(index);
+    run = unit === previous ? run + 1 : 1;
+    longest = Math.max(longest, run);
+    if (longest > MAX_RUN_SAMPLE_UNITS) return longest;
+    previous = unit;
+  }
+  return longest;
+}
+
+/** A match cannot contain a repeated-unit run longer than either query string. */
+function hasImpossibleRun(pattern: string, limit: number): boolean {
+  if (limit > MAX_RUN_SAMPLE_UNITS || pattern.length <= limit) return false;
+  const start = (pattern.length - limit - 1) >>> 1;
+  const unit = pattern.charCodeAt(start);
+  for (let offset = 1; offset <= limit; offset++) if (pattern.charCodeAt(start + offset) !== unit) return false;
+  return true;
+}
 
 /** Gate impossible prefixes before checking patterns with a reusable UTF-16 pair filter. */
 function compileStreamingNameMatcher(
@@ -351,6 +374,7 @@ function compileStreamingNameMatcher(
     let searches = 0;
     let gramsReady = false;
     let gramHits = 0;
+    let runLimit: number | undefined;
     for (const [pattern, candidate] of patterns) {
       if (candidate >= rank || pattern.length > upper) continue;
       if (pattern.length >= 2 && !possible(pattern)) continue;
@@ -368,6 +392,10 @@ function compileStreamingNameMatcher(
           // A saturated/uninformative filter must not add probes indefinitely.
           gramHits++;
         }
+      }
+      if (gramHits === MAX_UNPRODUCTIVE_GRAM_CHECKS) {
+        runLimit ??= Math.max(maximumRun(name), separate ? maximumRun(last) : 0);
+        if (hasImpossibleRun(pattern, runLimit)) continue;
       }
       // Bloom collisions only schedule native exact searches. Do not allocate
       // substrings at every window, even for adversarial polynomial collisions.

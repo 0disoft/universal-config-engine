@@ -141,6 +141,17 @@ gram survivors, probing stops for that query because the filter is uninformative
 Activation and survivor counters reset with each query. There is no new buffer,
 per-pattern metadata, substring-window enumeration or persistent cache.
 
+When gram filtering is bypassed or stops after consecutive survivors, a lazy run
+check can reject more native searches. It scans each normalized query string at
+most once for the longest sequence of an identical UTF-16 unit. A run above 32
+ends the scan early and disables this optimization. Otherwise, a centered pattern
+window of `maximumRun + 1` units (at most 33 reads) cannot consist of one repeated
+unit if the pattern is present. Such candidates are rejected exactly; mixed
+windows, shorter patterns and queries above the run cap retain native searching.
+The query summary is a local number reset on every call, without extra buffers,
+collections or retained pattern metadata. This bounds the added work rather than
+claiming every exact search is eliminated.
+
 `pnpm run benchmark:name-patterns` includes compilation plus 4,096 nonmatching
 paths and reports five-run medians after warmup. Local measurements with 4,096
 distinct patterns fell from about 1,280 ms to 18 ms; this synthetic workload does
@@ -198,7 +209,7 @@ fixtures allocated outside timing. Local seven-run query medians changed from
 21.7 / 38.4 ms to 4.7 / 5.4 ms. These are synthetic measurements, not production
 latency guarantees. The deterministic guard reduces exact searches for four
 4,096-unit queries from 32,768 to 360; doubling patterns to 16,384 requires 680
-searches, with character reads growing from 149,096 to 281,448. The preview avoids
+searches, with character reads growing from 149,096 to 281,628. The preview avoids
 an unproductive extra query pass at the larger size. Both sizes retain
 exactly 139,264 bytes of filter buffers. If all four sampled pairs occur or the
 Bloom filter collides, exact searches remain necessary; the extra sample adds a
@@ -213,11 +224,12 @@ preview slices without substring-window enumeration, and cover frequent filter p
 sampled pairs occur but a sampled four-unit gram is absent, exact searches stay
 at 128 for both 256 and 512 candidate patterns. Query character reads are 41,196
 and 83,180; a constant allowance accounts for the first 128 searches skipping gram
-probes. A separate fixture has every sampled gram present too: all 256 / 512
-native searches remain necessary, but the preview skips both the full gram query
-pass and pattern gram probes. Guards require exactly three four-unit slices,
-at most six native gram searches across the two normalized strings, and one
-pair-query scan. A regression also activates the filter with an absent preview
+probes. A separate fixture has every sampled gram present too: its maximum query
+run is four, so five-unit center windows now hold exact searches at 128 for both
+256 / 512 candidates. A run-cap fixture appends 33 equal units and retains all
+256 / 512 searches. Guards require exactly three four-unit slices, at most six
+native gram searches across the two normalized strings, one pair-query scan and
+at most one additional run scan. A regression also activates the filter with an absent preview
 gram before exercising the existing 32-survivor cutoff and exact-match fallback.
 
 Permanent eight-path benchmarks use roughly 16,384-unit names and 512 / 2,048
@@ -236,6 +248,17 @@ uninformative 512-pattern case changed from 19.2 to 16.6 ms. Selective 512 / 2,0
 pattern cases changed from 8.8 / 10.9 ms to 9.0 / 11.2 ms. These local synthetic
 medians do not establish universal speedups or bounds on native search time.
 The benchmark also retains a 65,536-unit uninformative-query fixture.
+
+A subsequent comparison of run rejection against the preceding implementation,
+using the same eight warmups and 15 alternating batches, changed the 512-pattern
+uninformative cases from 17.3 to 6.6 ms at 16,384 units and 45.2 to 28.1 ms at
+65,536 units. A query with a 33-unit run retained its native fallback (18.3 to
+18.3 ms); the selective pair-hit case changed from 9.4 to 9.2 ms. The benchmark
+retains the run-cap fallback fixture, and regression tests cover 31/32/33-unit
+boundaries, actual matches, source reasons, surrogate units and query resets.
+These synthetic measurements do not establish a production latency guarantee;
+patterns without impossible center runs still require exact checking. Filter
+buffers retain the existing 136 KiB ceiling.
 
 ## Consumer Matrix
 

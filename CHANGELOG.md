@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Reject impossible repeated-unit patterns after uninformative gram filtering by
+  comparing a bounded center run with the query's maximum run, avoiding repeated
+  exact searches without new buffers or per-pattern metadata.
 - Preview up to three literal grams before adaptive query filtering, bypassing
   its full query pass when the samples already occur; retain the 136 KiB buffer
   ceiling with at most three temporary four-unit strings per query.
