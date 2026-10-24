@@ -102,7 +102,8 @@ function buildReport(
 ): DiagnosticReport {
   const sourceIdsWithErrors = new Set(
     result.issues
-      .filter((issue) => issue.severity === "error" && issue.sourceId !== undefined)
+      .filter((issue) => issue.severity === "error" && issue.sourceId !== undefined
+        && issue.validatorId === undefined)
       .map((issue) => issue.sourceId as string)
   );
 
@@ -182,6 +183,7 @@ function sanitizeIssue(
     severity: issue.severity,
     ...(issue.path === undefined ? {} : { path: [...issue.path] }),
     ...(issue.sourceId === undefined ? {} : { sourceId: issue.sourceId }),
+    ...(issue.validatorId === undefined ? {} : { validatorId: issue.validatorId }),
     message: "Diagnostic message redacted because it is associated with a secret path or source."
   };
 }
@@ -205,13 +207,17 @@ function sanitizeProvenance(
 }
 
 function shouldSanitizeDiagnostic(
-  diagnostic: Pick<ConfigIssue, "path" | "sourceId"> & { readonly previousSourceId?: string },
+  diagnostic: Pick<ConfigIssue, "path" | "sourceId"> & {
+    readonly previousSourceId?: string; readonly validatorId?: string;
+    readonly category?: ConfigIssue["category"]; readonly action?: ProvenanceEvent["action"];
+  },
   sourceById: ReadonlyMap<string, ConfigSourceDescriptor>,
   redactionContext: RedactionContext
 ): boolean {
   const { path, sourceId, previousSourceId } = diagnostic;
+  const validatorOrigin = diagnostic.validatorId !== undefined || diagnostic.action === "validated";
   if (
-    (sourceId !== undefined && redactionContext.secretSourceIds.has(sourceId)) ||
+    (!validatorOrigin && sourceId !== undefined && redactionContext.secretSourceIds.has(sourceId)) ||
     (previousSourceId !== undefined && redactionContext.secretSourceIds.has(previousSourceId))
   ) {
     return true;

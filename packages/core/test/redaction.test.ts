@@ -4,6 +4,27 @@ import type { ConfigIssue, ProvenanceEvent } from "../src/index.js";
 import { source } from "./helpers/source.js";
 
 describe("buildDiagnosticReport", () => {
+  it("separates validator failures from a loaded secret source with the same id", async () => {
+    const result = await runConfigPipeline({ context: undefined,
+      loaders: [{ descriptor: { id: "config", kind: "object", priority: 0, displayName: "config",
+        redaction: { secretSource: true } }, load: () => ({ value: {} }) }],
+      validators: [{ id: "config", validate: () => ({ ok: false, issues: [
+        { code: "invalid_port", severity: "error", path: ["server", "port"] },
+        { code: "missing_password", severity: "error", path: ["auth", "password"] }
+      ] }) }]
+    });
+    expect(result.report.sources[0]?.status).toBe("loaded");
+    expect(result.report.issues[0]).toMatchObject({ sourceId: "config", validatorId: "config" });
+    expect(result.report.issues[0]?.message).toContain("invalid_port");
+    expect(result.report.issues[1]?.message).toMatch(/^Diagnostic message redacted/);
+    expect(result.report.issues[1]?.validatorId).toBe("config");
+    expect(result.report.provenance.find(event => event.action === "validated")?.message).toContain("completed");
+    const actualFailure = buildDiagnosticReport({ ...result.result, issues: [
+      { category: "parse", code: "parse_failed", severity: "error", sourceId: "config", message: "parse failure" }
+    ] });
+    expect(actualFailure.sources[0]?.status).toBe("failed");
+  });
+
   it.each(["descriptor", "options"].flatMap(policy => [2, 200].map(maxDiagnostics => ({ policy, maxDiagnostics }))))(
     "fails closed when $policy ownership is truncated at diagnostic budget $maxDiagnostics", async ({ policy, maxDiagnostics }) => {
     const loaders = [

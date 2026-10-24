@@ -27,6 +27,7 @@
       "severity": "error",
       "path": ["server", "port"],
       "sourceId": "schema:server",
+      "validatorId": "schema:server",
       "message": "Validator schema:server reported validation issue minimum."
     }
   ],

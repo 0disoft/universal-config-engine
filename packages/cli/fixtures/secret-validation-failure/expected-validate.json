@@ -28,6 +28,7 @@
       "severity": "error",
       "path": ["database", "password"],
       "sourceId": "schema:database",
+      "validatorId": "schema:database",
       "message": "Diagnostic message redacted because it is associated with a secret path or source."
     }
   ],

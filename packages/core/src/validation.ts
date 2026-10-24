@@ -111,7 +111,10 @@ export async function runValidators(input: RunValidatorsInput): Promise<RunValid
     }
   }
 
-  return { issues, provenance };
+  return {
+    issues: issues.map(issue => issue.sourceId === undefined ? issue : { ...issue, validatorId: issue.sourceId }),
+    provenance
+  };
 }
 
 function provenanceLimitIssue(maximum: number): ConfigIssue {

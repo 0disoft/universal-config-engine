@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Separate validator diagnostics from input source status and source-only masking
+  when their IDs coincide, retaining legacy sourceId and adding validatorId.
 - Extend bounded repeated-run rejection to alternating UTF-16 pairs when uniform
   runs cannot exclude a candidate, reducing overflow exact searches without new
   buffers or pattern metadata and preserving the existing span cap.

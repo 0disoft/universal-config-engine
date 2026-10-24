@@ -66,6 +66,8 @@ export interface ConfigIssue {
   readonly message: string;
   readonly path?: ConfigPath;
   readonly sourceId?: string;
+  /** Validation origin; sourceId remains as a legacy correlation identifier. */
+  readonly validatorId?: string;
   readonly details?: Readonly<Record<string, string | number | boolean | null>>;
 }
 

@@ -76,7 +76,7 @@ describe("runValidators", () => {
     expect(loaded.issues[0]?.details).toEqual(details);
     expect(loaded.issues[0]?.details).not.toBe(details);
     expect(validation.issues).toEqual([{
-      category: "validation", code: "notice", severity: "warning", sourceId: "validator",
+      category: "validation", code: "notice", severity: "warning", sourceId: "validator", validatorId: "validator",
       message: "Validator validator reported validation issue notice."
     }]);
   });
@@ -168,7 +168,7 @@ describe("runValidators", () => {
       category: "validation",
       code: "validator_threw",
       severity: "error",
-      sourceId: "throws",
+      sourceId: "throws", validatorId: "throws",
       message: "Validator throws threw an exception. Exception details were omitted from diagnostics."
     });
     expect(JSON.stringify(validation)).not.toContain("example-secret-value");
@@ -218,7 +218,7 @@ describe("runValidators", () => {
         code: "root_invalid",
         severity: "error",
         path: ["database", "password"],
-        sourceId: "root-check",
+        sourceId: "root-check", validatorId: "root-check",
         message: "Validator root-check reported validation issue root_invalid."
       }
     ]);
@@ -256,7 +256,7 @@ describe("runValidators", () => {
         category: "validation",
         code: "validator_issue_invalid",
         severity: "error",
-        sourceId: "malicious-code",
+        sourceId: "malicious-code", validatorId: "malicious-code",
         message: "Validator malicious-code returned invalid issue at index 0."
       }
     ]);
@@ -421,28 +421,28 @@ describe("runValidators", () => {
       code: "custom_failure",
       severity: "error",
       path: ["server", "port"],
-      sourceId: "malformed-issues",
+      sourceId: "malformed-issues", validatorId: "malformed-issues",
       message: "Validator malformed-issues reported validation issue custom_failure."
     });
     expect(validation.issues).toContainEqual({
       category: "validation",
       code: "validator_issue_invalid",
       severity: "error",
-      sourceId: "malformed-issues",
+      sourceId: "malformed-issues", validatorId: "malformed-issues",
       message: "Validator malformed-issues returned invalid issue at index 1."
     });
     expect(validation.issues).toContainEqual({
       category: "validation",
       code: "validator_issue_invalid",
       severity: "error",
-      sourceId: "malformed-issues",
+      sourceId: "malformed-issues", validatorId: "malformed-issues",
       message: "Validator malformed-issues returned invalid issue at index 2."
     });
     expect(validation.issues).toContainEqual({
       category: "validation",
       code: "validator_result_invalid",
       severity: "error",
-      sourceId: "malformed-result",
+      sourceId: "malformed-result", validatorId: "malformed-result",
       message: "Validator malformed-result returned an invalid result."
     });
     expect(validation.provenance).toContainEqual({
@@ -493,14 +493,14 @@ describe("runValidators", () => {
       category: "validation",
       code: "validator_failed_without_issues",
       severity: "error",
-      sourceId: "false-without-error",
+      sourceId: "false-without-error", validatorId: "false-without-error",
       message: "Validator false-without-error returned ok false without any error issues."
     });
     expect(validation.issues).toContainEqual({
       category: "validation",
       code: "custom_error",
       severity: "error",
-      sourceId: "true-with-error",
+      sourceId: "true-with-error", validatorId: "true-with-error",
       message: "Validator true-with-error reported validation issue custom_error."
     });
     expect(validation.provenance).toContainEqual({
@@ -564,7 +564,7 @@ describe("runValidators", () => {
         category: "validation",
         code: "first_failure",
         severity: "error",
-        sourceId: "many-issues",
+        sourceId: "many-issues", validatorId: "many-issues",
         message: "Validator many-issues reported validation issue first_failure."
       },
       {

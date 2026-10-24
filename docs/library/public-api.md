@@ -64,6 +64,10 @@ Repository Type: library
   without stack overflow; caller and resolved config objects remain unfrozen.
 - `ValidatorIssue`: structured validator output containing a stable code, severity,
   and optional normalized config path.
+- Validation `ConfigIssue` entries identify their origin with `validatorId`.
+  `sourceId` remains a legacy correlation field; validator errors do not mark an
+  input source with the same ID as failed or inherit its source-only secret policy.
+  Path-based secret policies still apply to validator diagnostics.
 - `ConfigProvenance`: value-level source, override, default, coercion, validation,
   and redaction report.
 - `RedactedDiagnostic`: secret-safe errors and explain output.
