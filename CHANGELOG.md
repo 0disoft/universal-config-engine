@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Align stable installation documentation with the 1.2.0 baseline and distinguish
+  source-checkout additions from published APIs instead of recommending an old RC.
 - Apply declaration coercion rules and resource limits in the application adoption
   example, with installed CLI/application parity checks for coercion and rejection.
 - Separate validator diagnostics from input source status and source-only masking

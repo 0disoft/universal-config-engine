@@ -11,6 +11,8 @@ npm install --save-dev @0disoft/universal-config-engine-cli
 ```
 
 Node.js `>=24` and ESM are required.
+The stable baseline is **1.2.0**. Normal installation selects the stable `latest`
+tag; the historical `1.2.0-rc.1` candidate is not needed.
 
 ## Use
 
@@ -53,10 +55,18 @@ and [pipeline configuration reference](https://github.com/0disoft/universal-conf
 
 Version 1.2 adds opt-in `explain --values`, typed `--path` queries,
 `diff --config before.json --against after.json` and CI checks with `--policy`.
-Install `1.2.0-rc.1` explicitly to try the release candidate. Legacy commands keep schema
+These features are in stable 1.2.0. Legacy commands keep schema
 `0.2`; new output uses `inspection-1`, `diff-1` or `change-check-1`. Secret values
 remain hidden and secret comparisons require explicit opt-in. See the
 [inspection and diff guide](https://github.com/0disoft/universal-config-engine/blob/main/docs/cli/inspection-and-diff.md).
+
+## Unreleased on main
+
+The source checkout additionally contains init/doctor, public-share reports,
+file-format adapters, discovery, profiles/inheritance and reload/watch examples.
+These additions are not part of the published 1.2.0 API. Follow the
+[source-checkout adoption example](https://github.com/0disoft/universal-config-engine/blob/main/examples/adoption/README.md)
+to try them; install instructions above target the stable release.
 
 ## License
 

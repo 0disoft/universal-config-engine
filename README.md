@@ -1,6 +1,6 @@
 # universal-config-engine
 
-Status: Draft
+Status: Stable 1.2.0 baseline, with unreleased additions on main
 Scope: backend
 Repository Type: library
 Addons: cli-tool
@@ -65,6 +65,10 @@ Not owned:
 local files, build outputs, caches, and secret files under control.
 
 ## Install
+
+The stable installation baseline is **1.2.0**, promoted from `1.2.0-rc.1`.
+Normal package installation uses the stable `latest` tag. Historical release
+candidates are not required; `next` is reserved for intentionally testing a candidate.
 
 Unreleased local-adoption work (ADR 0018) adds official file dialects, bounded
 discovery, typed validation output, profiles/inheritance, disposable reload/watch,
