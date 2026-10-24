@@ -3,7 +3,7 @@ import { discoverPipelineDeclaration } from "@0disoft/universal-config-engine-no
 import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
 import { parseInspectionArgs } from "./args.js";
 import type { CliRuntime } from "./types.js";
-import { isProfileName } from "./pipeline/declaration-fields.js";
+import { isPipelineProfileName as isProfileName } from "@0disoft/universal-config-engine-node";
 
 export interface PreparedDiscoveryArgs {
   readonly args: readonly string[];

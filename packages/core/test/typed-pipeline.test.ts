@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  createStandardSchemaValidator, runValidatedConfigPipeline, type ConfigLoader, type ValidatorAdapter
+  createStandardSchemaValidator, runValidatedConfigPipeline, runConfigPipeline, validateConfigOutput,
+  type ConfigLoader, type ValidatorAdapter
 } from "../src/index.js";
 
 const loader = (value: unknown): ConfigLoader => ({
@@ -9,6 +10,16 @@ const loader = (value: unknown): ConfigLoader => ({
 const success = (): ValidatorAdapter<{ port: number }> => ({ id: "typed", validate: () => ({ ok: true, value: { port: 443 }, issues: [] }) });
 
 describe("separate validated pipeline output", () => {
+  it("validates existing pipeline output without loading sources again", async () => {
+    const load = vi.fn(() => ({ value: { port: 443 } }));
+    const pipeline = await runConfigPipeline({ context: undefined, loaders: [{ ...loader({}), load }] });
+    const result = await validateConfigOutput(pipeline, success());
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.port).toBe(443);
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(pipeline.result.provenance).toHaveLength(1);
+    expect(result.result.provenance).toHaveLength(2);
+  });
   it("infers transformed output while preserving resolved config and provenance", async () => {
     const validate = vi.fn(async (value: unknown) => {
       expect(Object.isFrozen(value)).toBe(true);

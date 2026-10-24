@@ -164,10 +164,17 @@ shares aggregate validation budgets and returns no typed value on failure. The
 original resolved config, report schema and ADR 0009 validator behavior remain
 unchanged. The typed value is application data and may contain secrets.
 
-CLI `selectPipelineProfile` compiles a named profile into the base declaration
+Node `selectPipelineProfile` (also re-exported by CLI) compiles a named profile into the base declaration
 without process-environment inference. It preserves ids/priorities, combines
 declared stages and limits, and rejects malformed profiles or aggregate collisions.
 See [profiles and inheritance](../cli/profiles-and-inheritance.md).
+
+Node `loadConfig` / `loadValidatedConfig` own the shared app/CLI execution path;
+declaration/source/profile APIs are re-exported by CLI for compatibility. Core
+`validateConfigOutput` validates typed output from an existing pipeline without
+reloading sources. Ajv remains an explicitly supplied optional Node factory.
+See [application loading](../adapters/load-config.md) for failure and cancellation
+behavior. No runtime dependencies were added to core or Node.
 
 ## Package Boundary Direction
 

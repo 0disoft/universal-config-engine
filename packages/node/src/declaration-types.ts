@@ -1,0 +1,87 @@
+import type { CoercionRule, ConfigSourceDescriptor, OverrideMapping, ResourceLimitPolicy } from "@0disoft/universal-config-engine-core";
+import type { ConfigFileFormat } from "./config-file-loader.js";
+import type { UnmappedInputBehavior } from "./input-policy.js";
+
+export interface PipelineDeclaration {
+  readonly sources: readonly PipelineSourceDeclaration[];
+  readonly validators?: readonly PipelineValidatorDeclaration[];
+  readonly coercionRules?: readonly CoercionRule[];
+  readonly limits?: Partial<ResourceLimitPolicy>;
+  readonly profiles?: Readonly<Record<string, PipelineProfileDeclaration>>;
+  readonly extends?: readonly string[];
+}
+
+export interface PipelineProfileDeclaration {
+  readonly sources?: readonly PipelineSourceDeclaration[];
+  readonly validators?: readonly PipelineValidatorDeclaration[];
+  readonly coercionRules?: readonly CoercionRule[];
+  readonly limits?: Partial<ResourceLimitPolicy>;
+}
+
+export type PipelineSourceDeclaration =
+  | ObjectSourceDeclaration
+  | JsonFileSourceDeclaration
+  | FileAdapterSourceDeclaration
+  | DotenvFileSourceDeclaration
+  | ProcessEnvSourceDeclaration
+  | ArgvSourceDeclaration;
+
+interface BaseSourceDeclaration {
+  readonly id: string;
+  readonly priority: number;
+  readonly displayName?: string;
+  readonly redaction?: ConfigSourceDescriptor["redaction"];
+}
+
+export interface ObjectSourceDeclaration extends BaseSourceDeclaration {
+  readonly kind: "object";
+  readonly value: unknown;
+}
+
+export interface JsonFileSourceDeclaration extends BaseSourceDeclaration {
+  readonly kind: "json-file";
+  readonly path: string;
+  readonly maxFileBytes?: number;
+}
+
+export interface DotenvFileSourceDeclaration extends BaseSourceDeclaration {
+  readonly kind: "dotenv-file";
+  readonly path: string;
+  readonly maxFileBytes?: number;
+}
+
+export interface FileAdapterSourceDeclaration extends BaseSourceDeclaration {
+  readonly kind: "adapter";
+  readonly format: ConfigFileFormat;
+  readonly path: string;
+  readonly maxFileBytes?: number;
+  readonly allowTrailingComma?: boolean;
+}
+
+export interface ProcessEnvSourceDeclaration extends BaseSourceDeclaration {
+  readonly kind: "process-env";
+  readonly mappings: readonly OverrideMapping[];
+  readonly maxEnvEntries?: number;
+  readonly unmappedBehavior?: UnmappedInputBehavior;
+  readonly unmappedPrefix?: string;
+}
+
+export interface ArgvSourceDeclaration extends BaseSourceDeclaration {
+  readonly kind: "argv";
+  readonly mappings: readonly OverrideMapping[];
+  readonly maxArgvEntries?: number;
+  readonly unmappedBehavior?: UnmappedInputBehavior;
+}
+
+export interface AjvJsonSchemaValidatorDeclaration {
+  readonly id: string;
+  readonly kind: "json-schema-ajv";
+  readonly schema: boolean | Record<string, unknown>;
+}
+
+export interface PipelineValidatorDeclaration {
+  readonly id: string;
+  readonly kind: string;
+  readonly schema?: unknown;
+}
+

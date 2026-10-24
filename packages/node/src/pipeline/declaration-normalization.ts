@@ -5,12 +5,12 @@ import type {
   RedactionPolicyInput,
   ResourceLimitPolicy
 } from "@0disoft/universal-config-engine-core";
-import type { ConfigFileFormat } from "@0disoft/universal-config-engine-node";
+import type { ConfigFileFormat } from "../config-file-loader.js";
 import type {
   PipelineDeclaration,
   PipelineValidatorDeclaration,
   PipelineSourceDeclaration
-} from "../types.js";
+} from "../declaration-types.js";
 import { PipelineDeclarationError, pipelineDeclarationIssue } from "./declaration-diagnostics.js";
 import { isRecord, isPositiveInteger, profileToDeclaration } from "./declaration-fields.js";
 

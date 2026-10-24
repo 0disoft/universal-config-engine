@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAjvValidator } from "@0disoft/universal-config-engine-validator-ajv";
 import { createDeclaredValidators } from "../src/validators.js";
 import { executeDeclaration } from "../src/execution.js";
-import { validatePipelineDeclaration } from "../src/pipeline/declaration-validation.js";
 import { withTempDir } from "./helpers/temp-directory.js";
 
 vi.mock("@0disoft/universal-config-engine-validator-ajv", async importOriginal => {
@@ -18,9 +17,6 @@ describe("validator compilation budgets", () => {
     const validators = new Array(2);
     Object.defineProperty(validators, 0, { get() { throw new Error("Must not inspect"); } });
     const declaration = { sources: [], validators, limits: { maxProvenanceEvents: 1 } };
-    expect(validatePipelineDeclaration(declaration)).toEqual([
-      expect.objectContaining({ code: "max_provenance_events_exceeded" })
-    ]);
     expect(createDeclaredValidators(declaration)).toMatchObject({ validators: [], issues: [
       expect.objectContaining({ code: "max_provenance_events_exceeded" })
     ] });

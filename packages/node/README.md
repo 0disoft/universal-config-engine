@@ -12,6 +12,15 @@ npm install @0disoft/universal-config-engine-core @0disoft/universal-config-engi
 
 Node.js `>=24` and ESM are required.
 
+## Application Declaration API (Unreleased)
+
+`loadConfig({ configPath, validatorFactory? })` applies declaration profiles,
+source loading, coercion, resource limits and validation through the same execution
+path as the CLI. `loadValidatedConfig({ ...options, outputValidator })` additionally
+returns separate typed application output. Neither requires importing the CLI.
+Supply `createAjvValidator` from the optional Ajv adapter when declaring schemas;
+missing factories fail explicitly. See the [application loading contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/adapters/load-config.md).
+
 ## Process Environment Source
 
 ```js

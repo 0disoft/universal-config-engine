@@ -1,5 +1,5 @@
 import { resolveConfig } from "./merge.js";
-import { applyPipelineValidators, runConfigPipeline, type RunConfigPipelineInput, type RunConfigPipelineResult } from "./pipeline.js";
+import { combineConfigIssues, applyPipelineValidators, runConfigPipeline, type RunConfigPipelineInput, type RunConfigPipelineResult } from "./pipeline.js";
 import { buildDiagnosticReport } from "./redaction.js";
 import { normalizeResourceLimits } from "./limits.js";
 import { isRecord } from "./adapter-guards.js";
@@ -28,14 +28,28 @@ export async function runValidatedConfigPipeline<TOutput, TContext = undefined>(
       message: "The output validator must have a distinct id from pipeline validators." });
   }
   const pipeline = await runConfigPipeline(input);
-  if (!pipeline.result.ok || pipeline.report.status !== "ok") return { ...pipeline, ok: false };
+  return validateConfigOutput(pipeline, input.outputValidator, input);
+}
 
+/** Validate typed output from an existing pipeline without reloading its sources. */
+export async function validateConfigOutput<TOutput>(
+  pipeline: RunConfigPipelineResult,
+  validator: ValidatorAdapter<TOutput>,
+  options: Pick<RunConfigPipelineInput, "signal" | "onError" | "reportOptions"> = {}
+): Promise<RunValidatedConfigPipelineResult<TOutput>> {
+  if (!pipeline.result.ok || pipeline.report.status !== "ok") return { ...pipeline, ok: false };
+  if (pipeline.result.provenance.some(event => event.action === "validated" && event.sourceId === validator.id)) {
+    const issues = combineConfigIssues(pipeline.result.issues, [{ category: "usage", code: "typed_validator_id_conflict",
+      severity: "error", message: "The output validator must have a distinct id from pipeline validators." }], pipeline.result.limits.maxDiagnostics);
+    const result = { ...pipeline.result, ok: false, issues };
+    return { ok: false, result, report: buildDiagnosticReport(result, options.reportOptions) };
+  }
   let captured = false;
   let value!: TOutput;
   const outputValidator: ValidatorAdapter = {
-    id: input.outputValidator.id,
+    id: validator.id,
     async validate(validatorInput) {
-      const validated = await input.outputValidator.validate(validatorInput);
+      const validated = await validator.validate(validatorInput);
       if (isRecord(validated) && validated.ok === true && Array.isArray(validated.issues)) {
         if (!Object.hasOwn(validated, "value")) {
           return { ok: false, issues: [{ code: "typed_output_missing", severity: "error" }] };
@@ -48,8 +62,8 @@ export async function runValidatedConfigPipeline<TOutput, TContext = undefined>(
   };
   // Running after the ordinary pipeline avoids invoking output transforms on
   // invalid inputs. The existing stage owns frozen inputs and aggregate budgets.
-  const result = await applyPipelineValidators(pipeline.result, [outputValidator], input);
-  const report = buildDiagnosticReport(result, input.reportOptions);
+  const result = await applyPipelineValidators(pipeline.result, [outputValidator], options);
+  const report = buildDiagnosticReport(result, options.reportOptions);
   return result.ok && report.status === "ok" && captured
     ? { ok: true, value, result, report }
     : { ok: false, result, report };

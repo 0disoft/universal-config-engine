@@ -1,11 +1,9 @@
 import { dirname, relative, sep } from "node:path";
-import {
-  createArgvSource,
-  createProcessEnvSource,
-  loadDotenvFileSource,
-  loadJsonFileSource,
-  loadConfigFileSource
-} from "@0disoft/universal-config-engine-node";
+import { createArgvSource } from "../argv-source.js";
+import { createProcessEnvSource } from "../process-env-source.js";
+import { loadDotenvFileSource } from "../dotenv-file-loader.js";
+import { loadJsonFileSource } from "../json-file-loader.js";
+import { loadConfigFileSource } from "../config-file-loader.js";
 import type {
   ConfigPath,
   ConfigIssue,
@@ -14,13 +12,14 @@ import type {
   RedactionPolicyInput,
   SourceKind
 } from "@0disoft/universal-config-engine-core";
+import type { ConfigOperationOptions } from "@0disoft/universal-config-engine-core";
 import { pathToKey } from "@0disoft/universal-config-engine-core";
-import type { PipelineDeclaration, PipelineSourceDeclaration } from "../types.js";
+import type { PipelineDeclaration, PipelineSourceDeclaration } from "../declaration-types.js";
 import { resolveConfigRelativePath, createSourcePathCanonicalizer } from "./source-paths.js";
 import { PipelineDeclarationError } from "./declaration-diagnostics.js";
 import { validateSourceBudget } from "./declaration-validation.js";
 
-export async function loadDeclaredSources(input: {
+export async function loadDeclaredSources(input: ConfigOperationOptions & {
   readonly declaration: PipelineDeclaration;
   readonly configPath: string;
   readonly cwd: string;
@@ -35,6 +34,9 @@ export async function loadDeclaredSources(input: {
   const canonicalize = createSourcePathCanonicalizer();
 
   for (const [index, source] of input.declaration.sources.entries()) {
+    if (input.signal?.aborted) throw new PipelineDeclarationError([{
+      category: "source-load", code: "operation_aborted", severity: "error", message: "Configuration operation was cancelled."
+    }]);
     const descriptor = createDescriptor(source);
 
     switch (source.kind) {
@@ -57,6 +59,8 @@ export async function loadDeclaredSources(input: {
           break;
         }
         const fileInput = { descriptor, filePath: filePath.path, allowedRootPath: filePath.allowedRootPath,
+          ...(input.signal === undefined ? {} : { signal: input.signal }),
+          ...(input.onError === undefined ? {} : { onError: input.onError }),
           ...(source.maxFileBytes === undefined ? {} : { maxFileBytes: source.maxFileBytes }) };
         const loaded = source.kind === "adapter"
           ? await loadConfigFileSource({ ...fileInput, format: source.format,

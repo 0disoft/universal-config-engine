@@ -7,6 +7,10 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Share application/CLI declaration execution through Node loadConfig and
+  loadValidatedConfig, keeping CLI exports compatible and Ajv an optional factory.
+  Reuse core typed-output validation without reloading sources and forward optional
+  cancellation/private error observers across file and validator stages.
 - Add standalone CLI help/version, terminal-safe per-issue doctor diagnostics and
   a non-overwriting defaults/environment/schema initialization example.
 - Align stable installation documentation with the 1.2.0 baseline and distinguish

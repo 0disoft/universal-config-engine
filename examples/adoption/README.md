@@ -2,7 +2,8 @@
 
 Status: Unreleased ADR 0018 example. These APIs are not in published 1.2.0 yet.
 Use the source checkout below; after a later release this folder can be copied to
-a project that installs the matching core, node, CLI and Ajv packages.
+a project that installs the matching core, node and Ajv packages (and CLI for
+command-line examples).
 
 From the repository root:
 
@@ -25,12 +26,14 @@ Without `--profile` only defaults/YAML apply,
 even if `NODE_ENV` or `APP_PORT` exists. YAML paths use the common declaration's
 directory; TOML paths use the top declaration's directory. Source ids stay unique.
 
-The library example reuses declaration/source/validator APIs, obtains separate
+The library example uses Node `loadConfig` / `loadValidatedConfig`, obtains separate
 typed output, performs a serialized refresh and starts/closes a file watcher.
 It uses package imports and must run inside an installed consumer, not directly
 from this workspace root (which does not depend on its own packages). The packed
 smoke below prepares that isolated consumer and runs `node adoption/library.mjs`.
 It prints only fixed lifecycle statuses and a public-share diagnostic projection.
+Applications no longer import CLI helpers or manually reconstruct pipeline stages.
+The Ajv adapter is passed explicitly as the declaration's validator factory.
 An application can retain the watcher until shutdown; this example closes every
 handle so the demonstration finishes. Supply actual dependencies when changing
 the graph. `load` owns real application deadlines and external resources.

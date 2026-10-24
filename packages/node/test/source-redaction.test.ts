@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { loadDeclaredSources } from "../src/pipeline/source-loading.js";
-import type { PipelineSourceDeclaration } from "../src/types.js";
+import type { PipelineSourceDeclaration } from "../src/declaration-types.js";
 
 it("deduplicates secret paths in first-seen order without conflating typed or dotted paths", async () => {
   const paths = [["first"], ["a.b"], ["a", "b"], ["items", 0], ["items", "0"]];

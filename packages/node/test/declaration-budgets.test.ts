@@ -3,6 +3,13 @@ import { loadDeclaredSources } from "../src/pipeline/source-loading.js";
 import { validatePipelineDeclaration } from "../src/pipeline/declaration-validation.js";
 
 describe("declaration budget preflight", () => {
+  it("rejects excess validators before inspecting their entries", () => {
+    const validators = new Array(2);
+    Object.defineProperty(validators, 0, { get() { throw new Error("Must not inspect"); } });
+    expect(validatePipelineDeclaration({ sources: [], validators, limits: { maxProvenanceEvents: 1 } })).toEqual([
+      expect.objectContaining({ code: "max_provenance_events_exceeded" })
+    ]);
+  });
   it.each([1, 64])("rejects excess sources without inspecting entries at limit %s", maximum => {
     let reads = 0;
     const sources = new Array(maximum + 1);

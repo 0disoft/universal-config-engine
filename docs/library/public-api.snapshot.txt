@@ -117,7 +117,7 @@ export { buildConfigInspection } from "./inspection.js";
 export { buildConfigDiff } from "./diff.js";
 export { checkConfigChanges } from "./change-policy.js";
 export { createStandardSchemaValidator } from "./standard-schema.js";
-export { runValidatedConfigPipeline } from "./typed-pipeline.js";
+export { runValidatedConfigPipeline, validateConfigOutput } from "./typed-pipeline.js";
 export type { RunValidatedConfigPipelineInput, RunValidatedConfigPipelineResult } from "./typed-pipeline.js";
 export type { StandardConfigSchema, StandardConfigSchemaResult, StandardConfigSchemaIssue, StandardConfigSchemaOutput, CreateStandardSchemaValidatorInput } from "./standard-schema.js";
 export type { ConfigChangePolicy, ConfigChangeRule, ConfigChangeCheck, ConfigPolicyViolation } from "./change-policy.js";
@@ -457,6 +457,8 @@ export type RunValidatedConfigPipelineResult<TOutput> = RunConfigPipelineResult 
 });
 /** Return schema output separately; resolved config and its provenance stay unchanged. */
 export declare function runValidatedConfigPipeline<TOutput, TContext = undefined>(input: RunValidatedConfigPipelineInput<TOutput, TContext>): Promise<RunValidatedConfigPipelineResult<TOutput>>;
+/** Validate typed output from an existing pipeline without reloading its sources. */
+export declare function validateConfigOutput<TOutput>(pipeline: RunConfigPipelineResult, validator: ValidatorAdapter<TOutput>, options?: Pick<RunConfigPipelineInput, "signal" | "onError" | "reportOptions">): Promise<RunValidatedConfigPipelineResult<TOutput>>;
 
 ### types.d.ts
 import type { ConfigOperationOptions, ConfigAbortSignal } from "./operation.js";
@@ -689,6 +691,88 @@ export interface LoadConfigFileSourceInput extends LoadJsonFileSourceInput {
 /** First-party parsers share the bounded, opened-file I/O boundary. */
 export declare function loadConfigFileSource(input: LoadConfigFileSourceInput): Promise<LoadedSource>;
 
+### declaration-types.d.ts
+import type { CoercionRule, ConfigSourceDescriptor, OverrideMapping, ResourceLimitPolicy } from "@0disoft/universal-config-engine-core";
+import type { ConfigFileFormat } from "./config-file-loader.js";
+import type { UnmappedInputBehavior } from "./input-policy.js";
+export interface PipelineDeclaration {
+    readonly sources: readonly PipelineSourceDeclaration[];
+    readonly validators?: readonly PipelineValidatorDeclaration[];
+    readonly coercionRules?: readonly CoercionRule[];
+    readonly limits?: Partial<ResourceLimitPolicy>;
+    readonly profiles?: Readonly<Record<string, PipelineProfileDeclaration>>;
+    readonly extends?: readonly string[];
+}
+export interface PipelineProfileDeclaration {
+    readonly sources?: readonly PipelineSourceDeclaration[];
+    readonly validators?: readonly PipelineValidatorDeclaration[];
+    readonly coercionRules?: readonly CoercionRule[];
+    readonly limits?: Partial<ResourceLimitPolicy>;
+}
+export type PipelineSourceDeclaration = ObjectSourceDeclaration | JsonFileSourceDeclaration | FileAdapterSourceDeclaration | DotenvFileSourceDeclaration | ProcessEnvSourceDeclaration | ArgvSourceDeclaration;
+interface BaseSourceDeclaration {
+    readonly id: string;
+    readonly priority: number;
+    readonly displayName?: string;
+    readonly redaction?: ConfigSourceDescriptor["redaction"];
+}
+export interface ObjectSourceDeclaration extends BaseSourceDeclaration {
+    readonly kind: "object";
+    readonly value: unknown;
+}
+export interface JsonFileSourceDeclaration extends BaseSourceDeclaration {
+    readonly kind: "json-file";
+    readonly path: string;
+    readonly maxFileBytes?: number;
+}
+export interface DotenvFileSourceDeclaration extends BaseSourceDeclaration {
+    readonly kind: "dotenv-file";
+    readonly path: string;
+    readonly maxFileBytes?: number;
+}
+export interface FileAdapterSourceDeclaration extends BaseSourceDeclaration {
+    readonly kind: "adapter";
+    readonly format: ConfigFileFormat;
+    readonly path: string;
+    readonly maxFileBytes?: number;
+    readonly allowTrailingComma?: boolean;
+}
+export interface ProcessEnvSourceDeclaration extends BaseSourceDeclaration {
+    readonly kind: "process-env";
+    readonly mappings: readonly OverrideMapping[];
+    readonly maxEnvEntries?: number;
+    readonly unmappedBehavior?: UnmappedInputBehavior;
+    readonly unmappedPrefix?: string;
+}
+export interface ArgvSourceDeclaration extends BaseSourceDeclaration {
+    readonly kind: "argv";
+    readonly mappings: readonly OverrideMapping[];
+    readonly maxArgvEntries?: number;
+    readonly unmappedBehavior?: UnmappedInputBehavior;
+}
+export interface AjvJsonSchemaValidatorDeclaration {
+    readonly id: string;
+    readonly kind: "json-schema-ajv";
+    readonly schema: boolean | Record<string, unknown>;
+}
+export interface PipelineValidatorDeclaration {
+    readonly id: string;
+    readonly kind: string;
+    readonly schema?: unknown;
+}
+export {};
+
+### declaration-validators.d.ts
+import type { ConfigIssue, ValidatorAdapter } from "@0disoft/universal-config-engine-core";
+import { type ConfigOperationOptions } from "@0disoft/universal-config-engine-core";
+import type { PipelineDeclaration, AjvJsonSchemaValidatorDeclaration } from "./declaration-types.js";
+export interface CreateDeclaredValidatorsResult {
+    readonly validators: readonly ValidatorAdapter[];
+    readonly issues: readonly ConfigIssue[];
+}
+export type DeclaredValidatorFactory = (declaration: AjvJsonSchemaValidatorDeclaration) => ValidatorAdapter;
+export declare function createDeclaredValidators(declaration: PipelineDeclaration, factory?: DeclaredValidatorFactory, options?: ConfigOperationOptions): CreateDeclaredValidatorsResult;
+
 ### discovery.d.ts
 import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
 export declare const DEFAULT_PIPELINE_FILENAMES: readonly string[];
@@ -824,6 +908,15 @@ export { watchConfigFiles } from "./watch.js";
 export type { ConfigWatchHandle, ConfigWatchDependencies, WatchConfigFilesInput, WatchConfigFilesResult } from "./watch.js";
 export { createConfigFileReadLimiter, DEFAULT_MAX_CONCURRENT_FILE_READS } from "./file-read-limiter.js";
 export type { ConfigFileReadLimiter } from "./file-read-limiter.js";
+export { loadPipelineDeclaration, loadPipelineDeclarationContext, loadDeclaredSources, PipelineDeclarationError, sourceLoadFailedIssue, sourceLoadFailedIssues } from "./pipeline.js";
+export type { LoadedPipelineDeclaration, PipelineDeclarationReadPolicy } from "./pipeline.js";
+export { selectPipelineProfile } from "./profiles.js";
+export { isProfileName as isPipelineProfileName } from "./pipeline/declaration-fields.js";
+export type { PipelineDeclaration, PipelineProfileDeclaration, PipelineSourceDeclaration, ObjectSourceDeclaration, JsonFileSourceDeclaration, DotenvFileSourceDeclaration, FileAdapterSourceDeclaration, ProcessEnvSourceDeclaration, ArgvSourceDeclaration, AjvJsonSchemaValidatorDeclaration, PipelineValidatorDeclaration } from "./declaration-types.js";
+export { createDeclaredValidators } from "./declaration-validators.js";
+export type { CreateDeclaredValidatorsResult, DeclaredValidatorFactory } from "./declaration-validators.js";
+export { loadConfig, loadValidatedConfig } from "./load-config.js";
+export type { LoadConfigInput } from "./load-config.js";
 
 ### input-policy.d.ts
 import type { ConfigIssueSeverity } from "@0disoft/universal-config-engine-core";
@@ -867,6 +960,27 @@ export declare const JSON_SCAN_ERROR_NONE = 0;
 ### limits.d.ts
 export declare function positiveSafeIntegerLimit(value: number | undefined, fallback: number): number;
 
+### load-config.d.ts
+import { type RunConfigPipelineResult, type RunValidatedConfigPipelineResult, type ValidatorAdapter, type BuildDiagnosticReportOptions } from "@0disoft/universal-config-engine-core";
+import { type PipelineDeclarationReadPolicy } from "./pipeline.js";
+import { type DeclaredValidatorFactory } from "./declaration-validators.js";
+export interface LoadConfigInput extends PipelineDeclarationReadPolicy {
+    readonly configPath: string;
+    readonly cwd?: string;
+    readonly env?: NodeJS.ProcessEnv;
+    readonly argv?: readonly string[];
+    /** Required only when the declaration has schemas; e.g. createAjvValidator. */
+    readonly validatorFactory?: DeclaredValidatorFactory;
+    /** Defaults to true. False is useful for provenance-only CLI explanations. */
+    readonly validate?: boolean;
+    readonly reportOptions?: BuildDiagnosticReportOptions;
+}
+/** Shared app/CLI execution: declared limits, coercion and validation cannot drift. */
+export declare function loadConfig(input: LoadConfigInput): Promise<RunConfigPipelineResult>;
+export declare function loadValidatedConfig<TOutput>(input: LoadConfigInput & {
+    readonly outputValidator: ValidatorAdapter<TOutput>;
+}): Promise<RunValidatedConfigPipelineResult<TOutput>>;
+
 ### operation-deadline.d.ts
 import type { ConfigAbortSignal } from "@0disoft/universal-config-engine-core";
 export declare const DEFAULT_OPERATION_TIMEOUT_MS = 30000;
@@ -881,6 +995,125 @@ export declare function createOperationDeadline(parent: ConfigAbortSignal, timeo
     waitFor<T>(work: T | PromiseLike<T>): Promise<T>;
 };
 
+### pipeline.d.ts
+import type { ConfigOperationOptions } from "@0disoft/universal-config-engine-core";
+import type { PipelineDeclaration } from "./declaration-types.js";
+export interface LoadedPipelineDeclaration {
+    readonly declaration: PipelineDeclaration;
+    readonly canonicalConfigPath: string;
+    readonly workspacePath?: string;
+    readonly sourceConfigPaths?: ReadonlyMap<string, string>;
+    readonly declarationPaths?: readonly string[];
+}
+export interface PipelineDeclarationReadPolicy extends ConfigOperationOptions {
+    readonly allowedRootPath?: string;
+    readonly workspacePath?: string;
+    readonly profile?: string;
+}
+export declare function loadPipelineDeclaration(configPath: string, cwd?: string, policy?: PipelineDeclarationReadPolicy): Promise<PipelineDeclaration>;
+export declare function loadPipelineDeclarationContext(configPath: string, cwd?: string, policy?: PipelineDeclarationReadPolicy): Promise<LoadedPipelineDeclaration>;
+export { loadDeclaredSources } from "./pipeline/source-loading.js";
+export { PipelineDeclarationError, sourceLoadFailedIssue, sourceLoadFailedIssues } from "./pipeline/declaration-diagnostics.js";
+
+### pipeline/declaration-diagnostics.d.ts
+import { type ConfigPath, type ConfigIssue } from "@0disoft/universal-config-engine-core";
+export declare class PipelineDeclarationError extends Error {
+    readonly issues: readonly ConfigIssue[];
+    constructor(issues: readonly ConfigIssue[]);
+}
+export declare function sourceLoadFailedIssue(error: unknown): ConfigIssue;
+export declare function sourceLoadFailedIssues(error: unknown): readonly ConfigIssue[];
+export declare function pipelineDeclarationIssue(input: {
+    readonly code: string;
+    readonly message: string;
+    readonly path?: ConfigPath | undefined;
+    readonly sourceId?: string | undefined;
+}): ConfigIssue;
+export declare function appendDeclarationIssues(destination: ConfigIssue[], nextIssues: readonly ConfigIssue[]): boolean;
+
+### pipeline/declaration-fields.d.ts
+import type { ConfigPath } from "@0disoft/universal-config-engine-core";
+export declare const SUPPORTED_SOURCE_KINDS: Set<string>;
+export declare const SUPPORTED_FILE_FORMATS: Set<string>;
+export declare const SUPPORTED_MAPPING_PARSE_AS: Set<string>;
+export declare const SUPPORTED_COERCION_TARGETS: Set<string>;
+export declare const SUPPORTED_VALIDATOR_KINDS: Set<string>;
+export declare const RESOURCE_LIMIT_FIELDS: readonly ["maxDepth", "maxKeyCount", "maxPathLength", "maxDiagnostics", "maxSources", "maxProvenanceEvents", "maxResolvedPaths", "maxReportBytes"];
+export declare const PIPELINE_DECLARATION_FIELDS: Set<string>;
+export declare const PROFILE_DECLARATION_FIELDS: Set<string>;
+export declare const BASE_SOURCE_FIELDS: Set<string>;
+export declare const SOURCE_KIND_FIELDS: Readonly<Record<string, ReadonlySet<string>>>;
+export declare const OVERRIDE_MAPPING_FIELDS: Set<string>;
+export declare const COERCION_RULE_FIELDS: Set<string>;
+export declare const VALIDATOR_DECLARATION_FIELDS: Set<string>;
+export declare const REDACTION_POLICY_FIELDS: Set<string>;
+export declare const MAX_PIPELINE_DECLARATION_DIAGNOSTICS = 200;
+export declare function formatConfigPath(path: ConfigPath): string;
+export declare function isRecord(value: unknown): value is Readonly<Record<string, unknown>>;
+export declare function isPositiveInteger(value: unknown): value is number;
+export declare function isProfileName(value: unknown): value is string;
+/** Profiles cannot introduce nested profiles or inheritance. */
+export declare function profileToDeclaration(value: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>>;
+export declare function isConfigPath(value: unknown): value is ConfigPath;
+export declare function isStringOnlyConfigPath(value: unknown): value is ConfigPath;
+
+### pipeline/declaration-normalization.d.ts
+import type { PipelineDeclaration } from "../declaration-types.js";
+export declare function normalizePipelineDeclaration(value: unknown): PipelineDeclaration;
+
+### pipeline/declaration-validation.d.ts
+import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
+export declare function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[];
+/** Shared preflight for declaration validation and direct source loading. */
+export declare function validateSourceBudget(count: number, limits: unknown): readonly ConfigIssue[];
+
+### pipeline/inheritance.d.ts
+import type { LoadedPipelineDeclaration, PipelineDeclarationReadPolicy } from "../pipeline.js";
+export interface ParsedPipelineDocument extends LoadedPipelineDeclaration {
+    readonly byteLength: number;
+}
+export declare function loadDeclarationInheritance(initial: ParsedPipelineDocument, policy: PipelineDeclarationReadPolicy, read: (path: string, workspace: string, maxBytes: number) => Promise<ParsedPipelineDocument>): Promise<LoadedPipelineDeclaration>;
+
+### pipeline/profile-validation.d.ts
+import { type ConfigIssue } from "@0disoft/universal-config-engine-core";
+export declare function validateProfiles(value: unknown, validate: (value: unknown) => readonly ConfigIssue[], baseLimits?: Readonly<Record<string, unknown>>): readonly ConfigIssue[];
+
+### pipeline/source-loading.d.ts
+import type { LoadedSource } from "@0disoft/universal-config-engine-core";
+import type { ConfigOperationOptions } from "@0disoft/universal-config-engine-core";
+import type { PipelineDeclaration } from "../declaration-types.js";
+export declare function loadDeclaredSources(input: ConfigOperationOptions & {
+    readonly declaration: PipelineDeclaration;
+    readonly configPath: string;
+    readonly cwd: string;
+    readonly env: NodeJS.ProcessEnv;
+    readonly argv: readonly string[];
+    readonly sourceConfigPaths?: ReadonlyMap<string, string>;
+    readonly workspacePath?: string;
+}): Promise<readonly LoadedSource[]>;
+
+### pipeline/source-paths.d.ts
+import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
+export declare function resolveConfigRelativePath(input: {
+    readonly configPath: string;
+    readonly cwd: string;
+    readonly sourceIndex: number;
+    readonly sourceId: string;
+    readonly targetPath: string;
+    readonly allowedRootPath?: string;
+}, canonicalize?: (path: string) => Promise<string>): Promise<{
+    readonly ok: true;
+    readonly path: string;
+    readonly allowedRootPath: string;
+} | {
+    readonly ok: false;
+    readonly issue: ConfigIssue;
+}>;
+/** Scope this cache to one load; opening a file still performs its own identity/boundary checks. */
+export declare function createSourcePathCanonicalizer(resolvePath?: (path: string) => Promise<string>): (path: string) => Promise<string>;
+export declare function resolveInputPath(inputPath: string, cwd: string): string;
+export declare function isInsideOrEqualPath(rootPath: string, targetPath: string): boolean;
+
 ### process-env-source.d.ts
 import { type ConfigSourceDescriptor, type LoadedSource, type OverrideMapping } from "@0disoft/universal-config-engine-core";
 import { type UnmappedInputBehavior } from "./input-policy.js";
@@ -894,6 +1127,11 @@ export interface CreateProcessEnvSourceInput {
     readonly unmappedPrefix?: string;
 }
 export declare function createProcessEnvSource(input: CreateProcessEnvSourceInput): LoadedSource;
+
+### profiles.d.ts
+import type { PipelineDeclaration } from "./declaration-types.js";
+/** Compile one explicitly selected profile without reading process environment. */
+export declare function selectPipelineProfile(declaration: PipelineDeclaration, profile?: string): PipelineDeclaration;
 
 ### reload.d.ts
 import { type ConfigOperationOptions, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
@@ -1044,10 +1282,10 @@ export interface DoctorReport {
 export declare function runDoctorCli(args: readonly string[], runtime: CliRuntime, publicMode?: boolean): Promise<CliResult>;
 
 ### execution.d.ts
-import { type ConfigResult, type RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
+import type { ConfigResult, RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
 import { type PipelineDeclarationReadPolicy } from "./pipeline.js";
 import type { CliRuntime } from "./types.js";
-/** One pipeline implementation for legacy commands, inspection and both diff sides. */
+/** Compatibility wrapper; applications and CLI now share the Node execution API. */
 export declare function executeDeclaration(configPath: string, runtime: CliRuntime, argv: readonly string[], validate: boolean, policy?: PipelineDeclarationReadPolicy): Promise<RunConfigPipelineResult>;
 export declare function declarationFailure(error: unknown): ConfigResult;
 
@@ -1104,132 +1342,17 @@ export declare function formatJsonReport(command: CliCommand, report: Diagnostic
 export declare function formatHumanReport(command: CliCommand, report: DiagnosticReport): string;
 
 ### pipeline.d.ts
-import type { PipelineDeclaration } from "./types.js";
-export interface LoadedPipelineDeclaration {
-    readonly declaration: PipelineDeclaration;
-    readonly canonicalConfigPath: string;
-    readonly workspacePath?: string;
-    readonly sourceConfigPaths?: ReadonlyMap<string, string>;
-    readonly declarationPaths?: readonly string[];
-}
-export interface PipelineDeclarationReadPolicy {
-    readonly allowedRootPath?: string;
-    readonly workspacePath?: string;
-    readonly profile?: string;
-}
-export declare function loadPipelineDeclaration(configPath: string, cwd?: string, policy?: PipelineDeclarationReadPolicy): Promise<PipelineDeclaration>;
-export declare function loadPipelineDeclarationContext(configPath: string, cwd?: string, policy?: PipelineDeclarationReadPolicy): Promise<LoadedPipelineDeclaration>;
-export { loadDeclaredSources } from "./pipeline/source-loading.js";
-export { PipelineDeclarationError, sourceLoadFailedIssue, sourceLoadFailedIssues } from "./pipeline/declaration-diagnostics.js";
-
-### pipeline/declaration-diagnostics.d.ts
-import { type ConfigPath, type ConfigIssue } from "@0disoft/universal-config-engine-core";
-export declare class PipelineDeclarationError extends Error {
-    readonly issues: readonly ConfigIssue[];
-    constructor(issues: readonly ConfigIssue[]);
-}
-export declare function sourceLoadFailedIssue(error: unknown): ConfigIssue;
-export declare function sourceLoadFailedIssues(error: unknown): readonly ConfigIssue[];
-export declare function pipelineDeclarationIssue(input: {
-    readonly code: string;
-    readonly message: string;
-    readonly path?: ConfigPath | undefined;
-    readonly sourceId?: string | undefined;
-}): ConfigIssue;
-export declare function appendDeclarationIssues(destination: ConfigIssue[], nextIssues: readonly ConfigIssue[]): boolean;
-
-### pipeline/declaration-fields.d.ts
-import type { ConfigPath } from "@0disoft/universal-config-engine-core";
-export declare const SUPPORTED_SOURCE_KINDS: Set<string>;
-export declare const SUPPORTED_FILE_FORMATS: Set<string>;
-export declare const SUPPORTED_MAPPING_PARSE_AS: Set<string>;
-export declare const SUPPORTED_COERCION_TARGETS: Set<string>;
-export declare const SUPPORTED_VALIDATOR_KINDS: Set<string>;
-export declare const RESOURCE_LIMIT_FIELDS: readonly ["maxDepth", "maxKeyCount", "maxPathLength", "maxDiagnostics", "maxSources", "maxProvenanceEvents", "maxResolvedPaths", "maxReportBytes"];
-export declare const PIPELINE_DECLARATION_FIELDS: Set<string>;
-export declare const PROFILE_DECLARATION_FIELDS: Set<string>;
-export declare const BASE_SOURCE_FIELDS: Set<string>;
-export declare const SOURCE_KIND_FIELDS: Readonly<Record<string, ReadonlySet<string>>>;
-export declare const OVERRIDE_MAPPING_FIELDS: Set<string>;
-export declare const COERCION_RULE_FIELDS: Set<string>;
-export declare const VALIDATOR_DECLARATION_FIELDS: Set<string>;
-export declare const REDACTION_POLICY_FIELDS: Set<string>;
-export declare const MAX_PIPELINE_DECLARATION_DIAGNOSTICS = 200;
-export declare function formatConfigPath(path: ConfigPath): string;
-export declare function isRecord(value: unknown): value is Readonly<Record<string, unknown>>;
-export declare function isPositiveInteger(value: unknown): value is number;
-export declare function isProfileName(value: unknown): value is string;
-/** Profiles cannot introduce nested profiles or inheritance. */
-export declare function profileToDeclaration(value: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>>;
-export declare function isConfigPath(value: unknown): value is ConfigPath;
-export declare function isStringOnlyConfigPath(value: unknown): value is ConfigPath;
-
-### pipeline/declaration-normalization.d.ts
-import type { PipelineDeclaration } from "../types.js";
-export declare function normalizePipelineDeclaration(value: unknown): PipelineDeclaration;
-
-### pipeline/declaration-validation.d.ts
-import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
-export declare function validatePipelineDeclaration(value: unknown): readonly ConfigIssue[];
-/** Shared preflight for declaration validation and direct source loading. */
-export declare function validateSourceBudget(count: number, limits: unknown): readonly ConfigIssue[];
-
-### pipeline/inheritance.d.ts
-import type { LoadedPipelineDeclaration, PipelineDeclarationReadPolicy } from "../pipeline.js";
-export interface ParsedPipelineDocument extends LoadedPipelineDeclaration {
-    readonly byteLength: number;
-}
-export declare function loadDeclarationInheritance(initial: ParsedPipelineDocument, policy: PipelineDeclarationReadPolicy, read: (path: string, workspace: string, maxBytes: number) => Promise<ParsedPipelineDocument>): Promise<LoadedPipelineDeclaration>;
-
-### pipeline/profile-validation.d.ts
-import { type ConfigIssue } from "@0disoft/universal-config-engine-core";
-export declare function validateProfiles(value: unknown, validate: (value: unknown) => readonly ConfigIssue[], baseLimits?: Readonly<Record<string, unknown>>): readonly ConfigIssue[];
-
-### pipeline/source-loading.d.ts
-import type { LoadedSource } from "@0disoft/universal-config-engine-core";
-import type { PipelineDeclaration } from "../types.js";
-export declare function loadDeclaredSources(input: {
-    readonly declaration: PipelineDeclaration;
-    readonly configPath: string;
-    readonly cwd: string;
-    readonly env: NodeJS.ProcessEnv;
-    readonly argv: readonly string[];
-    readonly sourceConfigPaths?: ReadonlyMap<string, string>;
-    readonly workspacePath?: string;
-}): Promise<readonly LoadedSource[]>;
-
-### pipeline/source-paths.d.ts
-import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
-export declare function resolveConfigRelativePath(input: {
-    readonly configPath: string;
-    readonly cwd: string;
-    readonly sourceIndex: number;
-    readonly sourceId: string;
-    readonly targetPath: string;
-    readonly allowedRootPath?: string;
-}, canonicalize?: (path: string) => Promise<string>): Promise<{
-    readonly ok: true;
-    readonly path: string;
-    readonly allowedRootPath: string;
-} | {
-    readonly ok: false;
-    readonly issue: ConfigIssue;
-}>;
-/** Scope this cache to one load; opening a file still performs its own identity/boundary checks. */
-export declare function createSourcePathCanonicalizer(resolvePath?: (path: string) => Promise<string>): (path: string) => Promise<string>;
-export declare function resolveInputPath(inputPath: string, cwd: string): string;
-export declare function isInsideOrEqualPath(rootPath: string, targetPath: string): boolean;
+export { loadDeclaredSources, loadPipelineDeclaration, loadPipelineDeclarationContext, PipelineDeclarationError, sourceLoadFailedIssue, sourceLoadFailedIssues } from "@0disoft/universal-config-engine-node";
+export type { LoadedPipelineDeclaration, PipelineDeclarationReadPolicy } from "@0disoft/universal-config-engine-node";
 
 ### profiles.d.ts
-import type { PipelineDeclaration } from "./types.js";
-/** Compile one explicitly selected profile without reading process environment. */
-export declare function selectPipelineProfile(declaration: PipelineDeclaration, profile?: string): PipelineDeclaration;
+export { selectPipelineProfile } from "@0disoft/universal-config-engine-node";
 
 ### public-output.d.ts
 import { type DiagnosticReport } from "@0disoft/universal-config-engine-core";
 export declare function formatPublicReport(report: DiagnosticReport): {
     output: string;
-    status: "error" | "ok";
+    status: "ok" | "error";
 };
 
 ### run.d.ts
@@ -1237,77 +1360,10 @@ import type { CliResult, CliRuntime } from "./types.js";
 export declare function runCli(args: readonly string[], runtime: CliRuntime): Promise<CliResult>;
 
 ### types.d.ts
-import type { CoercionRule, ConfigSourceDescriptor, OverrideMapping, ResourceLimitPolicy } from "@0disoft/universal-config-engine-core";
-import type { Schema } from "ajv/dist/ajv.js";
-import type { ConfigFileFormat, UnmappedInputBehavior } from "@0disoft/universal-config-engine-node";
+export type { PipelineDeclaration, PipelineProfileDeclaration, PipelineSourceDeclaration, ObjectSourceDeclaration, JsonFileSourceDeclaration, DotenvFileSourceDeclaration, FileAdapterSourceDeclaration, ProcessEnvSourceDeclaration, ArgvSourceDeclaration, AjvJsonSchemaValidatorDeclaration, PipelineValidatorDeclaration } from "@0disoft/universal-config-engine-node";
 export type CliCommand = "explain" | "validate";
 export type CliExecutionCommand = CliCommand | "diff";
 export type CliOutputMode = "human" | "json";
-export interface PipelineDeclaration {
-    readonly sources: readonly PipelineSourceDeclaration[];
-    readonly validators?: readonly PipelineValidatorDeclaration[];
-    readonly coercionRules?: readonly CoercionRule[];
-    readonly limits?: Partial<ResourceLimitPolicy>;
-    readonly profiles?: Readonly<Record<string, PipelineProfileDeclaration>>;
-    readonly extends?: readonly string[];
-}
-export interface PipelineProfileDeclaration {
-    readonly sources?: readonly PipelineSourceDeclaration[];
-    readonly validators?: readonly PipelineValidatorDeclaration[];
-    readonly coercionRules?: readonly CoercionRule[];
-    readonly limits?: Partial<ResourceLimitPolicy>;
-}
-export type PipelineSourceDeclaration = ObjectSourceDeclaration | JsonFileSourceDeclaration | FileAdapterSourceDeclaration | DotenvFileSourceDeclaration | ProcessEnvSourceDeclaration | ArgvSourceDeclaration;
-interface BaseSourceDeclaration {
-    readonly id: string;
-    readonly priority: number;
-    readonly displayName?: string;
-    readonly redaction?: ConfigSourceDescriptor["redaction"];
-}
-export interface ObjectSourceDeclaration extends BaseSourceDeclaration {
-    readonly kind: "object";
-    readonly value: unknown;
-}
-export interface JsonFileSourceDeclaration extends BaseSourceDeclaration {
-    readonly kind: "json-file";
-    readonly path: string;
-    readonly maxFileBytes?: number;
-}
-export interface DotenvFileSourceDeclaration extends BaseSourceDeclaration {
-    readonly kind: "dotenv-file";
-    readonly path: string;
-    readonly maxFileBytes?: number;
-}
-export interface FileAdapterSourceDeclaration extends BaseSourceDeclaration {
-    readonly kind: "adapter";
-    readonly format: ConfigFileFormat;
-    readonly path: string;
-    readonly maxFileBytes?: number;
-    readonly allowTrailingComma?: boolean;
-}
-export interface ProcessEnvSourceDeclaration extends BaseSourceDeclaration {
-    readonly kind: "process-env";
-    readonly mappings: readonly OverrideMapping[];
-    readonly maxEnvEntries?: number;
-    readonly unmappedBehavior?: UnmappedInputBehavior;
-    readonly unmappedPrefix?: string;
-}
-export interface ArgvSourceDeclaration extends BaseSourceDeclaration {
-    readonly kind: "argv";
-    readonly mappings: readonly OverrideMapping[];
-    readonly maxArgvEntries?: number;
-    readonly unmappedBehavior?: UnmappedInputBehavior;
-}
-export interface AjvJsonSchemaValidatorDeclaration {
-    readonly id: string;
-    readonly kind: "json-schema-ajv";
-    readonly schema: Schema;
-}
-export interface PipelineValidatorDeclaration {
-    readonly id: string;
-    readonly kind: string;
-    readonly schema?: unknown;
-}
 export interface CliRuntime {
     readonly cwd: string;
     readonly env: NodeJS.ProcessEnv;
@@ -1317,15 +1373,11 @@ export interface CliRuntime {
 export interface CliResult {
     readonly exitCode: number;
 }
-export {};
 
 ### validators.d.ts
-import type { ConfigIssue, ValidatorAdapter } from "@0disoft/universal-config-engine-core";
-import type { PipelineDeclaration } from "./types.js";
-export interface CreateDeclaredValidatorsResult {
-    readonly validators: readonly ValidatorAdapter[];
-    readonly issues: readonly ConfigIssue[];
-}
+import { type PipelineDeclaration } from "@0disoft/universal-config-engine-node";
+import type { CreateDeclaredValidatorsResult } from "@0disoft/universal-config-engine-node";
+export type { CreateDeclaredValidatorsResult } from "@0disoft/universal-config-engine-node";
 export declare function createDeclaredValidators(declaration: PipelineDeclaration): CreateDeclaredValidatorsResult;
 
 ## @0disoft/universal-config-engine-validator-ajv

@@ -1,39 +1,14 @@
-import {
-  buildDiagnosticReport, combineConfigIssues, runConfigPipeline, runValidators,
-  type ConfigLoader, type ConfigResult, type LoadedSource, type RunConfigPipelineResult
-} from "@0disoft/universal-config-engine-core";
-import { loadDeclaredSources, loadPipelineDeclarationContext, sourceLoadFailedIssues, type PipelineDeclarationReadPolicy } from "./pipeline.js";
-import { createDeclaredValidators } from "./validators.js";
+import { loadConfig } from "@0disoft/universal-config-engine-node";
+import { createAjvValidator } from "@0disoft/universal-config-engine-validator-ajv";
+import type { ConfigResult, RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
+import { sourceLoadFailedIssues, type PipelineDeclarationReadPolicy } from "./pipeline.js";
 import type { CliRuntime } from "./types.js";
 
-/** One pipeline implementation for legacy commands, inspection and both diff sides. */
-export async function executeDeclaration(configPath: string, runtime: CliRuntime, argv: readonly string[], validate: boolean,
+/** Compatibility wrapper; applications and CLI now share the Node execution API. */
+export function executeDeclaration(configPath: string, runtime: CliRuntime, argv: readonly string[], validate: boolean,
   policy: PipelineDeclarationReadPolicy = {}): Promise<RunConfigPipelineResult> {
-  const context = await loadPipelineDeclarationContext(configPath, runtime.cwd, policy);
-  const declaration = context.declaration;
-  const sources = await loadDeclaredSources({ declaration, configPath: context.canonicalConfigPath,
-    cwd: runtime.cwd, env: runtime.env, argv,
-    ...(context.sourceConfigPaths === undefined ? {} : { sourceConfigPaths: context.sourceConfigPaths }),
-    ...(context.workspacePath === undefined ? {} : { workspacePath: context.workspacePath }) });
-  const pipeline = await runConfigPipeline({
-    loaders: sources.map(toLoadedSourceAdapter), context: undefined,
-    ...(declaration.coercionRules === undefined ? {} : { coercionRules: declaration.coercionRules }),
-    ...(declaration.limits === undefined ? {} : { limits: declaration.limits })
-  });
-  if (!validate || !pipeline.result.ok || pipeline.report.status !== "ok") return pipeline;
-  const remaining = pipeline.result.limits.maxProvenanceEvents - pipeline.result.provenance.length;
-  const declared = (declaration.validators?.length ?? 0) > remaining
-    ? { validators: [], issues: [{ category: "resource-limit", code: "max_provenance_events_exceeded", severity: "error",
-        message: "Declared validators exceed the remaining provenance budget." }] as const }
-    : createDeclaredValidators(declaration);
-  const validation = declared.issues.length > 0 || declared.validators.length === 0
-    ? { issues: declared.issues, provenance: [] }
-    : await runValidators({ config: pipeline.result.config, provenance: pipeline.result.provenance,
-        validators: declared.validators, limits: pipeline.result.limits });
-  const issues = combineConfigIssues(pipeline.result.issues, validation.issues, pipeline.result.limits.maxDiagnostics);
-  const result = { ...pipeline.result, ok: !issues.some((issue) => issue.severity === "error"), issues,
-    provenance: [...pipeline.result.provenance, ...validation.provenance] };
-  return { result, report: buildDiagnosticReport(result) };
+  return loadConfig({ ...policy, configPath, cwd: runtime.cwd, env: runtime.env, argv, validate,
+    validatorFactory: createAjvValidator });
 }
 
 export function declarationFailure(error: unknown): ConfigResult {
@@ -43,10 +18,4 @@ export function declarationFailure(error: unknown): ConfigResult {
     limits: { maxDepth: 0, maxKeyCount: 0, maxPathLength: 0, maxDiagnostics: Math.max(1, issues.length),
       maxSources: 1, maxProvenanceEvents: 1, maxResolvedPaths: 1, maxReportBytes: 4 * 1024 * 1024 }
   };
-}
-
-function toLoadedSourceAdapter(source: LoadedSource): ConfigLoader {
-  return { descriptor: source.descriptor, load: () => ({ value: source.value,
-    ...(source.issues === undefined ? {} : { issues: source.issues }),
-    ...(source.locations === undefined ? {} : { locations: source.locations }) }) };
 }

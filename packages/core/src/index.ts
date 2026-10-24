@@ -27,7 +27,7 @@ export { buildConfigInspection } from "./inspection.js";
 export { buildConfigDiff } from "./diff.js";
 export { checkConfigChanges } from "./change-policy.js";
 export { createStandardSchemaValidator } from "./standard-schema.js";
-export { runValidatedConfigPipeline } from "./typed-pipeline.js";
+export { runValidatedConfigPipeline, validateConfigOutput } from "./typed-pipeline.js";
 export type { RunValidatedConfigPipelineInput, RunValidatedConfigPipelineResult } from "./typed-pipeline.js";
 export type {
   StandardConfigSchema, StandardConfigSchemaResult, StandardConfigSchemaIssue,

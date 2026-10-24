@@ -46,3 +46,14 @@ export { watchConfigFiles } from "./watch.js";
 export type { ConfigWatchHandle, ConfigWatchDependencies, WatchConfigFilesInput, WatchConfigFilesResult } from "./watch.js";
 export { createConfigFileReadLimiter, DEFAULT_MAX_CONCURRENT_FILE_READS } from "./file-read-limiter.js";
 export type { ConfigFileReadLimiter } from "./file-read-limiter.js";
+
+export { loadPipelineDeclaration, loadPipelineDeclarationContext, loadDeclaredSources,
+  PipelineDeclarationError, sourceLoadFailedIssue, sourceLoadFailedIssues } from "./pipeline.js";
+export type { LoadedPipelineDeclaration, PipelineDeclarationReadPolicy } from "./pipeline.js";
+export { selectPipelineProfile } from "./profiles.js";
+export { isProfileName as isPipelineProfileName } from "./pipeline/declaration-fields.js";
+export type { PipelineDeclaration, PipelineProfileDeclaration, PipelineSourceDeclaration, ObjectSourceDeclaration, JsonFileSourceDeclaration, DotenvFileSourceDeclaration, FileAdapterSourceDeclaration, ProcessEnvSourceDeclaration, ArgvSourceDeclaration, AjvJsonSchemaValidatorDeclaration, PipelineValidatorDeclaration } from "./declaration-types.js";
+export { createDeclaredValidators } from "./declaration-validators.js";
+export type { CreateDeclaredValidatorsResult, DeclaredValidatorFactory } from "./declaration-validators.js";
+export { loadConfig, loadValidatedConfig } from "./load-config.js";
+export type { LoadConfigInput } from "./load-config.js";
