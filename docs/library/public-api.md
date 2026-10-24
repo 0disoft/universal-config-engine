@@ -78,6 +78,10 @@ Repository Type: library
   `maxKeyCount` counts expanded object keys and array indexes, including repeated
   references. Exhaustion stops structural traversal before merge clones arrays.
   Large scalar arrays now need an explicitly larger budget just like wide objects.
+  Structural traversal enumerates object keys without eagerly reading all values.
+  Values are fetched only after key/index, diagnostic, depth/path and unsafe-key
+  admission checks, so discarded accessors cannot replace a limit diagnostic with
+  an inspection exception. Object key enumeration still requires O(N) storage.
 - `ConfigIssue`: bounded issue taxonomy for CLI usage, load, parse, mapping,
   merge, coercion, validation, redaction, and resource-limit failures.
 

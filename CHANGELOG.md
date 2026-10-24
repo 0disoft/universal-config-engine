@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Fetch source values only after structural admission checks. Avoid eager object
+  entry allocation and prevent discarded object/array accessors from executing
+  beyond key, diagnostic or depth/path limits or for rejected unsafe keys.
 - Preserve both sides' secret paths during comparison when standalone diagnostics
   exceed their byte budget. Derive shared masking policy directly from resolved
   paths and the redactor, so discarded display metadata cannot expose values.

@@ -52,10 +52,58 @@ describe("isConfigValue", () => {
 });
 
 describe("config leaf resource limits", () => {
+  it.each(["object", "array"])("does not read %s values beyond the key/index budget", kind => {
+    const container: Record<string, unknown> | unknown[] = kind === "array" ? [] : {};
+    const maximum = 4;
+    const admitted = kind === "array" ? maximum - 1 : maximum;
+    let reads = 0;
+    for (let index = 0; index < 1000; index++) {
+      Object.defineProperty(container, kind === "array" ? index : `key${index}`, {
+        enumerable: true, get() {
+          reads++;
+          if (index >= admitted) throw new Error("Discarded values must not be evaluated.");
+          return index;
+        }
+      });
+    }
+    const value = kind === "array" ? { items: container } : container;
+    const flattened = flattenConfigObject("input", value, { ...DEFAULT_RESOURCE_LIMITS, maxKeyCount: maximum });
+    expect(flattened.issues).toContainEqual(expect.objectContaining({ code: "max_key_count_exceeded" }));
+    expect(reads).toBe(admitted);
+  });
+
+  it("rejects unsafe keys without evaluating them or values beyond the diagnostic budget", () => {
+    let reads = 0;
+    const value = {};
+    for (const key of ["__proto__", "discarded"]) {
+      Object.defineProperty(value, key, { enumerable: true, get() {
+        reads++;
+        throw new Error("Rejected values must not be evaluated.");
+      } });
+    }
+    const result = resolveConfig({ sources: [source("input", 0, value)], limits: { maxDiagnostics: 1 } });
+    expect(result.ok).toBe(false);
+    expect(result.config).toEqual({});
+    expect(reads).toBe(0);
+    expect(result.issues.some(issue => issue.code === "source_value_inspection_failed")).toBe(false);
+  });
+
   const cases = [
     { limits: { maxDepth: 1 }, code: "max_depth_exceeded" },
     { limits: { maxPathLength: 1 }, code: "max_path_length_exceeded" }
   ];
+
+  it.each(cases)("does not evaluate values beyond $code", ({ limits, code }) => {
+    let reads = 0;
+    const value = { outer: {} };
+    Object.defineProperty(value.outer, "leaf", { enumerable: true, get() {
+      reads++;
+      throw new Error("Discarded leaves must not be evaluated.");
+    } });
+    const flattened = flattenConfigObject("input", value, { ...DEFAULT_RESOURCE_LIMITS, ...limits });
+    expect(flattened.issues).toContainEqual(expect.objectContaining({ code }));
+    expect(reads).toBe(0);
+  });
 
   it.each(cases)("checks object scalar leaves against $code before merging", ({ limits, code }) => {
     for (const leaf of ["value", 42, true, null]) {

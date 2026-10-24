@@ -100,7 +100,7 @@ function walk(
   const ancestors = new WeakSet<object>();
   const stack: {
     readonly source: object;
-    readonly entries: Iterator<readonly [string | number, unknown]>;
+    readonly keys: Iterator<string | number>;
     readonly array: boolean;
     readonly emitEntries: boolean;
     readonly initialIssueCount: number;
@@ -110,7 +110,7 @@ function walk(
     state.issues.push({ category, code, severity: "error", sourceId, path: [...path], message });
   }
 
-  function enter(child: unknown, emitEntries: boolean): boolean {
+  function enter(input: unknown, emitEntries: boolean, key?: string | number): boolean {
     if (state.issues.length >= limits.maxDiagnostics) {
       markDiagnosticsOverflow(state.issues, limits.maxDiagnostics);
       return false;
@@ -124,6 +124,9 @@ function walk(
         `Config path ${formatPath(path)} exceeds the maximum path length of ${limits.maxPathLength}.`);
       return false;
     }
+    // Nested values are fetched only after admission, never through prototypes.
+    const child = key === undefined ? input : Object.hasOwn(input as object, key)
+      ? (input as Readonly<Record<string | number, unknown>>)[key] : undefined;
     if (child !== null && typeof child === "object") {
       if (ancestors.has(child)) {
         issue("parse", "cyclic_value", `Config value at ${formatPath(path)} contains a cycle.`);
@@ -134,14 +137,14 @@ function walk(
         issue("parse", "invalid_value", `Config value at ${formatPath(path)} is not JSON-compatible.`);
         return false;
       }
-      const entries = array ? undefined : Object.entries(child);
-      if (entries?.length === 0) {
+      const keys = array ? undefined : Object.keys(child);
+      if (keys?.length === 0) {
         if (path.length > 0 && emitEntries) state.entries.push({ path: [...path], value: {} });
         return false;
       }
       ancestors.add(child);
       stack.push({ source: child, array, emitEntries, initialIssueCount: state.issues.length,
-        entries: array ? Array.prototype.entries.call(child) : entries!.values() });
+        keys: array ? Array.prototype.keys.call(child) : keys!.values() });
       return true;
     }
     if (!isConfigValue(child)) {
@@ -164,7 +167,7 @@ function walk(
   enter(value, true);
   while (stack.length > 0) {
     const frame = stack[stack.length - 1]!;
-    const next = frame.entries.next();
+    const next = frame.keys.next();
     if (next.done) {
       leave(true);
       continue;
@@ -174,7 +177,7 @@ function walk(
       leave(false);
       continue;
     }
-    const [key, child] = next.value;
+    const key = next.value;
     path.push(key);
     // Count every expanded slot, including repeated references and array indexes,
     // before merge can clone an atomic array into an exponentially larger tree.
@@ -192,6 +195,7 @@ function walk(
         continue;
       }
     }
-    if (!enter(child, frame.emitEntries && !frame.array)) path.pop();
+    // enter checks path budgets before fetching this property's value.
+    if (!enter(frame.source, frame.emitEntries && !frame.array, key)) path.pop();
   }
 }
