@@ -1,10 +1,45 @@
 import { describe, expect, it } from "vitest";
-import { buildConfigDiff, resolveConfig } from "../src/index.js";
+import { buildConfigDiff, buildDiagnosticReport, resolveConfig } from "../src/index.js";
 import { source } from "./helpers/source.js";
 
 function result(value: unknown, id = "file") { return resolveConfig({ sources: [source(id, 0, value)] }); }
 
 describe("config diff", () => {
+  it.each([false, true].flatMap(detectSecretChanges => ["before", "after"].flatMap(overflowSide =>
+    [false, true].map(overridden => ({ detectSecretChanges, overflowSide, overridden })))))(
+    "preserves secret ownership when $overflowSide diagnostics overflow (overridden=$overridden, detect=$detectSecretChanges)",
+    ({ detectSecretChanges, overflowSide, overridden }) => {
+      const vault = source("vault", 0, { value: "before hidden content" });
+      const large = resolveConfig({ sources: [
+        { ...vault, descriptor: { ...vault.descriptor, redaction: { secretSource: true } } },
+        ...(overridden ? [source("override", 1, { value: "override hidden content" })] : []),
+        { ...source("notes", 2, { notice: 1 }), issues: [{
+          category: "parse", code: "public_warning", severity: "warning", path: ["notice"],
+          message: "Public warning", details: { note: "x".repeat(16000) }
+        } as const] }
+      ], limits: { maxReportBytes: 8000 } });
+      const cli = source("cli", 0, { value: "after hidden content", notice: 1 });
+      const small = resolveConfig({ sources: [{ ...cli,
+        descriptor: { ...cli.descriptor, redaction: { secretPaths: [["notice"]] } }
+      }], limits: { maxReportBytes: 8000 } });
+      expect(large.ok).toBe(true);
+      expect(buildDiagnosticReport(large).issues[0]?.code).toBe("max_report_bytes_exceeded");
+      const [before, after] = overflowSide === "before" ? [large, small] : [small, large];
+      const report = buildConfigDiff(before!, after!, { detectSecretChanges });
+      expect(report.status).toBe("ok");
+      for (const side of [report.before, report.after]) {
+        expect(side.entries.find(entry => entry.path[0] === "value")?.visibility).toBe("redacted");
+      }
+      const serialized = JSON.stringify(report);
+      for (const text of ["before hidden content", "override hidden content", "after hidden content"]) {
+        expect(serialized).not.toContain(text);
+      }
+      expect(report.changes.some(change => change.path[0] === "value" &&
+        change.kinds.includes("value-changed"))).toBe(detectSecretChanges);
+      expect(new TextEncoder().encode(serialized).byteLength).toBeLessThanOrEqual(8000);
+    }
+  );
+
   it("compares winning and overridden location fields independently of object key order", () => {
     const located = (reverse: boolean, line = 1) => resolveConfig({ sources: ["defaults", "file"].map((id, priority) => ({
       ...source(id, priority, { port: 80 }), locations: [{ path: ["port"], location: reverse

@@ -122,7 +122,9 @@ the order of overridden locations remains significant.
 Opaque secret objects also compare descendant ownership in memory without adding
 their children or ownership fingerprints to displayed entries.
 Entries are deterministically sorted by serialized typed path. Both sides' secret
-policies apply to both outputs; metadata remains visible. Secrets are explicitly
+policies apply to both outputs; metadata remains visible. The shared secret-path
+policy is calculated directly from resolved ownership and the redaction matcher,
+independently of diagnostic report byte truncation. Secrets are explicitly
 uncompared by default. `detectSecretChanges: true` compares opaque secret values
 in memory without retaining values, hashes or fingerprints. A missing selected
 path on just one side is an addition/removal; missing on both sides is an error.

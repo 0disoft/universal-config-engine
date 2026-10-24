@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Preserve both sides' secret paths during comparison when standalone diagnostics
+  exceed their byte budget. Derive shared masking policy directly from resolved
+  paths and the redactor, so discarded display metadata cannot expose values.
 - Compile redaction policies once per inspection and share cached path decisions
   with diagnostic construction, avoiding duplicate matcher/index allocations while
   retaining per-call policy freshness and existing masking behavior.

@@ -1,6 +1,6 @@
 import { buildConfigInspection, configValueType, type BuildConfigInspectionOptions, type ConfigInspection, type ConfigInspectionEntry } from "./inspection.js";
 import { getConfigValueAtPath, pathToKey } from "./path.js";
-import { buildDiagnosticReport, type BuildDiagnosticReportOptions } from "./redaction.js";
+import { createPathRedactor, type BuildDiagnosticReportOptions } from "./redaction.js";
 import type { ConfigPath, ConfigResult, ConfigValue } from "./types.js";
 import { sourceIdentity } from "./source-identity.js";
 import { normalizeComparisonOptions, type ConfigComparisonOptions } from "./comparison.js";
@@ -98,8 +98,12 @@ function sharedRedaction(before: ConfigResult, after: ConfigResult, options: Bui
   const combined = { ...options, secretSourceIds: [...new Set([
     ...(options.secretSourceIds ?? []), ...sources.filter((source) => source.redaction?.secretSource === true).map((source) => source.id)
   ])] };
-  const paths = [before, after].flatMap((result) => buildDiagnosticReport(result, combined).resolvedPaths
-    .filter((entry) => entry.redacted).map((entry) => entry.path));
+  // Policy must survive diagnostic byte overflow. The bounded display report can
+  // intentionally omit every resolved path; query the same redactor directly.
+  const paths = [before, after].flatMap((result) => {
+    const redact = createPathRedactor(result, combined);
+    return result.resolvedPaths.filter((entry) => redact(entry.path).redacted).map((entry) => entry.path);
+  });
   return {
     ...combined,
     secretPaths: [...(options.secretPaths ?? []), ...sources.flatMap((source) => source.redaction?.secretPaths ?? []), ...paths],
