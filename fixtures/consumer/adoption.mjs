@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const cwd = process.cwd();
@@ -18,6 +18,24 @@ assert.equal(shared.schemaVersion, "public-diagnostic-1");
 assert(!JSON.stringify(shared).includes("deployment-env"));
 const library = JSON.parse(execFileSync(process.execPath, [join(cwd, "adoption/library.mjs")], { cwd, env, encoding: "utf8", timeout: 30000 }));
 assert.deepEqual([library.typed, library.reload, library.watch], ["valid", "ready", "closed"]);
+assert(library.publicReport.provenance.some(event => event.action === "coerced"));
+
+// The application example must enforce the same declaration budget as the CLI.
+const declarationPath = join(cwd, "adoption/uce.json");
+const originalDeclaration = readFileSync(declarationPath, "utf8");
+try {
+  const declaration = JSON.parse(originalDeclaration);
+  declaration.limits.maxKeyCount = 1;
+  writeFileSync(declarationPath, JSON.stringify(declaration));
+  const limitedCli = spawnSync(process.execPath, [cli, "validate", ...baseArgs, "--json"],
+    { cwd, env, encoding: "utf8", timeout: 30000 });
+  assert.notEqual(limitedCli.status, 0);
+  assert(JSON.parse(limitedCli.stdout).issues.some(issue => issue.code === "max_key_count_exceeded"));
+  const limitedLibrary = spawnSync(process.execPath, [join(cwd, "adoption/library.mjs")],
+    { cwd, env, encoding: "utf8", timeout: 30000 });
+  assert.equal(limitedLibrary.status, 1);
+  assert.match(limitedLibrary.stderr, /Example typed validation failed/);
+} finally { writeFileSync(declarationPath, originalDeclaration); }
 
 // The reproducible comparison case is executed against the actual installed CLI.
 const policy = spawnSync(process.execPath, [cli, "diff", "--config", "comparison/before.json", "--against", "comparison/after.json", "--policy", "comparison/policy.json", "--json"],

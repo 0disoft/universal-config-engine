@@ -10,7 +10,9 @@ async function input() {
   const sources = await loadDeclaredSources({ ...context, configPath: context.canonicalConfigPath, cwd: workspace, env: process.env, argv: [] });
   const declared = createDeclaredValidators(context.declaration);
   if (declared.issues.length > 0) throw new Error("Example validator setup failed.");
-  return { context: undefined, validators: declared.validators, loaders: sources.map(source => ({
+  return { context: undefined, validators: declared.validators,
+    coercionRules: context.declaration.coercionRules, limits: context.declaration.limits,
+    loaders: sources.map(source => ({
     descriptor: source.descriptor, load: () => source
   })) };
 }

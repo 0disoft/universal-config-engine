@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Apply declaration coercion rules and resource limits in the application adoption
+  example, with installed CLI/application parity checks for coercion and rejection.
 - Separate validator diagnostics from input source status and source-only masking
   when their IDs coincide, retaining legacy sourceId and adding validatorId.
 - Extend bounded repeated-run rejection to alternating UTF-16 pairs when uniform

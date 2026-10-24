@@ -18,7 +18,10 @@ Remove-Item Env:APP_PORT
 The original settings are defaults port 3000, YAML port 8080, explicitly selected
 production TOML port 443 and an explicitly mapped `APP_PORT` at priority 20. With
 the environment command above the winning value is 9443 from `deployment-env`;
-provenance retains the lower sources. Without `--profile` only defaults/YAML apply,
+provenance retains the lower sources. The mapping keeps the input string and the
+declaration explicitly coerces it to a number before schema validation. Both the
+CLI and application example apply this rule and the 100-key declaration limit.
+Without `--profile` only defaults/YAML apply,
 even if `NODE_ENV` or `APP_PORT` exists. YAML paths use the common declaration's
 directory; TOML paths use the top declaration's directory. Source ids stay unique.
 
