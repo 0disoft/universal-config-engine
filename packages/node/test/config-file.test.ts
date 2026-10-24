@@ -1,7 +1,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { resolveConfig } from "@0disoft/universal-config-engine-core";
 import { loadConfigFileSource, type ConfigFileFormat, type LoadConfigFileSourceInput } from "../src/index.js";
 
@@ -109,6 +109,49 @@ describe("official configuration file formats", () => {
     const loaded = await load("json5", "{text:'" + "[".repeat(1000) + "', /* { [ */ port:80}");
     expect(loaded.issues).toBeUndefined();
     expect(resolveConfig({ sources: [loaded] }).ok).toBe(true);
+  });
+
+  it("stops deeply nested YAML before consuming the entire token stream", async () => {
+    const { Parser } = await import("yaml");
+    const next = vi.spyOn(Parser.prototype, "next");
+    const onError = vi.fn();
+    try {
+      const loaded = await load("yaml", "value: " + "[".repeat(10000) + "0" + "]".repeat(10000), { onError });
+      expect(loaded.value).toEqual({});
+      expect(loaded.issues?.[0]).toMatchObject({ category: "resource-limit", code: "max_parse_depth_exceeded" });
+      expect(next.mock.calls.length).toBeLessThan(128);
+      expect(onError).not.toHaveBeenCalled();
+    } finally {
+      next.mockRestore();
+    }
+  });
+
+  it.each([255, 256])("enforces the YAML parser ceiling at %i nested arrays", async depth => {
+    const loaded = await load("yaml", "value: " + "[".repeat(depth) + "0" + "]".repeat(depth),
+      { limits: { maxDepth: 512, maxPathLength: 512 } });
+    if (depth === 255) expect(loaded.issues).toBeUndefined();
+    else expect(loaded.issues?.[0]?.code).toBe("max_parse_depth_exceeded");
+  });
+
+  it("bounds YAML block mappings before recursive document composition", async () => {
+    const text = Array.from({ length: 100 }, (_, index) => "  ".repeat(index) + "value:").join("\n") + "\n";
+    expect((await load("yaml", text)).issues?.[0]?.code).toBe("max_parse_depth_exceeded");
+  });
+
+  it.each([
+    "text: '" + "[".repeat(1000) + "'\n",
+    'text: "' + "{".repeat(1000) + '"\n',
+    "# " + "[".repeat(1000) + "\ntext: ok\n",
+    "text: |\n  " + "[".repeat(1000) + "\n",
+    "text: >\n  " + "{".repeat(1000) + "\n"
+  ])("does not count YAML scalar or comment brackets as collections", async text => {
+    expect((await load("yaml", text, { limits: { maxDepth: 1 } })).issues).toBeUndefined();
+  });
+
+  it("still rejects YAML multiple documents without retaining partial values", async () => {
+    const loaded = await load("yaml", "port: 80\n---\nport: 443\n");
+    expect(loaded.value).toEqual({});
+    expect(loaded.issues?.[0]?.code).toBe("config_file_parse_failed");
   });
 
   it.each(['{"port":80} /* unterminated', '{"port":80,}', '{"port":80,,}', '{"port":80, /* note */ "x":}'])(

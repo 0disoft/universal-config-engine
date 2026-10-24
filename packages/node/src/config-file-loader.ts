@@ -32,12 +32,14 @@ export async function loadConfigFileSource(input: LoadConfigFileSourceInput): Pr
     async parse(raw, canonicalPath) {
       // The recursive dialect parsers must not consume unbounded nesting before
       // core can validate their output. JSON uses its existing iterative boundary.
-      if ((input.format === "jsonc" || input.format === "json5") &&
-          exceedsJsonLikeDepth(raw, Math.min(limits.maxDepth + 1, MAX_RECURSIVE_PARSE_DEPTH))) {
+      const maximum = Math.min(limits.maxDepth + 1, MAX_RECURSIVE_PARSE_DEPTH);
+      const yaml = input.format === "yaml" ? await parseBoundedYaml(raw, maximum) : undefined;
+      if (yaml?.ok === false || ((input.format === "jsonc" || input.format === "json5") &&
+          exceedsJsonLikeDepth(raw, maximum))) {
         return failure(input, { category: "resource-limit", code: "max_parse_depth_exceeded",
           message: "Configuration nesting exceeds the parser depth budget." });
       }
-      const value = await parseDialect(raw, input);
+      const value = yaml?.ok === true ? yaml.value : await parseDialect(raw, input);
       const checked = flattenConfigObject(input.descriptor.id, value, limits);
       if (checked.issues.some(issue => issue.severity === "error")) {
         return { descriptor: input.descriptor, value: {}, issues: checked.issues };
@@ -95,12 +97,6 @@ async function parseDialect(raw: string, input: LoadConfigFileSourceInput): Prom
       // not build attacker-controlled prototypes through parser assignments.
       return JSON.parse(chunks.join("")) as unknown;
     }
-    case "yaml": {
-      const { parseDocument } = await import("yaml");
-      const document = parseDocument(raw, { version: "1.2", uniqueKeys: true, stringKeys: true });
-      if (document.errors.length > 0 || document.warnings.length > 0) throw new Error("Invalid YAML.");
-      return document.toJS({ maxAliasCount: 0 });
-    }
     case "toml": {
       const { parse } = await import("smol-toml");
       // Preserve unsafe own keys for core's explicit unsafe_key diagnostic.
@@ -113,6 +109,44 @@ async function parseDialect(raw: string, input: LoadConfigFileSourceInput): Prom
     }
     default: throw new Error("Unsupported configuration format.");
   }
+}
+
+/** Reuse YAML's own lexer and CST parser; quoted/block scalars are never guessed. */
+async function parseBoundedYaml(raw: string, maximum: number): Promise<
+  { readonly ok: false } | { readonly ok: true; readonly value: unknown }
+> {
+  const { Composer, Lexer, Parser } = await import("yaml");
+  const parser = new Parser();
+  let exceeded = false;
+  function* tokens() {
+    for (const lexeme of new Lexer().lex(raw)) {
+      yield* parser.next(lexeme);
+      // The public CST stack also contains document/scalar frames. Only real
+      // collections count; normal shallow tokens need no stack traversal.
+      if (parser.stack.length <= maximum) continue;
+      let depth = 0;
+      for (const token of parser.stack) {
+        if ((token.type === "block-map" || token.type === "block-seq" || token.type === "flow-collection") &&
+            ++depth > maximum) {
+          exceeded = true;
+          return; // Never deliver this incomplete/deep CST to the recursive composer.
+        }
+      }
+    }
+    yield* parser.end();
+  }
+  const composer = new Composer({ version: "1.2", uniqueKeys: true, stringKeys: true });
+  let document: import("yaml").Document.Parsed | undefined;
+  for (const next of composer.compose(tokens(), true, raw.length)) {
+    if (exceeded) return { ok: false };
+    if (document !== undefined) throw new Error("Invalid YAML.");
+    document = next;
+  }
+  if (exceeded) return { ok: false };
+  if (document === undefined || document.errors.length > 0 || document.warnings.length > 0) {
+    throw new Error("Invalid YAML.");
+  }
+  return { ok: true, value: document.toJS({ maxAliasCount: 0 }) };
 }
 
 function failure(input: LoadConfigFileSourceInput, issue: Pick<ConfigIssue, "category" | "code" | "message">): LoadedSource {

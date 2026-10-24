@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Bound YAML collection nesting during streaming parsing, before recursive document
+  composition, and report `max_parse_depth_exceeded` instead of consuming the whole
+  deeply nested input or falling back to an internal parser failure.
 - Add optional strict decimal/safe-integer and empty-input mapping policies, plus
   independent value/source/location comparisons shared by diff and policy-owned CI
   checks. Preserve defaults and reject caller attempts to narrow CI comparisons.

@@ -47,6 +47,10 @@ const result = resolveConfig({ sources: [source] });
 - YAML uses YAML 1.2 with unique string keys. Duplicate keys, aliases, unknown tags,
   parser warnings and custom runtime values are rejected. Anchors without aliases
   do not expand configuration. Merge-key magic and custom schemas are not enabled.
+  Its streaming CST parser stops at the smaller of the configured depth plus root
+  and 256 collections, before recursive document composition or value conversion.
+  Excess produces `max_parse_depth_exceeded`, with no partial configuration.
+  Quoted/block scalars and comments do not count as collection nesting.
 - TOML date/time objects, big integers and non-finite numbers are unsupported.
   Use quoted strings for dates and JSON-compatible numeric ranges. Do not silently
   convert dates or precision-sensitive values into a different type.
