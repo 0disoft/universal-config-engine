@@ -55,8 +55,15 @@ export async function runDoctorCli(args: readonly string[], runtime: CliRuntime,
   const report: DoctorReport = { schemaVersion: "doctor-1", command: "doctor", status: pipeline.report.status,
     diagnostics: pipeline.report, fixes: [...fixes.values()] };
   runtime.stdout(json ? `${JSON.stringify(report, null, 2)}\n` :
-    `Configuration doctor: ${report.status}\n${report.fixes.map(fix => `- ${fix.action}\n`).join("")}${report.status === "ok" ? "No configuration errors found.\n" : ""}`);
+    `Configuration doctor: ${report.status}\n${report.diagnostics.issues.map(formatDoctorIssue).join("")}${report.fixes.map(fix => `- ${fix.action}\n`).join("")}${report.status === "ok" ? "No configuration errors found.\n" : ""}`);
   return { exitCode: exitCodeForResult({ ...pipeline.result, ok: pipeline.result.ok && report.status === "ok", issues: pipeline.report.issues }) };
+}
+
+function formatDoctorIssue(issue: ConfigIssue): string {
+  const path = issue.path === undefined ? "" : ` at ${JSON.stringify(issue.path)}`;
+  const origin = issue.validatorId !== undefined ? ` validator ${JSON.stringify(issue.validatorId)}`
+    : issue.sourceId === undefined ? "" : ` source ${JSON.stringify(issue.sourceId)}`;
+  return `- ${issue.severity} ${JSON.stringify(issue.code)}${path}${origin}: ${JSON.stringify(issue.message)}\n`;
 }
 
 function fixForIssue(issue: ConfigIssue): DoctorFix {

@@ -11,6 +11,21 @@ async function invoke(cwd: string, args: string[]) {
 }
 
 describe("actionable configuration doctor", () => {
+  it("shows sanitized human paths and escapes terminal control characters", async () => {
+    await withTempDir(async root => {
+      await writeFile(join(root, "uce.json"), JSON.stringify({ sources: [{ id: "base", kind: "object", priority: 0,
+        value: { password: "UCE_DOCTOR_PRIVATE" } }], validators: [{ id: "schema\u001b[2J", kind: "json-schema-ajv",
+        schema: { type: "object", properties: { password: { type: "integer" } } } }] }));
+      let output = "";
+      const result = await runCli(["doctor", "--config", "uce.json"], {
+        cwd: root, env: {}, stdout: text => { output += text; }, stderr() {}
+      });
+      expect(result.exitCode).toBe(1); expect(output).toContain('["password"]');
+      expect(output).toContain('validator "schema\\u001b[2J"');
+      expect(output).not.toContain("\u001b"); expect(output).not.toContain("UCE_DOCTOR_PRIVATE");
+      expect(output).toContain("Diagnostic message redacted");
+    });
+  });
   it.each([["--output", "json"], ["--output=json"]])("honors JSON output aliases for success and usage failures", async (...flags) => {
     await withTempDir(async root => {
       await writeFile(join(root, "uce.json"), JSON.stringify({ sources: [] }));

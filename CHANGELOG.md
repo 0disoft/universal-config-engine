@@ -7,6 +7,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Add standalone CLI help/version, terminal-safe per-issue doctor diagnostics and
+  a non-overwriting defaults/environment/schema initialization example.
 - Align stable installation documentation with the 1.2.0 baseline and distinguish
   source-checkout additions from published APIs instead of recommending an old RC.
 - Apply declaration coercion rules and resource limits in the application adoption

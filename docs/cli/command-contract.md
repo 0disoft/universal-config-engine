@@ -12,6 +12,10 @@ Repository Type: cli-tool
 
 ## Commands
 
+Unreleased `uce --help` / `-h`, `uce help [command]` and `uce <command> --help`
+show command guidance without reading configuration. `uce --version` / `-v`
+reports the installed package version. These standalone forms exit 0.
+
 Diagnostic report byte-budget failures return exit code `3`, including ordinary
 `explain` and `validate` output when config resolution itself succeeded.
 

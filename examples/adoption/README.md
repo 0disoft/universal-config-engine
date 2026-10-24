@@ -35,8 +35,9 @@ An application can retain the watcher until shutdown; this example closes every
 handle so the demonstration finishes. Supply actual dependencies when changing
 the graph. `load` owns real application deadlines and external resources.
 
-For a new project, `uce init` creates an empty defaults declaration; it does not
-overwrite files. This checked-in example is intentionally richer. `doctor` reads
+For a new project, `uce init` creates defaults, an APP_PORT mapping and a port
+schema in one declaration; it does not overwrite files. This checked-in example
+adds file sources and profiles. `doctor` reads
 and validates the selected setup, but does not fix files or test service health.
 See [reload](../../docs/adapters/reload.md), [profiles](../../docs/cli/profiles-and-inheritance.md)
 and [public sharing](../../docs/library/public-sharing.md) for the exact limits.

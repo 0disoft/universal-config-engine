@@ -19,8 +19,11 @@ import type { CliResult, CliRuntime } from "./types.js";
 import { runInitCli } from "./init.js";
 import { runDoctorCli } from "./doctor.js";
 import { formatPublicReport } from "./public-output.js";
+import { runInformationCli } from "./information.js";
 
 export async function runCli(args: readonly string[], runtime: CliRuntime): Promise<CliResult> {
+  const information = await runInformationCli(args, runtime);
+  if (information !== undefined) return information;
   const separator = args.indexOf("--");
   const options = separator < 0 ? args : args.slice(0, separator);
   const publicMode = options.includes("--public");

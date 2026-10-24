@@ -1075,6 +1075,11 @@ export type { CliJsonReport } from "./output.js";
 export { selectPipelineProfile } from "./profiles.js";
 export type { PipelineProfileDeclaration } from "./types.js";
 
+### information.d.ts
+import type { CliResult, CliRuntime } from "./types.js";
+/** Information commands never discover or load user configuration. */
+export declare function runInformationCli(args: readonly string[], runtime: CliRuntime): Promise<CliResult | undefined>;
+
 ### init.d.ts
 import type { CliResult, CliRuntime } from "./types.js";
 /** Deliberately separate from the stable explain/validate parser and envelopes. */

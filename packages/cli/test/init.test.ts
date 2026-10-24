@@ -11,6 +11,18 @@ async function invoke(cwd: string, args: string[]) {
 }
 
 describe("non-destructive initialization", () => {
+  it.each([["8080", 0], ["65536", 1], ["not-a-number", 3]] as const)("validates the generated env mapping (%s)", async (port, expected) => {
+    await withTempDir(async root => {
+      await invoke(root, ["init", "--json"]);
+      let output = "";
+      const result = await runCli(["doctor", "--config", "uce.json"], { cwd: root, env: { APP_PORT: port },
+        stdout: text => { output += text; }, stderr() {} });
+      expect(result.exitCode).toBe(expected);
+      if (expected !== 0) { expect(output).toContain('["server","port"]'); expect(output).not.toContain(port); }
+      if (expected === 1) expect(output).toContain('validator "server-schema"');
+      if (expected === 3) expect(output).toContain('source "environment"');
+    });
+  });
   it("creates a usable minimal declaration once and never overwrites it", async () => {
     await withTempDir(async root => {
       expect(await invoke(root, ["init", "--json"])).toMatchObject({ exitCode: 0, report: { status: "created" } });
