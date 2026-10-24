@@ -115,8 +115,9 @@ The existing `check` job remains the Ubuntu compatibility gate and:
 - installs Node.js 24.11.1
 - enables pnpm 11.7.0 through Corepack
 - installs the locked dependency graph
-- runs `pnpm run check`
-- runs `pnpm run smoke:packages`
+- runs `pnpm run build` once
+- runs `pnpm run check:built` against that build
+- runs `pnpm run smoke:packages:built` against that build
 - runs `git diff --check`
 
 The release workflow additionally runs `pnpm run smoke:registry-packages` after a
@@ -135,6 +136,23 @@ runtime claim on Ubuntu. Its `minimum` job uses exact Node.js `24.0.0`; its
 checks and tests, packed-package smoke, and diff hygiene with the locked pnpm
 version. This rolling matrix is a compatibility signal, while the pinned main CI
 and release jobs remain the reproducible release baseline.
+
+Each CI and runtime job builds the workspace once before its `:built` commands.
+Runtime jobs run `typecheck:built`, `test:built`, then `smoke:packages:built`.
+These three validation workflows still have eight jobs: two pinned-baseline CI jobs, two Ubuntu
+minimum/current runtime jobs, and four Ubuntu/Windows minimum/current isolated
+consumer jobs. Workflow paths, job names, triggers, versions and smoke scenarios
+are unchanged. Explicit whole-workspace builds per push/PR fall from 14 to 8;
+per-package `prepack` hooks still run and are not bypassed.
+
+The standalone `pnpm run check` still builds, checks and cleans. `check:built`
+requires a fresh build and intentionally leaves it available for the next step.
+`smoke:packages:built` skips only its initial whole-workspace build, requires the
+artifacts to exist, and retains normal packing, isolated installation, CLI/type
+checks and success/failure cleanup. It does not cache artifacts across jobs or
+commits. CI runners are disposable if an earlier check fails before smoke cleanup.
+To revert this optimization, restore the standalone commands in the two workflows;
+no branch protection check names or remote settings need changing.
 
 `.github/workflows/consumer-compatibility.yml` installs packed candidate artifacts
 into isolated core, Node, Ajv, Zod, and CLI projects. It runs JavaScript ESM, strict

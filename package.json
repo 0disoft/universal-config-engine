@@ -22,6 +22,7 @@
     "typecheck:built": "pnpm -r typecheck:built",
     "test": "pnpm run build && pnpm run test:built",
     "test:built": "pnpm -r test:built",
+    "check:built": "pnpm run typecheck:built && node scripts/check-public-api-snapshot.mjs && pnpm run test:built && pnpm run check:no-secret-snapshots && pnpm run check:adapter-fixtures && pnpm run check:release-scripts && pnpm run check:workflow-actions && pnpm run check:smoke-tools && pnpm run check:complexity:built",
     "clean:build": "node scripts/clean-build-output.mjs",
     "check:adapter-fixtures": "node scripts/check-adapter-fixtures.mjs",
     "check:smoke-tools": "node --test scripts/lib/package-tools.test.mjs",
@@ -38,11 +39,12 @@
     "benchmark:name-patterns": "pnpm --filter @0disoft/universal-config-engine-core build && node scripts/benchmark-name-patterns.mjs",
     "smoke:core-package": "node scripts/smoke-core-package.mjs",
     "smoke:packages": "node scripts/smoke-packages.mjs",
+    "smoke:packages:built": "node scripts/smoke-packages.mjs --built",
     "smoke:consumer-matrix": "node scripts/smoke-consumer-matrix.mjs",
     "smoke:portable-runtimes": "node scripts/smoke-portable-runtimes.mjs",
     "smoke:registry-packages": "node scripts/smoke-registry-packages.mjs",
     "verify:registry-packages": "node scripts/wait-for-registry-packages.mjs",
-    "check": "pnpm run build && pnpm run typecheck:built && node scripts/check-public-api-snapshot.mjs && pnpm run test:built && pnpm run check:no-secret-snapshots && pnpm run check:adapter-fixtures && pnpm run check:release-scripts && pnpm run check:workflow-actions && pnpm run check:smoke-tools && pnpm run check:complexity:built && pnpm run clean:build"
+    "check": "pnpm run build && pnpm run check:built && pnpm run clean:build"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",

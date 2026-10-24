@@ -37,11 +37,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run repository check
-        run: pnpm run check
+      - name: Build workspace once
+        run: pnpm run build
+
+      - name: Run repository check using the build
+        run: pnpm run check:built
 
       - name: Smoke workspace packages
-        run: pnpm run smoke:packages
+        run: pnpm run smoke:packages:built
 
       - name: Check repository diff hygiene
         run: git diff --check
@@ -69,11 +72,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run repository check
-        run: pnpm run check
+      - name: Build workspace once
+        run: pnpm run build
+
+      - name: Run repository check using the build
+        run: pnpm run check:built
 
       - name: Smoke workspace packages
-        run: pnpm run smoke:packages
+        run: pnpm run smoke:packages:built
 
       - name: Check repository diff hygiene
         run: git diff --check

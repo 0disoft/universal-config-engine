@@ -1,10 +1,27 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { npmCompatibleEnvironment, withWorkspaceSmoke } from "./package-tools.mjs";
 import { WORKSPACE_PACKAGE_NAMES, packageDirectory } from "./workspace-packages.mjs";
+
+test("prebuilt package smoke fails without artifacts instead of rebuilding or passing", () => {
+  const root = mkdtempSync(join(tmpdir(), "uce-prebuilt-smoke-"));
+  try {
+    const manager = join(root, "package-manager.cjs");
+    writeFileSync(manager, 'require("node:fs").writeFileSync("rebuilt", "unexpected build"); process.exit(17);');
+    const result = spawnSync(process.execPath, [fileURLToPath(new URL("../smoke-packages.mjs", import.meta.url)), "--built"], {
+      cwd: root, env: { ...process.env, npm_execpath: manager }, encoding: "utf8", timeout: 10000, windowsHide: true
+    });
+    assert.ifError(result.error);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /build did not produce dist\/index\.js/);
+    assert.deepEqual(readdirSync(root), ["package-manager.cjs"]);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
 
 test("the shared package catalog covers publishable manifests in dependency order", () => {
   const packageRoot = new URL("../../packages/", import.meta.url);

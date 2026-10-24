@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Reuse each CI/runtime job's workspace build for checks and packed smoke while
+  retaining all eight OS/Node jobs, existing check names and packaging lifecycle
+  hooks. Reduce explicit whole-workspace builds per push/PR from 14 to 8.
 - Rebind file watches when an intermediate directory or directory symlink is
   replaced. Watch logical and canonical ancestor components within the workspace,
   retaining the 128-handle maximum and bounding path resolution to 192 requests

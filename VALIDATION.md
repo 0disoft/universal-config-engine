@@ -50,6 +50,11 @@ builds dependencies once and runs `test:built` for all packages, plus the script
 guards. Smoke helper guards cover cleanup after both success and failure and
 preservation of unrelated release artifacts.
 
+CI builds once, runs `check:built`, then `smoke:packages:built` to reuse that fresh
+build without changing test coverage. `check:built` leaves artifacts intact;
+both smoke modes clean them on success/failure. Standalone `check` still builds
+and cleans, and standalone `smoke:packages` still builds before packing.
+
 ## Inspection and Comparison
 
 Core regression suites cover value previews, nested/atomic-array secret policies,

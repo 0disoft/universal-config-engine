@@ -12,6 +12,11 @@ import {
   withWorkspaceSmoke
 } from "./lib/package-tools.mjs";
 
+const args = process.argv.slice(2);
+if (args.length > 1 || args.length === 1 && args[0] !== "--built") {
+  throw new Error("Usage: smoke-packages.mjs [--built]");
+}
+const reuseBuild = args[0] === "--built";
 const root = process.cwd();
 const packages = [
   {
@@ -114,7 +119,7 @@ const packages = [
 await withWorkspaceSmoke(root, async ({ packDir, consumerDir }) => {
   const packedTarballs = [];
 
-  runPnpm(["-r", "build"]);
+  if (!reuseBuild) runPnpm(["-r", "build"]);
 
   for (const packageInfo of packages) {
     if (!existsSync(packageInfo.distIndex)) {
