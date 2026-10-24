@@ -1,6 +1,6 @@
 import { isConfigPath } from "./adapter-guards.js";
 import { getConfigValueAtPath, isPathPrefix, isUnsafePathSegment, pathToKey } from "./path.js";
-import { buildDiagnosticReport, createPathRedactor, type BuildDiagnosticReportOptions } from "./redaction.js";
+import { createDiagnosticReportContext, type BuildDiagnosticReportOptions } from "./redaction.js";
 import type { ConfigPath, ConfigResult, ConfigScalar, ConfigValue, DiagnosticReport, DiagnosticReportResolvedPath } from "./types.js";
 
 export type InspectedValueType = "null" | "string" | "number" | "boolean" | "object" | "array";
@@ -35,7 +35,8 @@ export function buildConfigInspection(
   options: BuildConfigInspectionOptions = {}
 ): ConfigInspection {
   const path = options.path ?? [];
-  let diagnostics = buildDiagnosticReport(result, options);
+  const { diagnostics: initialDiagnostics, redact } = createDiagnosticReportContext(result, options);
+  let diagnostics = initialDiagnostics;
   if (!Array.isArray(path) || path.length > result.limits.maxPathLength || !isConfigPath(path) || path.some(isUnsafePathSegment)) {
     return inspectionFailure(diagnostics, [], "invalid_inspection_path", "Inspection requires a safe typed config path.");
   }
@@ -56,7 +57,6 @@ export function buildConfigInspection(
     return inspectionFailure(diagnostics, path, "inspection_path_not_found", "The selected config path does not exist.");
   }
   const maxValueLength = positiveLimit(options.maxValueLength, 1024);
-  const redact = createPathRedactor(result, options);
   const sourceIndex = new Map(diagnostics.resolvedPaths.map((entry) => [pathToKey(entry.path), entry]));
   const entries: ConfigInspectionEntry[] = [];
   const pending: { path: ConfigPath; value: ConfigValue; source: DiagnosticReportResolvedPath | undefined }[] = [

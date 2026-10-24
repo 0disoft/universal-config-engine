@@ -373,6 +373,11 @@ export interface RedactionDecision {
     readonly reason?: string;
 }
 export declare function buildDiagnosticReport(result: ConfigResult, options?: BuildDiagnosticReportOptions): DiagnosticReport;
+/** Internal per-call boundary: diagnostics and values share one compiled policy/cache. */
+export declare function createDiagnosticReportContext(result: ConfigResult, options?: BuildDiagnosticReportOptions): {
+    readonly diagnostics: DiagnosticReport;
+    readonly redact: (path: ConfigPath) => RedactionDecision;
+};
 /** Internal shared policy boundary for value-bearing opt-in reports. */
 export declare function createPathRedactor(result: ConfigResult, options?: BuildDiagnosticReportOptions): (path: ConfigPath) => RedactionDecision;
 

@@ -3,6 +3,34 @@ import { buildConfigInspection, resolveConfig, runConfigPipeline, type ConfigPat
 import { source } from "./helpers/source.js";
 
 describe("safe value inspection", () => {
+  it("compiles policies once per inspection and keeps array descendants protected", () => {
+    const values = ["privateField", ...Array.from({ length: 64 }, (_, index) => `hidden_${index}`)];
+    let reads = 0;
+    const secretNamePatterns = new Proxy(values, {
+      get(target, key, receiver) {
+        if (typeof key === "string" && /^\d+$/.test(key)) reads++;
+        return Reflect.get(target, key, receiver);
+      }
+    });
+    const result = resolveConfig({ sources: [source("file", 0, {
+      rows: [{ privateField: "hidden content" }], visible: "public content"
+    })] });
+    const report = buildConfigInspection(result, { secretNamePatterns });
+    expect(report.status).toBe("ok");
+    expect(report.entries).toContainEqual(expect.objectContaining({
+      path: ["rows", 0, "privateField"], visibility: "redacted"
+    }));
+    expect(JSON.stringify(report)).not.toContain("hidden content");
+    expect(reads).toBe(values.length);
+
+    // The shared state belongs to this call, not a stale cross-call cache.
+    values[0] = "visible";
+    const updated = buildConfigInspection(result, { secretNamePatterns });
+    expect(updated.entries.find(entry => entry.path[0] === "visible")?.visibility).toBe("redacted");
+    expect(updated.entries.find(entry => entry.path.at(-1) === "privateField")?.value).toBe("hidden content");
+    expect(reads).toBe(values.length * 2);
+  });
+
   it("connects a selected value to coercion, source locations and root validation events", async () => {
     const input = source("file", 10, { port: "80" });
     const pipeline = await runConfigPipeline({ loaders: [{ descriptor: input.descriptor, load: () => ({

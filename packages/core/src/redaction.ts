@@ -43,17 +43,31 @@ export function buildDiagnosticReport(
   result: ConfigResult,
   options: BuildDiagnosticReportOptions = {}
 ): DiagnosticReport {
+  return createDiagnosticReportContext(result, options).diagnostics;
+}
+
+/** Internal per-call boundary: diagnostics and values share one compiled policy/cache. */
+export function createDiagnosticReportContext(
+  result: ConfigResult,
+  options: BuildDiagnosticReportOptions = {}
+): { readonly diagnostics: DiagnosticReport; readonly redact: (path: ConfigPath) => RedactionDecision } {
   const ownershipFailure = incompleteOwnershipFailure(result);
   if (ownershipFailure !== undefined) {
     return {
-      schemaVersion: "0.2", status: "error", sources: [], resolvedPaths: [], provenance: [],
-      issues: [{ category: "resource-limit", code: ownershipFailure, severity: "error",
-        message: "Resolved path ownership is incomplete; diagnostic content was omitted." }],
-      limits: { ...result.limits }
+      diagnostics: {
+        schemaVersion: "0.2", status: "error", sources: [], resolvedPaths: [], provenance: [],
+        issues: [{ category: "resource-limit", code: ownershipFailure, severity: "error",
+          message: "Resolved path ownership is incomplete; diagnostic content was omitted." }],
+        limits: { ...result.limits }
+      },
+      redact: () => ({ redacted: true, reason: "incomplete-ownership" })
     };
   }
   const { sourceById, redactionContext } = createRedactionState(result, options);
-  return buildReport(result, sourceById, redactionContext);
+  return {
+    diagnostics: buildReport(result, sourceById, redactionContext),
+    redact: path => getRedactionForAnySource(path, sourceById, redactionContext)
+  };
 }
 
 /** Internal shared policy boundary for value-bearing opt-in reports. */

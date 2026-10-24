@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Compile redaction policies once per inspection and share cached path decisions
+  with diagnostic construction, avoiding duplicate matcher/index allocations while
+  retaining per-call policy freshness and existing masking behavior.
 - Bound YAML collection nesting during streaming parsing, before recursive document
   composition, and report `max_parse_depth_exceeded` instead of consuming the whole
   deeply nested input or falling back to an internal parser failure.

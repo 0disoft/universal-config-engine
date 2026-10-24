@@ -106,6 +106,9 @@ against `maxResolvedPaths`, so a result near its leaf limit can exceed this budg
 Filtered sanitized diagnostics retain ancestors and descendants of the query;
 root validation events remain available. This is an explanation of recorded
 decisions, not a historical store of overwritten values. Metadata is not public-safe.
+Each inspection shares one compiled redaction policy and path-decision cache between
+its diagnostics and value traversal. This state is local to that call; subsequent
+calls compile their current options without retaining stale policies across calls.
 
 ## Config Comparison
 
