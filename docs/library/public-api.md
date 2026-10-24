@@ -328,6 +328,9 @@ before assignment; failed mappings do not create partial target objects. Raw JSO
 and parser exception text are omitted from these issues. JSON strings containing
 numeric text remain strings; finite values at the JavaScript numeric boundary are
 accepted.
+Parser-owned JSON values use one iterative pass for finite numbers and unsafe keys;
+native parsing already guarantees an acyclic tree of JSON types. Unsafe-key errors
+retain precedence over numeric overflow regardless of traversal order.
 
 JSON value checks, structural validation and `cloneConfigValue` traverse containers
 iteratively. Valid deep JSON is not mislabeled as invalid syntax because a JSON

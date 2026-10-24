@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { applyCoercionRules, buildConfigInspection, buildDiagnosticReport, createMappedOverrideSource, resolveConfig, type OverrideMapping } from "../src/index.js";
 
 describe("mapping redaction", () => {
@@ -99,6 +99,34 @@ describe("JSON mapping validation", () => {
       rules: [{ path: ["payload"], from: "string", to: "json", onFailure: "issue" }]
     });
   }
+
+  it.each(["mapping", "coercion"])("validates parsed JSON containers once for %s", stage => {
+    const items = Array.from({ length: 64 }, (_, index) => ({ index, enabled: true }));
+    const raw = JSON.stringify({ items });
+    const values = Object.values;
+    let visits = 0;
+    const spy = vi.spyOn(Object, "values").mockImplementation(value => {
+      if (value !== null && typeof value === "object" && Object.hasOwn(value, "index")) visits++;
+      return values(value);
+    });
+    try {
+      const result = stage === "mapping" ? mapJson(raw) : coerceJson(raw);
+      expect(result.issues).toEqual([]);
+      expect(visits).toBe(items.length);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it.each([
+    '{"number":1e999,"nested":{"constructor":0}}',
+    '{"number":-1e999,"nested":{"prototype":0}}',
+    '[1e999,{"__proto__":0}]',
+    '[{"__proto__":0},1e999]'
+  ])("keeps unsafe-key precedence over non-finite values (%s)", raw => {
+    expect(mapJson(raw).issues).toEqual([expect.objectContaining({ code: "unsafe_key" })]);
+    expect(coerceJson(raw).issues).toEqual([expect.objectContaining({ code: "unsafe_key" })]);
+  });
 
   it.each(["1e999", "-1e999", '{"note":"JSON input marker","nested":[1e999]}'])(
     "rejects non-finite JSON at the mapping boundary (%s)", (raw) => {

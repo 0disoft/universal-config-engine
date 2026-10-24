@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Validate parsed JSON values in one iterative pass for mappings and coercion,
+  eliminating the duplicate generic object-graph traversal and its cycle-detection
+  sets while preserving unsafe-key precedence and finite-number checks.
 - Fetch source values only after structural admission checks. Avoid eager object
   entry allocation and prevent discarded object/array accessors from executing
   beyond key, diagnostic or depth/path limits or for rejected unsafe keys.
