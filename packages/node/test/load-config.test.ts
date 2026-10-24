@@ -23,6 +23,23 @@ const validatorFactory: DeclaredValidatorFactory = declaration => ({ id: declara
   validate: input => ({ ok: typeof getConfigValueAtPath(input.config, ["port"]) === "number", issues: [] }) });
 
 describe("application declaration facade", () => {
+  it.each([
+    { env: { APP_PORT: " " }, argv: [], expected: 3000 },
+    { env: { APP_PORT: "8080" }, argv: [], expected: 8080 },
+    { env: { APP_PORT: "0x10" }, argv: [], expected: undefined },
+    { env: {}, argv: ["--port", "1.5"], expected: undefined }
+  ])("forwards declared strict numeric and empty-input policies (%j)", async ({ env, argv, expected }) => {
+    await withDeclaration(async cwd => {
+      await writeFile(join(cwd, "uce.json"), JSON.stringify({ sources: [
+        { id: "defaults", kind: "object", priority: 0, value: { port: 3000 } },
+        { id: "env", kind: "process-env", priority: 1, mappings: [{ ...mappingPolicy, externalName: "APP_PORT", sourceKind: "process-env" }] },
+        { id: "argv", kind: "argv", priority: 2, mappings: [{ ...mappingPolicy, externalName: "--port", sourceKind: "argv" }] }
+      ] }));
+      const pipeline = await loadConfig({ cwd, configPath: "uce.json", env, argv });
+      if (expected === undefined) expect(pipeline.result.issues[0]?.code).toBe("mapping_number_format_invalid");
+      else { expect(pipeline.result.ok).toBe(true); expect(pipeline.result.config).toEqual({ port: expected }); }
+    });
+  });
   it("applies declared coercion, budgets and validators without importing the CLI", async () => {
     await withDeclaration(async cwd => {
       const result = await loadConfig({ cwd, configPath: "uce.json", env: { APP_PORT: "8080" }, validatorFactory });
@@ -71,3 +88,5 @@ describe("application declaration facade", () => {
     expect(failed.result.ok).toBe(false); expect(JSON.stringify(failed.report)).not.toContain("UCE_DECLARATION_PRIVATE");
   });
 });
+
+const mappingPolicy = { targetPath: ["port"], parseAs: "number", numberFormat: "integer", emptyValue: "ignore" };

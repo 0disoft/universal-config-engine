@@ -13,6 +13,7 @@ export declare function isIssueDetails(value: unknown): value is Readonly<Record
 ### change-policy.d.ts
 import { type BuildConfigDiffOptions, type ConfigDiff } from "./diff.js";
 import type { ConfigPath, ConfigResult } from "./types.js";
+import { type ConfigComparisonOptions } from "./comparison.js";
 export type ConfigChangeRule = {
     readonly id: string;
     readonly path: ConfigPath;
@@ -25,6 +26,7 @@ export type ConfigChangeRule = {
 export interface ConfigChangePolicy {
     readonly version: "change-policy-1";
     readonly rules: readonly ConfigChangeRule[];
+    readonly comparison?: ConfigComparisonOptions;
 }
 export interface ConfigPolicyViolation {
     readonly code: "change_forbidden" | "required_path_missing" | "source_not_allowed" | "comparison_indeterminate" | "invalid_policy" | "comparison_failed" | "max_report_bytes_exceeded";
@@ -41,7 +43,7 @@ export interface ConfigChangeCheck {
     };
 }
 /** Policy always evaluates the complete configuration; a query cannot hide changes. */
-export declare function checkConfigChanges(before: ConfigResult, after: ConfigResult, policy: unknown, options?: Omit<BuildConfigDiffOptions, "path">): ConfigChangeCheck;
+export declare function checkConfigChanges(before: ConfigResult, after: ConfigResult, policy: unknown, options?: Omit<BuildConfigDiffOptions, "path" | "comparison">): ConfigChangeCheck;
 
 ### coercion.d.ts
 import type { CoercionRule, ConfigIssue, ConfigValue, ProvenanceEvent, ResourceLimitPolicy } from "./types.js";
@@ -61,6 +63,17 @@ export declare function applyCoercionRules(input: ApplyCoercionRulesInput): Appl
 /** Internal resolution boundary; standalone coercion keeps its existing depth contract. */
 export declare function applyResolutionCoercionRules(input: ApplyCoercionRulesInput): ApplyCoercionRulesResult;
 
+### comparison.d.ts
+export interface ConfigComparisonOptions {
+    /** Compare values and types; additions/removals are always reported. */
+    readonly values?: boolean;
+    /** Compare winning/overridden source IDs and priorities, independently of locations. */
+    readonly sources?: boolean;
+    /** Compare source paths, lines and columns. */
+    readonly locations?: boolean;
+}
+export declare function normalizeComparisonOptions(value: unknown): Required<ConfigComparisonOptions> | undefined;
+
 ### compiled-redaction.d.ts
 import type { ConfigPath, ConfigSourceDescriptor } from "./types.js";
 import type { BuildDiagnosticReportOptions, RedactionDecision } from "./redaction.js";
@@ -78,6 +91,7 @@ export declare function isDiagnosticsLimitReached(issues: readonly ConfigIssue[]
 ### diff.d.ts
 import { type BuildConfigInspectionOptions, type ConfigInspection, type ConfigInspectionEntry } from "./inspection.js";
 import type { ConfigPath, ConfigResult, ConfigValue } from "./types.js";
+import { type ConfigComparisonOptions } from "./comparison.js";
 export type ConfigChangeKind = "added" | "removed" | "type-changed" | "value-changed" | "source-changed";
 export interface ConfigChange {
     readonly path: ConfigPath;
@@ -88,11 +102,14 @@ export interface ConfigChange {
 export interface BuildConfigDiffOptions extends BuildConfigInspectionOptions {
     /** Explicitly disclose secret-change metadata; never retains values or fingerprints. */
     readonly detectSecretChanges?: boolean;
+    readonly comparison?: ConfigComparisonOptions;
 }
 export interface ConfigDiff {
     readonly schemaVersion: "diff-1";
     readonly status: "ok" | "error";
     readonly secretComparison: "skipped" | "detected";
+    /** Present only for an explicit comparison selection. */
+    readonly comparison?: Required<ConfigComparisonOptions>;
     readonly uncomparedSecretPaths: readonly ConfigPath[];
     readonly changes: readonly ConfigChange[];
     readonly before: ConfigInspection;
@@ -122,6 +139,7 @@ export type { RunValidatedConfigPipelineInput, RunValidatedConfigPipelineResult 
 export type { StandardConfigSchema, StandardConfigSchemaResult, StandardConfigSchemaIssue, StandardConfigSchemaOutput, CreateStandardSchemaValidatorInput } from "./standard-schema.js";
 export type { ConfigChangePolicy, ConfigChangeRule, ConfigChangeCheck, ConfigPolicyViolation } from "./change-policy.js";
 export type { BuildConfigDiffOptions, ConfigDiff, ConfigChange, ConfigChangeKind } from "./diff.js";
+export type { ConfigComparisonOptions } from "./comparison.js";
 export type { BuildConfigInspectionOptions, ConfigInspection, ConfigInspectionEntry, InspectedValueType } from "./inspection.js";
 export { cloneConfigValue, formatPath, getConfigValueAtPath, isPathPrefix, isUnsafePathSegment, pathToKey, pathsEqual, setConfigValueAtPath } from "./path.js";
 export { flattenConfigObject, isConfigValue, isPlainConfigObject } from "./value.js";
@@ -395,8 +413,9 @@ export declare function copySourceDescriptor(source: ConfigSourceDescriptor): Co
 
 ### source-identity.d.ts
 import type { ConfigIssue, ConfigSourceDescriptor, ResolvedPath } from "./types.js";
+import type { ConfigComparisonOptions } from "./comparison.js";
 /** Compare metadata fields, independent of the adapter's object insertion order. */
-export declare function sourceIdentity(source: Pick<ResolvedPath, "winningSourceId" | "overriddenSourceIds" | "winningLocation" | "overriddenLocations">, priorities: ReadonlyMap<string, number>): string;
+export declare function sourceIdentity(source: Pick<ResolvedPath, "winningSourceId" | "overriddenSourceIds" | "winningLocation" | "overriddenLocations">, priorities: ReadonlyMap<string, number>, comparison?: ConfigComparisonOptions): string;
 /** Reject known identity conflicts before loading; resolution reuses the same rule. */
 export declare function duplicateSourceIdIssues(sources: readonly {
     readonly descriptor: ConfigSourceDescriptor;
@@ -554,6 +573,10 @@ export interface OverrideMapping {
     readonly targetPath: ConfigPath;
     readonly sourceKind: "process-env" | "argv";
     readonly parseAs?: "string" | "number" | "boolean" | "json";
+    /** Number() compatibility by default; strict decimal or safe integer are opt-in. */
+    readonly numberFormat?: "javascript" | "decimal" | "integer";
+    /** Whitespace-only values are empty; default parse retains legacy behavior. */
+    readonly emptyValue?: "parse" | "ignore" | "error";
     readonly secret?: boolean;
 }
 export interface CoercionRule {
@@ -1231,7 +1254,7 @@ export declare function watchConfigFiles(input: WatchConfigFilesInput, dependenc
 ## @0disoft/universal-config-engine-cli
 
 ### args.d.ts
-import type { ConfigPath } from "@0disoft/universal-config-engine-core";
+import type { ConfigPath, ConfigComparisonOptions } from "@0disoft/universal-config-engine-core";
 import type { CliCommand, CliExecutionCommand, CliOutputMode } from "./types.js";
 export interface ParsedInspectionArgs {
     readonly command: CliExecutionCommand;
@@ -1243,6 +1266,7 @@ export interface ParsedInspectionArgs {
     readonly against?: string;
     readonly detectSecretChanges?: boolean;
     readonly policy?: string;
+    readonly comparison?: ConfigComparisonOptions;
 }
 export interface ParsedCliArgs extends Omit<ParsedInspectionArgs, "command"> {
     readonly command: CliCommand;

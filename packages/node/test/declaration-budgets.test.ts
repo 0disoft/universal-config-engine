@@ -3,6 +3,14 @@ import { loadDeclaredSources } from "../src/pipeline/source-loading.js";
 import { validatePipelineDeclaration } from "../src/pipeline/declaration-validation.js";
 
 describe("declaration budget preflight", () => {
+  it.each([{ numberFormat: "hex" }, { numberFormat: "decimal", parseAs: "string" }, { emptyValue: null }])(
+    "rejects malformed mapping policy declarations (%j)", extra => {
+      const issues = validatePipelineDeclaration({ sources: [{ id: "env", kind: "process-env", priority: 0, mappings: [
+        { externalName: "PORT", targetPath: ["port"], sourceKind: "process-env", parseAs: "number", ...extra }
+      ] }] });
+      expect(issues).toContainEqual(expect.objectContaining({ code: extra.emptyValue === null
+        ? "pipeline_override_mapping_empty_value_invalid" : "pipeline_override_mapping_number_format_invalid" }));
+    });
   it("requires explicit boolean constraint disclosure policy", () => {
     const declaration = { sources: [], validators: [{ id: "schema", kind: "json-schema-ajv", schema: true, includeConstraints: "true" }] };
     expect(validatePipelineDeclaration(declaration)).toContainEqual(expect.objectContaining({ code: "pipeline_validator_constraints_invalid" }));

@@ -25,7 +25,7 @@ export async function runDoctorCli(args: readonly string[], runtime: CliRuntime,
     let selected;
     let parsed;
     try {
-      if (options.some(arg => ["--values", "--path", "--against", "--policy", "--detect-secret-changes"]
+      if (options.some(arg => ["--values", "--path", "--against", "--policy", "--compare", "--detect-secret-changes"]
         .some(flag => arg === flag || arg.startsWith(`${flag}=`)))) throw new Error("Invalid doctor options.");
       selected = await prepareDiscoveryArgs(["validate", ...args.slice(1)], runtime);
       parsed = parseInspectionArgs(selected.args);

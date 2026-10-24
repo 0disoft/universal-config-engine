@@ -541,6 +541,15 @@ function validateOverrideMappingDeclaration(
     );
   }
 
+  if (mapping.numberFormat !== undefined && (mapping.parseAs !== "number" || typeof mapping.numberFormat !== "string" ||
+      !["javascript", "decimal", "integer"].includes(mapping.numberFormat))) {
+    issues.push(pipelineDeclarationIssue({ code: "pipeline_override_mapping_number_format_invalid", path: fieldPath("numberFormat"),
+      sourceId, message: "numberFormat requires parseAs number and javascript, decimal or integer." }));
+  }
+  if (mapping.emptyValue !== undefined && (typeof mapping.emptyValue !== "string" || !["parse", "ignore", "error"].includes(mapping.emptyValue))) {
+    issues.push(pipelineDeclarationIssue({ code: "pipeline_override_mapping_empty_value_invalid", path: fieldPath("emptyValue"),
+      sourceId, message: "emptyValue must be parse, ignore or error." }));
+  }
   if (mapping.secret !== undefined && typeof mapping.secret !== "boolean") {
     issues.push(
       pipelineDeclarationIssue({

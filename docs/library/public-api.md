@@ -129,6 +129,11 @@ small byte limits. Neither inspection nor comparison stores historical raw value
 
 ## CI Change Policies
 
+Unreleased [operational policies](operational-policies.md) add independent
+value/type, source and location comparison selectors and strict numeric/empty-input
+mapping policies. Defaults remain compatible; CI comparison settings belong to
+the policy and cannot be overridden by caller options.
+
 `checkConfigChanges(before, after, policy, options?)` returns `change-check-1`
 containing a whole-config `diff-1` and structured policy violations. Policy schema
 `change-policy-1` supports `forbid-changes`, `require-path` and `allowed-sources`

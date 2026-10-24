@@ -5,7 +5,8 @@ import type { CliResult, CliRuntime } from "./types.js";
 const INITIAL_DECLARATION = `${JSON.stringify({ sources: [
   { id: "defaults", kind: "object", priority: 0, value: { server: { port: 3000 } } },
   { id: "environment", kind: "process-env", priority: 10, mappings: [
-    { externalName: "APP_PORT", targetPath: ["server", "port"], sourceKind: "process-env", parseAs: "number" }
+    { externalName: "APP_PORT", targetPath: ["server", "port"], sourceKind: "process-env", parseAs: "number",
+      numberFormat: "integer", emptyValue: "error" }
   ] }
 ], validators: [{ id: "server-schema", kind: "json-schema-ajv", includeConstraints: true, schema: {
   type: "object", required: ["server"], properties: {

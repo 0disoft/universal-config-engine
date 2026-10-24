@@ -133,6 +133,10 @@ export interface OverrideMapping {
   readonly targetPath: ConfigPath;
   readonly sourceKind: "process-env" | "argv";
   readonly parseAs?: "string" | "number" | "boolean" | "json";
+  /** Number() compatibility by default; strict decimal or safe integer are opt-in. */
+  readonly numberFormat?: "javascript" | "decimal" | "integer";
+  /** Whitespace-only values are empty; default parse retains legacy behavior. */
+  readonly emptyValue?: "parse" | "ignore" | "error";
   readonly secret?: boolean;
 }
 

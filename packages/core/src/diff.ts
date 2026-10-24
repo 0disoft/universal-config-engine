@@ -3,6 +3,7 @@ import { getConfigValueAtPath, pathToKey } from "./path.js";
 import { buildDiagnosticReport, type BuildDiagnosticReportOptions } from "./redaction.js";
 import type { ConfigPath, ConfigResult, ConfigValue } from "./types.js";
 import { sourceIdentity } from "./source-identity.js";
+import { normalizeComparisonOptions, type ConfigComparisonOptions } from "./comparison.js";
 
 export type ConfigChangeKind = "added" | "removed" | "type-changed" | "value-changed" | "source-changed";
 
@@ -16,12 +17,15 @@ export interface ConfigChange {
 export interface BuildConfigDiffOptions extends BuildConfigInspectionOptions {
   /** Explicitly disclose secret-change metadata; never retains values or fingerprints. */
   readonly detectSecretChanges?: boolean;
+  readonly comparison?: ConfigComparisonOptions;
 }
 
 export interface ConfigDiff {
   readonly schemaVersion: "diff-1";
   readonly status: "ok" | "error";
   readonly secretComparison: "skipped" | "detected";
+  /** Present only for an explicit comparison selection. */
+  readonly comparison?: Required<ConfigComparisonOptions>;
   readonly uncomparedSecretPaths: readonly ConfigPath[];
   readonly changes: readonly ConfigChange[];
   readonly before: ConfigInspection;
@@ -30,15 +34,21 @@ export interface ConfigDiff {
 }
 
 export function buildConfigDiff(before: ConfigResult, after: ConfigResult, options: BuildConfigDiffOptions = {}): ConfigDiff {
+  const comparison = normalizeComparisonOptions(options.comparison);
   const maxBytes = Math.min(before.limits.maxReportBytes, after.limits.maxReportBytes);
   const policy = sharedRedaction(before, after, options);
   const inspectionOptions = { ...options, ...policy };
   const left = comparisonInspection(before, inspectionOptions);
   const right = comparisonInspection(after, inspectionOptions);
   const base: ConfigDiff = {
-    schemaVersion: "diff-1", status: "ok", secretComparison: options.detectSecretChanges === true ? "detected" : "skipped",
-    uncomparedSecretPaths: [], changes: [], before: left, after: right
+    schemaVersion: "diff-1", status: "ok", secretComparison: options.detectSecretChanges === true && comparison?.values === true ? "detected" : "skipped",
+    uncomparedSecretPaths: [], changes: [], before: left, after: right,
+    ...(options.comparison === undefined || comparison === undefined ? {} : { comparison })
   };
+  if (comparison === undefined) return diffFailure({ ...base, before: { ...left, status: "error", diagnostics: {
+    ...left.diagnostics, status: "error", issues: [{ category: "usage", code: "invalid_comparison_options", severity: "error",
+      message: "Comparison options must select values, sources or locations with boolean fields." }]
+  } } }, "input_failed", maxBytes);
   if (left.status === "ok" && right.status === "ok" && !left.found && !right.found) {
     return diffFailure({ ...base, before: { ...left, status: "error", diagnostics: {
       ...left.diagnostics, status: "error", issues: [{ category: "usage", code: "inspection_path_not_found",
@@ -56,8 +66,8 @@ export function buildConfigDiff(before: ConfigResult, after: ConfigResult, optio
   }
   const changes: ConfigChange[] = [];
   const uncomparedSecretPaths: ConfigPath[] = [];
-  const leftSources = sourceIdentities(before, left.entries);
-  const rightSources = sourceIdentities(after, right.entries);
+  const leftSources = sourceIdentities(before, left.entries, comparison);
+  const rightSources = sourceIdentities(after, right.entries, comparison);
   for (const key of keys) {
     const previous = leftIndex.get(key);
     const next = rightIndex.get(key);
@@ -66,10 +76,10 @@ export function buildConfigDiff(before: ConfigResult, after: ConfigResult, optio
     if (previous === undefined) kinds.push("added");
     else if (next === undefined) kinds.push("removed");
     else {
-      if (previous.type !== next.type) kinds.push("type-changed");
+      if (comparison.values && previous.type !== next.type) kinds.push("type-changed");
       const secret = previous.visibility === "redacted" || next.visibility === "redacted";
-      if (secret && options.detectSecretChanges !== true) uncomparedSecretPaths.push(path);
-      else if (previous.type === next.type && (secret || previous.visibility === "visible") &&
+      if (comparison.values && secret && options.detectSecretChanges !== true) uncomparedSecretPaths.push(path);
+      else if (comparison.values && previous.type === next.type && (secret || previous.visibility === "visible") &&
         !configValuesEqual(getConfigValueAtPath(before.config, path)!, getConfigValueAtPath(after.config, path)!)) {
         kinds.push("value-changed");
       }
@@ -106,12 +116,14 @@ function comparisonInspection(result: ConfigResult, options: BuildConfigInspecti
   return report;
 }
 
-function sourceIdentities(result: ConfigResult, entries: readonly ConfigInspectionEntry[]): ReadonlyMap<ConfigInspectionEntry, string> {
+function sourceIdentities(result: ConfigResult, entries: readonly ConfigInspectionEntry[],
+  comparison: Required<ConfigComparisonOptions>): ReadonlyMap<ConfigInspectionEntry, string> {
+  if (!comparison.sources && !comparison.locations) return new Map();
   const priorities = new Map(result.sources.map(source => [source.id, source.priority]));
   const identities = new Map<ConfigInspectionEntry, string>();
   const opaque = new Map<string, { entry: ConfigInspectionEntry; children: string[] }>();
   for (const entry of entries) {
-    identities.set(entry, entry.source === undefined ? "" : sourceIdentity(entry.source, priorities));
+    identities.set(entry, entry.source === undefined ? "" : sourceIdentity(entry.source, priorities, comparison));
     if (entry.visibility === "redacted" && entry.type === "object" && entry.source === undefined) {
       opaque.set(pathToKey(entry.path), { entry, children: [] });
     }
@@ -119,7 +131,7 @@ function sourceIdentities(result: ConfigResult, entries: readonly ConfigInspecti
   // Display stays opaque; compare retained ownership underneath it in memory.
   // Prefix lookup avoids rescanning every resolved path for each secret object.
   if (opaque.size > 0) for (const source of result.resolvedPaths) {
-    const owner = sourceIdentity(source, priorities);
+    const owner = sourceIdentity(source, priorities, comparison);
     for (let length = 0; length <= source.path.length; length += 1) {
       opaque.get(pathToKey(source.path.slice(0, length)))?.children.push(
         JSON.stringify([source.path.slice(length), owner]));

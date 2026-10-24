@@ -59,6 +59,10 @@ remain unchanged. See [the discovery contract](discovery.md).
 
 ## Opt-in Inspection
 
+Unreleased diff `--compare values,sources,locations` selects one or more comparison
+dimensions. For CI use a policy's `comparison` object; `--compare` with `--policy`
+is rejected. See [operational policies](../library/operational-policies.md).
+
 ### Opt-in inspection (ADR 0017)
 
 `uce explain --config pipeline.json --values [--json]` displays safe scalar values,

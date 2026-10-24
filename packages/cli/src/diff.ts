@@ -27,6 +27,7 @@ export async function runDiffCli(parsed: ParsedInspectionArgs, runtime: CliRunti
       : check.policy.violations.some((violation) => violation.code === "invalid_policy") ? 4 : 3 };
   }
   const report = buildConfigDiff(before, after, {
+    ...(parsed.comparison === undefined ? {} : { comparison: parsed.comparison }),
     ...(parsed.path === undefined ? {} : { path: parsed.path }),
     ...(parsed.detectSecretChanges === undefined ? {} : { detectSecretChanges: parsed.detectSecretChanges })
   });

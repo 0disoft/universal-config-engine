@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Add optional strict decimal/safe-integer and empty-input mapping policies, plus
+  independent value/source/location comparisons shared by diff and policy-owned CI
+  checks. Preserve defaults and reject caller attempts to narrow CI comparisons.
 - Add opt-in, allowlisted validator type/bound constraints for Ajv/Zod and declared
   schemas; sanitize them at core boundaries, mask secret-path metadata and keep
   provider prose/values out of diagnostics and public-share reports.

@@ -62,6 +62,11 @@ remain hidden and secret comparisons require explicit opt-in. See the
 
 ## Unreleased on main
 
+Optional `--compare` and policy-owned comparison settings separate value/type,
+ownership and location changes. Mappings can explicitly choose strict decimal or
+safe-integer syntax and empty-value behavior; existing defaults remain compatible.
+See [operational policies](https://github.com/0disoft/universal-config-engine/blob/main/docs/library/operational-policies.md).
+
 The source checkout additionally contains init/doctor, public-share reports,
 file-format adapters, discovery, profiles/inheritance and reload/watch examples.
 These additions are not part of the published 1.2.0 API. Follow the

@@ -1,4 +1,4 @@
-import type { ConfigPath } from "@0disoft/universal-config-engine-core";
+import type { ConfigPath, ConfigComparisonOptions } from "@0disoft/universal-config-engine-core";
 import type { CliCommand, CliExecutionCommand, CliOutputMode } from "./types.js";
 
 export interface ParsedInspectionArgs {
@@ -11,6 +11,7 @@ export interface ParsedInspectionArgs {
   readonly against?: string;
   readonly detectSecretChanges?: boolean;
   readonly policy?: string;
+  readonly comparison?: ConfigComparisonOptions;
 }
 
 export interface ParsedCliArgs extends Omit<ParsedInspectionArgs, "command"> {
@@ -43,11 +44,23 @@ export function parseInspectionArgs(args: readonly string[]): ParsedInspectionAr
   let values = false;
   let path: ConfigPath | undefined;
   let against: string | undefined;
+  let comparison: ConfigComparisonOptions | undefined;
   let detectSecretChanges = false;
   let policy: string | undefined;
 
   for (let index = 0; index < cliArgs.length; index += 1) {
     const arg = cliArgs[index];
+    if (arg === "--compare" || arg?.startsWith("--compare=") === true) {
+      if (comparison !== undefined) throw new Error("Specify --compare only once.");
+      const raw = arg === "--compare" ? readValue(cliArgs, index++, arg) : arg.slice("--compare=".length);
+      if (raw.length > 32) throw new Error("Invalid --compare selection.");
+      const selected = raw.split(",");
+      if (selected.some(name => !["values", "sources", "locations"].includes(name)) || new Set(selected).size !== selected.length) {
+        throw new Error("--compare requires values,sources,locations selections.");
+      }
+      comparison = { values: selected.includes("values"), sources: selected.includes("sources"), locations: selected.includes("locations") };
+      continue;
+    }
     if (arg === "--policy" || arg?.startsWith("--policy=") === true) {
       policy = arg === "--policy" ? readValue(cliArgs, index++, arg) : arg.slice("--policy=".length);
       if (policy.length === 0) throw new Error("Policy requires a file path.");
@@ -109,8 +122,9 @@ export function parseInspectionArgs(args: readonly string[]): ParsedInspectionAr
   }
   if (path !== undefined && commandCandidate === "validate") throw new Error("Path selection requires explain or diff.");
   if (commandCandidate === "diff" && (against === undefined || against.length === 0)) throw new Error("Diff requires --against path.");
-  if (commandCandidate !== "diff" && (against !== undefined || detectSecretChanges || policy !== undefined)) throw new Error("Comparison options require diff.");
+  if (commandCandidate !== "diff" && (against !== undefined || detectSecretChanges || policy !== undefined || comparison !== undefined)) throw new Error("Comparison options require diff.");
   if (policy !== undefined && path !== undefined) throw new Error("Policy checks require a complete comparison; omit --path.");
+  if (policy !== undefined && comparison !== undefined) throw new Error("Set comparison in the policy file; omit --compare.");
 
   return {
     command: commandCandidate,
@@ -121,7 +135,8 @@ export function parseInspectionArgs(args: readonly string[]): ParsedInspectionAr
     ...(path === undefined ? {} : { path }),
     ...(against === undefined ? {} : { against }),
     ...(detectSecretChanges ? { detectSecretChanges: true } : {}),
-    ...(policy === undefined ? {} : { policy })
+    ...(policy === undefined ? {} : { policy }),
+    ...(comparison === undefined ? {} : { comparison })
   };
 }
 

@@ -122,6 +122,8 @@ function normalizeOverrideMapping(mapping: unknown, sourceKind: "process-env" | 
     sourceKind,
     targetPath: stringPathField(mapping, "targetPath"),
     ...optionalParseAsField(mapping),
+    ...(mapping.numberFormat === undefined ? {} : { numberFormat: mapping.numberFormat as NonNullable<OverrideMapping["numberFormat"]> }),
+    ...(mapping.emptyValue === undefined ? {} : { emptyValue: mapping.emptyValue as NonNullable<OverrideMapping["emptyValue"]> }),
     ...optionalBooleanField(mapping, "secret")
   };
 }

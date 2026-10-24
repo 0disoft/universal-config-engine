@@ -4,7 +4,9 @@ Status: Unreleased, ADR 0018.
 
 `uce init [--directory <existing-directory>] [--json]` creates `uce.json` with a
 defaults port 3000, an explicit APP_PORT environment mapping and a JSON Schema
-requiring an integer port between 1 and 65535. The directory defaults to the
+requiring an integer port between 1 and 65535. Its mapping explicitly selects
+safe-integer syntax and rejects present empty APP_PORT values; a missing variable
+keeps the default. The directory defaults to the
 working directory; it must exist. Creation writes only this one declaration and
 does not read environment values, install packages or make network requests.
 Run `uce doctor --config uce.json`, then set APP_PORT and rerun it to see overrides

@@ -28,7 +28,7 @@ export const SOURCE_KIND_FIELDS: Readonly<Record<string, ReadonlySet<string>>> =
   argv: new Set(["mappings", "maxArgvEntries", "unmappedBehavior"])
 };
 
-export const OVERRIDE_MAPPING_FIELDS = new Set(["externalName", "targetPath", "sourceKind", "parseAs", "secret"]);
+export const OVERRIDE_MAPPING_FIELDS = new Set(["externalName", "targetPath", "sourceKind", "parseAs", "secret", "numberFormat", "emptyValue"]);
 
 export const COERCION_RULE_FIELDS = new Set(["path", "from", "to", "onFailure"]);
 

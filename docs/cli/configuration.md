@@ -24,6 +24,7 @@ CLI inputs:
 - explicit env mapping;
 - CLI override mapping;
 - inline Ajv JSON Schema validators for `validate`;
+- unreleased optional strict `numberFormat` / `emptyValue` mapping policies;
 - output mode selection.
 
 JSON file and dotenv file paths are resolved from the pipeline declaration

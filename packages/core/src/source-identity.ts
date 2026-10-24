@@ -1,18 +1,26 @@
 import { appendBoundedIssues, isDiagnosticsLimitReached } from "./diagnostics.js";
 import type { ConfigIssue, ConfigSourceDescriptor, ResolvedPath, SourceLocation } from "./types.js";
+import type { ConfigComparisonOptions } from "./comparison.js";
 
 /** Compare metadata fields, independent of the adapter's object insertion order. */
 export function sourceIdentity(
   source: Pick<ResolvedPath, "winningSourceId" | "overriddenSourceIds" | "winningLocation" | "overriddenLocations">,
-  priorities: ReadonlyMap<string, number>
+  priorities: ReadonlyMap<string, number>,
+  comparison: ConfigComparisonOptions = {}
 ): string {
-  return JSON.stringify([source.winningSourceId, priorities.get(source.winningSourceId),
-    source.overriddenSourceIds.map(id => [id, priorities.get(id)]),
-    locationIdentity(source.winningLocation), source.overriddenLocations?.map(locationIdentity)]);
+  return JSON.stringify([
+    comparison.sources === false ? undefined : source.winningSourceId,
+    comparison.sources === false ? undefined : priorities.get(source.winningSourceId),
+    comparison.sources === false ? undefined : source.overriddenSourceIds.map(id => [id, priorities.get(id)]),
+    comparison.locations === false ? undefined : locationIdentity(source.winningLocation, comparison.sources !== false),
+    comparison.locations === false ? undefined : source.overriddenLocations?.map(location => locationIdentity(location, comparison.sources !== false))
+  ]);
 }
 
-function locationIdentity(location: SourceLocation | undefined) {
-  return location === undefined ? undefined : [location.sourceId, location.sourcePath, location.line, location.column];
+function locationIdentity(location: SourceLocation | undefined, includeSourceId = true) {
+  if (location === undefined) return undefined;
+  return includeSourceId ? [location.sourceId, location.sourcePath, location.line, location.column]
+    : [location.sourcePath, location.line, location.column];
 }
 
 /** Reject known identity conflicts before loading; resolution reuses the same rule. */

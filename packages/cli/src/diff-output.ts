@@ -3,6 +3,7 @@ import type { ConfigDiff } from "@0disoft/universal-config-engine-core";
 export function formatDiff(report: ConfigDiff, json: boolean): string {
   if (json) return `${JSON.stringify({ command: "diff", ...report }, null, 2)}\n`;
   const lines = [`command: diff`, `status: ${report.status}`, `secret comparison: ${report.secretComparison}`];
+  if (report.comparison !== undefined) lines.push(`comparison: ${JSON.stringify(report.comparison)}`);
   if (report.error !== undefined) lines.push(`error: ${report.error}`);
   for (const change of report.changes) {
     lines.push(`${JSON.stringify(change.path)}: ${change.kinds.join(", ")}`);

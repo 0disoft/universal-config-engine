@@ -33,12 +33,23 @@ export function createMappedOverrideSource(input: CreateMappedOverrideSourceInpu
     if (mapping.sourceKind !== input.descriptor.kind) {
       continue;
     }
+    if (!validMappingPolicy(mapping)) {
+      issues.push({ category: "mapping", code: "mapping_policy_invalid", severity: "error",
+        sourceId: input.descriptor.id, path: [...mapping.targetPath], message: "Invalid numberFormat or emptyValue mapping policy." });
+      continue;
+    }
 
     if (!Object.prototype.hasOwnProperty.call(input.values, mapping.externalName)) {
       continue;
     }
     const rawValue = input.values[mapping.externalName];
     if (rawValue === undefined) {
+      continue;
+    }
+    if ((mapping.emptyValue === "ignore" || mapping.emptyValue === "error") && rawValue.trim().length === 0) {
+      if (mapping.emptyValue === "ignore") continue;
+      issues.push({ category: "mapping", code: "mapping_empty_value", severity: "error",
+        sourceId: input.descriptor.id, path: [...mapping.targetPath], message: "Mapped input must not be empty." });
       continue;
     }
 
@@ -164,9 +175,16 @@ function parseMappedValue(
     case "string":
       return { ok: true, value: rawValue };
     case "number": {
+      if ((mapping.numberFormat === "decimal" && !/^[+-]?\d+(?:\.\d+)?$/.test(rawValue)) ||
+          (mapping.numberFormat === "integer" && !/^[+-]?\d+$/.test(rawValue))) {
+        return { ok: false, code: "mapping_number_format_invalid", message: "Mapped input does not match the selected base-10 number format." };
+      }
       const numericValue = Number(rawValue);
       if (!Number.isFinite(numericValue)) {
         return { ok: false, message: `Mapping ${mapping.externalName} expected a finite number.` };
+      }
+      if (mapping.numberFormat === "integer" && !Number.isSafeInteger(numericValue)) {
+        return { ok: false, code: "mapping_integer_out_of_range", message: "Mapped integer must be a safe integer." };
       }
       return { ok: true, value: numericValue };
     }
@@ -182,6 +200,12 @@ function parseMappedValue(
     case "json":
       return parseJsonMappedValue(rawValue, mapping);
   }
+}
+
+function validMappingPolicy(mapping: OverrideMapping): boolean {
+  return (mapping.numberFormat === undefined || (mapping.parseAs === "number" &&
+    ["javascript", "decimal", "integer"].includes(mapping.numberFormat))) &&
+    (mapping.emptyValue === undefined || ["parse", "ignore", "error"].includes(mapping.emptyValue));
 }
 
 function parseJsonMappedValue(

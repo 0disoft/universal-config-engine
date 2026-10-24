@@ -21,6 +21,7 @@ Options:
   --values              Opt-in safe values for explain (never raw secrets)
   --path <JSON-array>    Inspect a typed path, for example '["server","port"]'
   --policy <file>        Apply change rules to diff
+  --compare <selection>  Diff values,sources,locations (choose one or more)
   --directory <folder>  Existing target directory for init
   --help, -h            Show help, also as uce <command> --help
   --version, -v         Show the installed CLI version

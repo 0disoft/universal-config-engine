@@ -35,6 +35,7 @@ export type {
 } from "./standard-schema.js";
 export type { ConfigChangePolicy, ConfigChangeRule, ConfigChangeCheck, ConfigPolicyViolation } from "./change-policy.js";
 export type { BuildConfigDiffOptions, ConfigDiff, ConfigChange, ConfigChangeKind } from "./diff.js";
+export type { ConfigComparisonOptions } from "./comparison.js";
 export type {
   BuildConfigInspectionOptions, ConfigInspection, ConfigInspectionEntry, InspectedValueType
 } from "./inspection.js";

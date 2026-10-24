@@ -4,6 +4,7 @@ import { getConfigValueAtPath, isUnsafePathSegment, pathToKey } from "./path.js"
 import type { ConfigPath, ConfigResult, ResolvedPath } from "./types.js";
 import { sourceIdentity } from "./source-identity.js";
 import { PathIntersectionIndex } from "./path-intersection-index.js";
+import { normalizeComparisonOptions, type ConfigComparisonOptions } from "./comparison.js";
 
 export type ConfigChangeRule = {
   readonly id: string;
@@ -16,6 +17,7 @@ export type ConfigChangeRule = {
 export interface ConfigChangePolicy {
   readonly version: "change-policy-1";
   readonly rules: readonly ConfigChangeRule[];
+  readonly comparison?: ConfigComparisonOptions;
 }
 
 export interface ConfigPolicyViolation {
@@ -40,11 +42,12 @@ export function checkConfigChanges(
   before: ConfigResult,
   after: ConfigResult,
   policy: unknown,
-  options: Omit<BuildConfigDiffOptions, "path"> = {}
+  options: Omit<BuildConfigDiffOptions, "path" | "comparison"> = {}
 ): ConfigChangeCheck {
-  const { path: _ignored, ...rootOptions } = options as BuildConfigDiffOptions;
-  const diff = buildConfigDiff(before, after, rootOptions);
+  const { path: _ignored, comparison: _ignoredComparison, ...rootOptions } = options as BuildConfigDiffOptions;
   const normalized = parsePolicy(policy);
+  const diff = buildConfigDiff(before, after, { ...rootOptions,
+    ...(normalized?.comparison === undefined ? {} : { comparison: normalized.comparison }) });
   let evaluation: ConfigChangeCheck["policy"];
   if (diff.status === "error") evaluation = { status: "error", violations: [{ code: "comparison_failed" }] };
   else if (normalized === undefined) evaluation = { status: "error", violations: [{ code: "invalid_policy" }] };
@@ -68,8 +71,11 @@ export function checkConfigChanges(
 }
 
 function createRuleEvaluator(diff: ConfigDiff, before: ConfigResult, after: ConfigResult) {
+  const comparison = normalizeComparisonOptions(diff.comparison)!;
   const unknown = new PathIntersectionIndex(diff.uncomparedSecretPaths, path => path);
   const changes = new PathIntersectionIndex(diff.changes, change => change.path);
+  const presenceChanges = comparison.values ? undefined : new PathIntersectionIndex(
+    diff.changes.filter(change => change.kinds.includes("added") || change.kinds.includes("removed")), change => change.path);
   const sourceChanges = new PathIntersectionIndex(diff.changes.filter(change => change.kinds.includes("source-changed")), change => change.path);
   const equality = new Map<string, boolean>();
   let sources: Map<string, PathIntersectionIndex<ResolvedPath>> | undefined;
@@ -85,7 +91,7 @@ function createRuleEvaluator(diff: ConfigDiff, before: ConfigResult, after: Conf
     let value = state.cache.get(key);
     if (value === undefined) {
       value = JSON.stringify(state.index.related(path).map(entry =>
-        JSON.stringify([entry.path, sourceIdentity(entry, state.priorities)])).sort());
+        JSON.stringify([entry.path, sourceIdentity(entry, state.priorities, comparison)])).sort());
       state.cache.set(key, value);
     }
     return value;
@@ -112,10 +118,11 @@ function createRuleEvaluator(diff: ConfigDiff, before: ConfigResult, after: Conf
     const previous = getConfigValueAtPath(before.config, rule.path);
     const next = getConfigValueAtPath(after.config, rule.path);
     if (previous === undefined || next === undefined) return previous === next ? undefined : "change_forbidden";
-    if (unknown.intersects(rule.path)) return changes.intersects(rule.path) ? "change_forbidden" : "comparison_indeterminate";
+    if (presenceChanges?.intersects(rule.path)) return "change_forbidden";
+    if (comparison.values && unknown.intersects(rule.path)) return changes.intersects(rule.path) ? "change_forbidden" : "comparison_indeterminate";
     const key = pathToKey(rule.path);
     let equal = equality.get(key);
-    if (equal === undefined) { equal = configValuesEqual(previous, next); equality.set(key, equal); }
+    if (equal === undefined) { equal = !comparison.values || configValuesEqual(previous, next); equality.set(key, equal); }
     if (!equal || sourceChanges.intersects(rule.path) &&
         ownershipAtPath(before, rule.path) !== ownershipAtPath(after, rule.path)) return "change_forbidden";
     return undefined;
@@ -126,7 +133,10 @@ function parsePolicy(value: unknown): ConfigChangePolicy | undefined {
   try {
     if (!isRecord(value) || value.version !== "change-policy-1" ||
       !Object.hasOwn(value, "version") || !Object.hasOwn(value, "rules") ||
-      Object.keys(value).some((key) => key !== "version" && key !== "rules")) return undefined;
+      Object.keys(value).some((key) => key !== "version" && key !== "rules" && key !== "comparison")) return undefined;
+    const rawComparison = Object.hasOwn(value, "comparison") ? value.comparison : undefined;
+    const comparison = normalizeComparisonOptions(rawComparison);
+    if (comparison === undefined) return undefined;
     const inputRules = boundedArray(value.rules, 256);
     if (inputRules === undefined) return undefined;
     const ids = new Set<string>();
@@ -149,7 +159,8 @@ function parsePolicy(value: unknown): ConfigChangePolicy | undefined {
       } else if (mode === "forbid-changes" || mode === "require-path") rules.push({ id, path, mode });
       else return undefined;
     }
-    return { version: "change-policy-1", rules };
+    return { version: "change-policy-1", rules,
+      ...(rawComparison === undefined ? {} : { comparison }) };
   } catch { return undefined; }
 }
 

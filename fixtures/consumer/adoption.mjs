@@ -13,6 +13,10 @@ assert.match(execFileSync(process.execPath, [cli, "--help"], { cwd, encoding: "u
 mkdirSync(join(cwd, "initialized"));
 assert.equal(invoke(["init", "--directory", "initialized", "--json"]).status, "created");
 assert.equal(invoke(["doctor", "--config", "initialized/uce.json", "--output", "json"]).status, "ok");
+const invalidPort = spawnSync(process.execPath, [cli, "doctor", "--config", "initialized/uce.json", "--json"],
+  { cwd, env: { ...env, APP_PORT: "0x10" }, encoding: "utf8", timeout: 30000 });
+assert.equal(invalidPort.status, 3);
+assert.equal(JSON.parse(invalidPort.stdout).diagnostics.issues[0].code, "mapping_number_format_invalid");
 const baseArgs = ["--config", "adoption/uce.json", "--workspace", "adoption", "--profile", "production"];
 const inspected = invoke(["explain", ...baseArgs, "--values", "--json"]);
 assert(inspected.entries.some(entry => entry.path.join(".") === "server.port" && entry.value === 9443 && entry.source?.winningSourceId === "deployment-env"));
@@ -49,4 +53,8 @@ assert.equal(change.status, "error");
 assert.equal(change.policy.violations.length, 3);
 const expected = ["stable-port", "required-enabled", "defaults-only"].sort();
 assert.deepEqual(change.policy.violations.map(entry => entry.ruleId).sort(), expected);
+const valuesOnly = invoke(["diff", "--config", "comparison/before.json", "--against", "comparison/after.json", "--compare", "values", "--json"]);
+assert.deepEqual(valuesOnly.comparison, { values: true, sources: false, locations: false });
+assert(valuesOnly.changes.length > 0);
+assert(valuesOnly.changes.every(entry => !entry.kinds.includes("source-changed")));
 console.log("Installed adoption workflow passed: initialization, profiles, provenance, doctor/public reports, typed output, reload/watch disposal and three CI violations.");
