@@ -660,6 +660,10 @@ function validateValidatorDeclaration(validator: unknown, index: number): readon
     );
   }
 
+  if (validator.includeConstraints !== undefined && typeof validator.includeConstraints !== "boolean") {
+    issues.push(pipelineDeclarationIssue({ code: "pipeline_validator_constraints_invalid",
+      path: fieldPath("includeConstraints"), sourceId: validatorId, message: "Validator includeConstraints must be boolean." }));
+  }
   if (!(typeof validator.schema === "boolean" || isRecord(validator.schema))) {
     issues.push(
       pipelineDeclarationIssue({

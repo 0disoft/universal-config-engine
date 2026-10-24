@@ -11,7 +11,7 @@ import {
   type Options,
   type Schema
 } from "ajv/dist/ajv.js";
-import { cloneConfigValue, DEFAULT_RESOURCE_LIMITS } from "@0disoft/universal-config-engine-core";
+import { cloneConfigValue, DEFAULT_RESOURCE_LIMITS, normalizeValidatorConstraint } from "@0disoft/universal-config-engine-core";
 
 export interface CreateAjvValidatorInput {
   readonly id?: string;
@@ -20,6 +20,8 @@ export interface CreateAjvValidatorInput {
   readonly options?: Options;
   /** Retained issue budget, including truncation; defaults to 200, capped at 10,000. */
   readonly maxIssues?: number;
+  /** Opt in only when schema limits/types are safe to disclose. */
+  readonly includeConstraints?: boolean;
 }
 
 export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAdapter {
@@ -65,7 +67,7 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
       const retained = truncated ? maximum - 1 : errors.length;
       const issues: ValidatorIssue[] = [];
       for (let index = 0; index < retained; index += 1) {
-        issues.push(toValidatorIssue(errors[index]!, root.value));
+        issues.push(toValidatorIssue(errors[index]!, root.value, input.includeConstraints === true));
       }
       if (truncated) issues.push({ code: "ajv_issues_truncated", severity: "error" });
       return { ok: false, issues };
@@ -73,7 +75,9 @@ export function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAda
   };
 }
 
-function toValidatorIssue(error: ErrorObject, config: unknown): ValidatorIssue {
+function toValidatorIssue(error: ErrorObject, config: unknown, includeConstraints: boolean): ValidatorIssue {
+  const constraint = includeConstraints ? normalizeValidatorConstraint({ kind: error.keyword,
+    expected: error.params.type, limit: error.keyword === "multipleOf" ? error.params.multipleOf : error.params.limit }) : undefined;
   const path = instancePathToConfigPath(error.instancePath, config);
   const property = error.keyword === "required"
     ? error.params.missingProperty
@@ -85,7 +89,8 @@ function toValidatorIssue(error: ErrorObject, config: unknown): ValidatorIssue {
       ? error.keyword
       : "ajv_custom_keyword",
     severity: "error",
-    path: typeof property === "string" ? [...path, property] : path
+    path: typeof property === "string" ? [...path, property] : path,
+    ...(constraint === undefined ? {} : { constraint })
   };
 }
 

@@ -55,7 +55,8 @@ export function createDeclaredValidators(declaration: PipelineDeclaration, facto
       validators.push(
         factory({
           id: validator.id, kind: "json-schema-ajv",
-          schema: validator.schema
+          schema: validator.schema,
+          ...(validator.includeConstraints === undefined ? {} : { includeConstraints: validator.includeConstraints })
         })
       );
     } catch (error) {

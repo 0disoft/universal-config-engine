@@ -14,6 +14,11 @@ Node.js `>=24`, ESM, and Ajv `^8.20.0` are required.
 
 ## Use
 
+Unreleased: `includeConstraints: true` retains explicitly public type/bound/rule
+metadata. It defaults to false; raw messages, patterns, enum values and received
+data remain private. Core removes constraints from secret-associated reports.
+See the [constraint contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/adapters/validator-constraints.md).
+
 ```js
 import { runValidators } from "@0disoft/universal-config-engine-core";
 import { createAjvValidator } from "@0disoft/universal-config-engine-validator-ajv";

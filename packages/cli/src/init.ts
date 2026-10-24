@@ -7,7 +7,7 @@ const INITIAL_DECLARATION = `${JSON.stringify({ sources: [
   { id: "environment", kind: "process-env", priority: 10, mappings: [
     { externalName: "APP_PORT", targetPath: ["server", "port"], sourceKind: "process-env", parseAs: "number" }
   ] }
-], validators: [{ id: "server-schema", kind: "json-schema-ajv", schema: {
+], validators: [{ id: "server-schema", kind: "json-schema-ajv", includeConstraints: true, schema: {
   type: "object", required: ["server"], properties: {
     server: { type: "object", required: ["port"], properties: {
       port: { type: "integer", minimum: 1, maximum: 65535 }

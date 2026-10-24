@@ -19,7 +19,10 @@ describe("non-destructive initialization", () => {
         stdout: text => { output += text; }, stderr() {} });
       expect(result.exitCode).toBe(expected);
       if (expected !== 0) { expect(output).toContain('["server","port"]'); expect(output).not.toContain(port); }
-      if (expected === 1) expect(output).toContain('validator "server-schema"');
+      if (expected === 1) {
+        expect(output).toContain('validator "server-schema"');
+        expect(output).toContain('{"kind":"maximum","limit":65535}');
+      }
       if (expected === 3) expect(output).toContain('source "environment"');
     });
   });

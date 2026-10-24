@@ -136,6 +136,8 @@ export { buildPublicDiagnosticReport } from "./public-report.js";
 export type { PublicDiagnosticReport } from "./public-report.js";
 export type { ConfigAbortSignal, ConfigOperationOptions, ConfigOperationError } from "./operation.js";
 export { reportConfigOperationError } from "./operation.js";
+export { normalizeValidatorConstraint } from "./validator-constraint.js";
+export type { ValidatorConstraint } from "./validator-constraint.js";
 
 ### inspection.d.ts
 import { type BuildDiagnosticReportOptions } from "./redaction.js";
@@ -462,6 +464,7 @@ export declare function validateConfigOutput<TOutput>(pipeline: RunConfigPipelin
 
 ### types.d.ts
 import type { ConfigOperationOptions, ConfigAbortSignal } from "./operation.js";
+import type { ValidatorConstraint } from "./validator-constraint.js";
 export type ConfigScalar = string | number | boolean | null;
 export type ConfigValue = ConfigScalar | readonly ConfigValue[] | {
     readonly [key: string]: ConfigValue;
@@ -502,6 +505,7 @@ export interface ConfigIssue {
     readonly sourceId?: string;
     /** Validation origin; sourceId remains as a legacy correlation identifier. */
     readonly validatorId?: string;
+    readonly constraint?: ValidatorConstraint;
     readonly details?: Readonly<Record<string, string | number | boolean | null>>;
 }
 export interface LoadedSource {
@@ -568,6 +572,8 @@ export interface ValidatorIssue {
     readonly code: string;
     readonly severity: ConfigIssueSeverity;
     readonly path?: ConfigPath;
+    /** Explicit public schema metadata; provider prose/values are never retained. */
+    readonly constraint?: ValidatorConstraint;
 }
 export interface ValidatorResult<TValidated = unknown> {
     readonly ok: boolean;
@@ -647,6 +653,19 @@ export interface RunValidatorsResult {
     readonly provenance: readonly ProvenanceEvent[];
 }
 export declare function runValidators(input: RunValidatorsInput): Promise<RunValidatorsResult>;
+
+### validator-constraint.d.ts
+export type ValidatorConstraint = {
+    readonly kind: "type";
+    readonly expected: "string" | "number" | "integer" | "boolean" | "object" | "array" | "null";
+} | {
+    readonly kind: "minimum" | "maximum" | "exclusiveMinimum" | "exclusiveMaximum" | "multipleOf" | "minLength" | "maxLength" | "minItems" | "maxItems" | "minProperties" | "maxProperties";
+    readonly limit: number;
+} | {
+    readonly kind: "required" | "additionalProperties";
+};
+/** Copy only public machine constraints; never retain provider prose or values. */
+export declare function normalizeValidatorConstraint(value: unknown): ValidatorConstraint | undefined;
 
 ### value.d.ts
 import type { ConfigIssue, ConfigPath, ConfigValue, ResourceLimitPolicy } from "./types.js";
@@ -754,11 +773,13 @@ export interface AjvJsonSchemaValidatorDeclaration {
     readonly id: string;
     readonly kind: "json-schema-ajv";
     readonly schema: boolean | Record<string, unknown>;
+    readonly includeConstraints?: boolean;
 }
 export interface PipelineValidatorDeclaration {
     readonly id: string;
     readonly kind: string;
     readonly schema?: unknown;
+    readonly includeConstraints?: boolean;
 }
 export {};
 
@@ -1392,6 +1413,8 @@ export interface CreateAjvValidatorInput {
     readonly options?: Options;
     /** Retained issue budget, including truncation; defaults to 200, capped at 10,000. */
     readonly maxIssues?: number;
+    /** Opt in only when schema limits/types are safe to disclose. */
+    readonly includeConstraints?: boolean;
 }
 export declare function createAjvValidator(input: CreateAjvValidatorInput): ValidatorAdapter;
 export declare function instancePathToConfigPath(instancePath: string, rootValue?: unknown): ConfigPath;
@@ -1406,6 +1429,8 @@ export interface CreateZodValidatorInput<TSchema extends z.ZodType> {
     readonly schema: TSchema;
     /** Retained issue budget, including truncation; defaults to 200, capped at 10,000. */
     readonly maxIssues?: number;
+    /** Opt in only when schema limits/types are safe to disclose. */
+    readonly includeConstraints?: boolean;
 }
 export type ZodValidatorOutput<TSchema extends z.ZodType> = z.output<TSchema>;
 export declare function createZodValidator<TSchema extends z.ZodType>(input: CreateZodValidatorInput<TSchema>): ValidatorAdapter<ZodValidatorOutput<TSchema>>;

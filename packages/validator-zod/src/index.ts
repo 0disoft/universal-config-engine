@@ -6,13 +6,15 @@ import type {
   ValidatorResult
 } from "@0disoft/universal-config-engine-core";
 import type { z } from "zod";
-import { DEFAULT_RESOURCE_LIMITS } from "@0disoft/universal-config-engine-core";
+import { DEFAULT_RESOURCE_LIMITS, normalizeValidatorConstraint } from "@0disoft/universal-config-engine-core";
 
 export interface CreateZodValidatorInput<TSchema extends z.ZodType> {
   readonly id?: string;
   readonly schema: TSchema;
   /** Retained issue budget, including truncation; defaults to 200, capped at 10,000. */
   readonly maxIssues?: number;
+  /** Opt in only when schema limits/types are safe to disclose. */
+  readonly includeConstraints?: boolean;
 }
 
 export type ZodValidatorOutput<TSchema extends z.ZodType> = z.output<TSchema>;
@@ -41,16 +43,35 @@ export function createZodValidator<TSchema extends z.ZodType>(
       const issues: ValidatorIssue[] = [];
       for (let index = 0; index < retained; index++) {
         const issue = errors[index]!;
+        const constraint = input.includeConstraints === true ? publicConstraint(issue) : undefined;
         issues.push({
           code: issue.code,
           severity: "error",
-          path: toConfigPath(issue.path)
+          path: toConfigPath(issue.path),
+          ...(constraint === undefined ? {} : { constraint })
         });
       }
       if (truncated) issues.push({ code: "zod_issues_truncated", severity: "error" });
       return { ok: false, issues };
     }
   };
+}
+
+function publicConstraint(issue: z.core.$ZodIssue) {
+  if (issue.code === "invalid_type") return normalizeValidatorConstraint({ kind: "type",
+    expected: issue.expected === "int" ? "integer" : issue.expected });
+  if (issue.code === "not_multiple_of") return normalizeValidatorConstraint({ kind: "multipleOf", limit: issue.divisor });
+  if (issue.code !== "too_small" && issue.code !== "too_big") return undefined;
+  const lower = issue.code === "too_small";
+  const limit = lower ? issue.minimum : issue.maximum;
+  if (issue.origin === "number") {
+    const inclusive = lower ? "minimum" : "maximum";
+    const exclusive = lower ? "exclusiveMinimum" : "exclusiveMaximum";
+    return normalizeValidatorConstraint({ kind: issue.inclusive === false ? exclusive : inclusive, limit });
+  }
+  if (issue.origin === "string") return normalizeValidatorConstraint({ kind: lower ? "minLength" : "maxLength", limit });
+  if (issue.origin === "array") return normalizeValidatorConstraint({ kind: lower ? "minItems" : "maxItems", limit });
+  return undefined;
 }
 
 function toConfigPath(path: readonly PropertyKey[]): ConfigPath {

@@ -1,5 +1,6 @@
 import { pathToKey } from "./path.js";
 import { compileRedaction } from "./compiled-redaction.js";
+import { normalizeValidatorConstraint } from "./validator-constraint.js";
 import type {
   ConfigIssue,
   ConfigPath,
@@ -170,8 +171,11 @@ function sanitizeIssue(
   redactionContext: RedactionContext
 ): ConfigIssue {
   if (!shouldSanitizeDiagnostic(issue, sourceById, redactionContext)) {
+    const { constraint: rawConstraint, ...publicIssue } = issue;
+    const constraint = normalizeValidatorConstraint(rawConstraint);
     return {
-      ...issue,
+      ...publicIssue,
+      ...(constraint === undefined ? {} : { constraint }),
       ...(issue.path === undefined ? {} : { path: [...issue.path] }),
       ...(issue.details === undefined ? {} : { details: { ...issue.details } })
     };

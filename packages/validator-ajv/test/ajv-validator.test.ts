@@ -12,6 +12,23 @@ import {
 } from "../src/index.js";
 
 describe("createAjvValidator", () => {
+  it.each([
+    { schema: { type: "number", minimum: 5 }, config: 4, constraint: { kind: "minimum", limit: 5 } },
+    { schema: { type: "string", maxLength: 2 }, config: "abc", constraint: { kind: "maxLength", limit: 2 } },
+    { schema: { type: "integer" }, config: "wrong", constraint: { kind: "type", expected: "integer" } },
+    { schema: { type: "number", multipleOf: 2 }, config: 3, constraint: { kind: "multipleOf", limit: 2 } }
+  ])("publishes only explicitly opted-in public constraints (%j)", async ({ schema, config, constraint }) => {
+    const ordinary = await createAjvValidator({ schema }).validate({ config, provenance: [] });
+    expect(ordinary.issues[0]?.constraint).toBeUndefined();
+    const opted = await createAjvValidator({ schema, includeConstraints: true }).validate({ config, provenance: [] });
+    expect(opted.issues[0]?.constraint).toEqual(constraint);
+  });
+  it.each([{ type: "string", pattern: "UCE_SCHEMA_PRIVATE" }, { enum: ["UCE_SCHEMA_PRIVATE"] }])(
+    "never publishes regex or enum payloads (%j)", async schema => {
+      const result = await createAjvValidator({ schema, includeConstraints: true }).validate({ config: "wrong", provenance: [] });
+      expect(result.ok).toBe(false); expect(result.issues[0]?.constraint).toBeUndefined();
+      expect(JSON.stringify(result)).not.toContain("UCE_SCHEMA_PRIVATE");
+    });
   const typedRun = (value: Record<string, string | number>, outputValidator: ReturnType<typeof createAjvValidator>) =>
     runValidatedConfigPipeline({ context: undefined, outputValidator, loaders: [{
       descriptor: { id: "settings", kind: "object", priority: 0, displayName: "settings" },

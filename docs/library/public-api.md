@@ -63,7 +63,7 @@ Repository Type: library
   configurations accepted with large explicit depth limits also reach validators
   without stack overflow; caller and resolved config objects remain unfrozen.
 - `ValidatorIssue`: structured validator output containing a stable code, severity,
-  and optional normalized config path.
+  optional normalized config path and explicitly public typed `constraint`.
 - Validation `ConfigIssue` entries identify their origin with `validatorId`.
   `sourceId` remains a legacy correlation field; validator errors do not mark an
   input source with the same ID as failed or inherit its source-only secret policy.
@@ -150,6 +150,10 @@ Complete-error collection remains opt-in and can allocate more errors inside Ajv
 the adapter does not impose an execution deadline or a schema-complexity sandbox.
 
 ## Standard Schema Validation (ADR 0018, Unreleased)
+
+Optional [public validator constraints](../adapters/validator-constraints.md)
+preserve allowlisted rule/type/bound metadata without retaining raw error prose.
+Ajv/Zod and JSON declarations opt in with `includeConstraints: true`.
 
 `createStandardSchemaValidator` accepts a structural `StandardConfigSchema` v1
 provider and infers its output type without adding a core runtime dependency.

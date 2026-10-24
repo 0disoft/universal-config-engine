@@ -14,7 +14,7 @@ describe("actionable configuration doctor", () => {
   it("shows sanitized human paths and escapes terminal control characters", async () => {
     await withTempDir(async root => {
       await writeFile(join(root, "uce.json"), JSON.stringify({ sources: [{ id: "base", kind: "object", priority: 0,
-        value: { password: "UCE_DOCTOR_PRIVATE" } }], validators: [{ id: "schema\u001b[2J", kind: "json-schema-ajv",
+        value: { password: "UCE_DOCTOR_PRIVATE" } }], validators: [{ id: "schema\u001b[2J", kind: "json-schema-ajv", includeConstraints: true,
         schema: { type: "object", properties: { password: { type: "integer" } } } }] }));
       let output = "";
       const result = await runCli(["doctor", "--config", "uce.json"], {
@@ -24,6 +24,7 @@ describe("actionable configuration doctor", () => {
       expect(output).toContain('validator "schema\\u001b[2J"');
       expect(output).not.toContain("\u001b"); expect(output).not.toContain("UCE_DOCTOR_PRIVATE");
       expect(output).toContain("Diagnostic message redacted");
+      expect(output).not.toContain("constraint");
     });
   });
   it.each([["--output", "json"], ["--output=json"]])("honors JSON output aliases for success and usage failures", async (...flags) => {

@@ -147,7 +147,8 @@ function normalizeValidatorDeclaration(validator: unknown): PipelineValidatorDec
   return {
     id: stringField(validator, "id"),
     kind: "json-schema-ajv",
-    schema: validator.schema
+    schema: validator.schema,
+    ...optionalBooleanField(validator, "includeConstraints")
   };
 }
 

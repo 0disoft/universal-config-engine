@@ -3,6 +3,11 @@ import { loadDeclaredSources } from "../src/pipeline/source-loading.js";
 import { validatePipelineDeclaration } from "../src/pipeline/declaration-validation.js";
 
 describe("declaration budget preflight", () => {
+  it("requires explicit boolean constraint disclosure policy", () => {
+    const declaration = { sources: [], validators: [{ id: "schema", kind: "json-schema-ajv", schema: true, includeConstraints: "true" }] };
+    expect(validatePipelineDeclaration(declaration)).toContainEqual(expect.objectContaining({ code: "pipeline_validator_constraints_invalid" }));
+    expect(validatePipelineDeclaration({ ...declaration, validators: [{ ...declaration.validators[0], includeConstraints: true }] })).toEqual([]);
+  });
   it("rejects excess validators before inspecting their entries", () => {
     const validators = new Array(2);
     Object.defineProperty(validators, 0, { get() { throw new Error("Must not inspect"); } });

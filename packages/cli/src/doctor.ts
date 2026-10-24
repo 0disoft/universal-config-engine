@@ -63,7 +63,8 @@ function formatDoctorIssue(issue: ConfigIssue): string {
   const path = issue.path === undefined ? "" : ` at ${JSON.stringify(issue.path)}`;
   const origin = issue.validatorId !== undefined ? ` validator ${JSON.stringify(issue.validatorId)}`
     : issue.sourceId === undefined ? "" : ` source ${JSON.stringify(issue.sourceId)}`;
-  return `- ${issue.severity} ${JSON.stringify(issue.code)}${path}${origin}: ${JSON.stringify(issue.message)}\n`;
+  const constraint = issue.constraint === undefined ? "" : ` constraint ${JSON.stringify(issue.constraint)}`;
+  return `- ${issue.severity} ${JSON.stringify(issue.code)}${path}${origin}${constraint}: ${JSON.stringify(issue.message)}\n`;
 }
 
 function fixForIssue(issue: ConfigIssue): DoctorFix {

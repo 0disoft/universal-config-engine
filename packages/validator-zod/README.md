@@ -15,6 +15,11 @@ Node.js `>=24`, ESM, and Zod `^4.4.3` are required.
 
 ## Use
 
+Unreleased: `includeConstraints: true` retains explicitly public types and
+number/string/array bounds. It defaults to false; provider prose and received data
+remain private. Core removes constraints from secret-associated reports.
+See the [constraint contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/adapters/validator-constraints.md).
+
 ```ts
 import { runValidators } from "@0disoft/universal-config-engine-core";
 import { createZodValidator } from "@0disoft/universal-config-engine-validator-zod";

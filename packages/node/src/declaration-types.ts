@@ -77,11 +77,13 @@ export interface AjvJsonSchemaValidatorDeclaration {
   readonly id: string;
   readonly kind: "json-schema-ajv";
   readonly schema: boolean | Record<string, unknown>;
+  readonly includeConstraints?: boolean;
 }
 
 export interface PipelineValidatorDeclaration {
   readonly id: string;
   readonly kind: string;
   readonly schema?: unknown;
+  readonly includeConstraints?: boolean;
 }
 

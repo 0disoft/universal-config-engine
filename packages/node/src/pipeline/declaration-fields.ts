@@ -32,7 +32,7 @@ export const OVERRIDE_MAPPING_FIELDS = new Set(["externalName", "targetPath", "s
 
 export const COERCION_RULE_FIELDS = new Set(["path", "from", "to", "onFailure"]);
 
-export const VALIDATOR_DECLARATION_FIELDS = new Set(["id", "kind", "schema"]);
+export const VALIDATOR_DECLARATION_FIELDS = new Set(["id", "kind", "schema", "includeConstraints"]);
 
 export const REDACTION_POLICY_FIELDS = new Set(["secretSource", "secretPaths", "secretNamePatterns"]);
 

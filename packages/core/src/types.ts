@@ -1,4 +1,5 @@
 import type { ConfigOperationOptions, ConfigAbortSignal } from "./operation.js";
+import type { ValidatorConstraint } from "./validator-constraint.js";
 
 export type ConfigScalar = string | number | boolean | null;
 
@@ -68,6 +69,7 @@ export interface ConfigIssue {
   readonly sourceId?: string;
   /** Validation origin; sourceId remains as a legacy correlation identifier. */
   readonly validatorId?: string;
+  readonly constraint?: ValidatorConstraint;
   readonly details?: Readonly<Record<string, string | number | boolean | null>>;
 }
 
@@ -152,6 +154,8 @@ export interface ValidatorIssue {
   readonly code: string;
   readonly severity: ConfigIssueSeverity;
   readonly path?: ConfigPath;
+  /** Explicit public schema metadata; provider prose/values are never retained. */
+  readonly constraint?: ValidatorConstraint;
 }
 
 export interface ValidatorResult<TValidated = unknown> {

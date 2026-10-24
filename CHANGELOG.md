@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Add opt-in, allowlisted validator type/bound constraints for Ajv/Zod and declared
+  schemas; sanitize them at core boundaries, mask secret-path metadata and keep
+  provider prose/values out of diagnostics and public-share reports.
 - Share application/CLI declaration execution through Node loadConfig and
   loadValidatedConfig, keeping CLI exports compatible and Ajv an optional factory.
   Reuse core typed-output validation without reloading sources and forward optional

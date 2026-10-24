@@ -9,6 +9,19 @@ import {
 import { createZodValidator } from "../src/index.js";
 
 describe("createZodValidator", () => {
+  it.each([
+    { schema: z.number().min(5, "UCE_SCHEMA_PRIVATE"), config: 4, constraint: { kind: "minimum", limit: 5 } },
+    { schema: z.string().max(2, "UCE_SCHEMA_PRIVATE"), config: "abc", constraint: { kind: "maxLength", limit: 2 } },
+    { schema: z.number().gt(5), config: 5, constraint: { kind: "exclusiveMinimum", limit: 5 } },
+    { schema: z.array(z.string()).min(2), config: [], constraint: { kind: "minItems", limit: 2 } },
+    { schema: z.number().int(), config: 1.5, constraint: { kind: "type", expected: "integer" } }
+  ])("keeps optional public constraints separate from provider messages (%j)", async ({ schema, config, constraint }) => {
+    const ordinary = await createZodValidator({ schema }).validate({ config, provenance: [] });
+    expect(ordinary.issues[0]?.constraint).toBeUndefined();
+    const opted = await createZodValidator({ schema, includeConstraints: true }).validate({ config, provenance: [] });
+    expect(opted.issues[0]?.constraint).toEqual(constraint);
+    expect(JSON.stringify(opted)).not.toContain("UCE_SCHEMA_PRIVATE");
+  });
   it("bounds converted errors, preserves exact limits and reserves a truncation slot", async () => {
     const schema = z.object({ items: z.array(z.number()) });
     const input = { config: { items: Array(1000).fill("invalid") }, provenance: [] };

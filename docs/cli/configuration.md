@@ -168,6 +168,11 @@ JSON Schema validation, validation provenance, and JSON validate output.
 
 ## Validator Declarations
 
+Unreleased validator declarations may opt in to `includeConstraints: true` to
+show public type/bound metadata in sanitized diagnostics. The default is false;
+secret paths and public-share reports omit constraints. See
+[public constraints](../adapters/validator-constraints.md) before enabling this.
+
 `uce validate` supports first-party Ajv JSON Schema validators in the pipeline
 declaration:
 

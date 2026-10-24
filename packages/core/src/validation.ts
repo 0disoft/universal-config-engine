@@ -2,6 +2,7 @@ import { runAbortable, operationAbortedIssue, reportConfigOperationError, type C
 import { appendBoundedIssues, isDiagnosticsLimitReached, markDiagnosticsOverflow } from "./diagnostics.js";
 import { isConfigPath, isIssueCode, isIssueDetails, isRecord } from "./adapter-guards.js";
 import { normalizeResourceLimits } from "./limits.js";
+import { normalizeValidatorConstraint } from "./validator-constraint.js";
 import { cloneConfigValue } from "./path.js";
 import type {
   ConfigIssue,
@@ -179,13 +180,15 @@ function normalizeValidatorIssues(
       continue;
     }
 
+    const constraint = normalizeValidatorConstraint(issue.constraint);
     normalizedIssues.push({
       category: "validation",
       code: issue.code,
       severity: issue.severity,
       message: `Validator ${validatorId} reported validation issue ${issue.code}.`,
       ...(issue.path === undefined ? {} : { path: [...issue.path] }),
-      sourceId: validatorId
+      sourceId: validatorId,
+      ...(constraint === undefined ? {} : { constraint })
     });
     if (index < issues.length - 1 && normalizedIssues.length >= maxDiagnostics) {
       markDiagnosticsOverflow(normalizedIssues, maxDiagnostics);

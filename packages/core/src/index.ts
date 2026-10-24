@@ -113,3 +113,5 @@ export type { PublicDiagnosticReport } from "./public-report.js";
 
 export type { ConfigAbortSignal, ConfigOperationOptions, ConfigOperationError } from "./operation.js";
 export { reportConfigOperationError } from "./operation.js";
+export { normalizeValidatorConstraint } from "./validator-constraint.js";
+export type { ValidatorConstraint } from "./validator-constraint.js";
