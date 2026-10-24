@@ -1,6 +1,6 @@
 import { watch } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
-import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import { createReloadState, type ConfigReloader, type ConfigReloadOutcome, type CreateConfigReloaderInput } from "./reload.js";
 
 export interface ConfigWatchHandle {
@@ -24,6 +24,7 @@ const WATCH_LIMITS = {
   maxDebounceMs: 1000,
   maxWaitMs: 1000,
   maxPaths: 64,
+  maxDirectories: 128,
   maxPathChars: 4096
 } as const;
 
@@ -156,31 +157,48 @@ export async function watchConfigFiles(input: WatchConfigFilesInput, dependencie
   } catch { close(); return { ok: false, code: "watch_setup_failed" }; }
 }
 
-/** At most two parent-directory selections per bounded input path. */
+/** Watch path components as well as targets, within fixed handle/I/O budgets. */
 async function resolveWatchGroups(root: string, paths: readonly string[], dependencies: ConfigWatchDependencies): Promise<Map<string, Set<string>> | undefined> {
   const groups = new Map<string, Set<string>>();
   const canonicalPaths = new Map<string, Promise<string>>();
   function canonicalize(path: string): Promise<string> {
     let pending = canonicalPaths.get(path);
     if (pending === undefined) {
+      if (canonicalPaths.size >= WATCH_LIMITS.maxDirectories + WATCH_LIMITS.maxPaths) {
+        throw new Error("Watch path resolution exceeded its budget.");
+      }
       pending = dependencies.realpath(path);
       canonicalPaths.set(path, pending);
     }
     return pending;
   }
   function add(directory: string, name: string) {
+    if (!groups.has(directory) && groups.size >= WATCH_LIMITS.maxDirectories) {
+      throw new Error("Watch directory selection exceeded its budget.");
+    }
     const names = groups.get(directory) ?? new Set<string>();
     names.add(name); groups.set(directory, names);
   }
+  async function addAncestors(path: string): Promise<boolean> {
+    const child = relative(root, path);
+    if (child === "" || !inside(root, path)) return false;
+    let parent = root;
+    for (const name of child.split(sep)) {
+      const directory = await canonicalize(parent);
+      if (!inside(root, directory)) return false;
+      add(directory, name);
+      parent = resolve(parent, name);
+    }
+    return true;
+  }
   for (const path of paths) {
     const absolute = resolve(root, path);
-    const directory = await canonicalize(dirname(absolute));
-    if (!inside(root, directory)) return undefined;
-    add(directory, basename(absolute));
+    // Watching only realpath(dirname(file)) misses replacement of an intermediate
+    // directory/link. Subscribe to each component in its canonical parent.
+    if (!await addAncestors(absolute)) return undefined;
     try {
       const target = await canonicalize(absolute);
-      if (!inside(root, target)) return undefined;
-      add(dirname(target), basename(target));
+      if (!await addAncestors(target)) return undefined;
     } catch (error) {
       if (error === null || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") throw error;
     }

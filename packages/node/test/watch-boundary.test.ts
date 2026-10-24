@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { relative, resolve, sep } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { runConfigPipeline } from "@0disoft/universal-config-engine-core";
 import { watchConfigFiles, type ConfigWatchDependencies } from "../src/index.js";
@@ -29,6 +29,61 @@ function fixture() {
 const load = () => runConfigPipeline({ context: undefined, loaders: [] });
 
 describe("injected watch scheduling", () => {
+  it.each([127, 128])("bounds ancestor directory handles at depth %s before installing watches", async depth => {
+    const runtime = fixture();
+    const read = vi.fn(load);
+    const watched = await watchConfigFiles({ workspacePath: "/workspace",
+      paths: [`${Array.from({ length: depth }, () => "a").join("/")}/config.json`], load: read }, runtime.dependencies);
+    if (depth === 128) {
+      expect(watched).toEqual({ ok: false, code: "watch_setup_failed" });
+      expect(runtime.dependencies.watch).not.toHaveBeenCalled();
+      expect(read).not.toHaveBeenCalled();
+    } else {
+      expect(watched.ok).toBe(true); if (!watched.ok) return;
+      try { expect(runtime.dependencies.watch).toHaveBeenCalledTimes(128); }
+      finally { watched.watcher.close(); }
+      expect(runtime.close).toHaveBeenCalledTimes(128);
+    }
+  });
+
+  it.each([190, 191])("bounds resolution work even when directory aliases share a handle at depth %s", async depth => {
+    const runtime = fixture();
+    const root = resolve("/workspace");
+    runtime.dependencies.realpath.mockImplementation(async path => path.endsWith("config.json") ? resolve(root, "config.json") : root);
+    const watched = await watchConfigFiles({ workspacePath: root,
+      paths: [`${"a/".repeat(depth)}config.json`], load }, runtime.dependencies);
+    if (depth === 191) {
+      expect(watched).toEqual({ ok: false, code: "watch_setup_failed" });
+      expect(runtime.dependencies.realpath).toHaveBeenCalledTimes(193); // Workspace + 192 selections.
+      expect(runtime.dependencies.watch).not.toHaveBeenCalled();
+    } else {
+      expect(watched.ok).toBe(true); if (!watched.ok) return;
+      try { expect(runtime.dependencies.watch).toHaveBeenCalledTimes(1); }
+      finally { watched.watcher.close(); }
+    }
+  });
+
+  it("rejects an intermediate directory link leaving the workspace without calling load", async () => {
+    const runtime = fixture();
+    const root = resolve("/workspace"), current = resolve(root, "current");
+    let target = resolve(root, "first");
+    runtime.dependencies.realpath.mockImplementation(async path => path === current || path.startsWith(`${current}${sep}`)
+      ? resolve(target, relative(current, path)) : resolve(path));
+    const read = vi.fn(load);
+    const watched = await watchConfigFiles({ workspacePath: root, paths: ["current/config.json"], load: read }, runtime.dependencies);
+    expect(watched.ok).toBe(true); if (!watched.ok) return;
+    try {
+      const previous = watched.watcher.getSnapshot();
+      target = resolve("/outside");
+      expect(await watched.watcher.refresh()).toMatchObject({ ok: false, reason: "load_failed" });
+      expect(read).toHaveBeenCalledTimes(1);
+      expect(watched.watcher.getSnapshot()).toBe(previous);
+      target = resolve(root, "second");
+      expect(await watched.watcher.refresh()).toMatchObject({ ok: true });
+      expect(read).toHaveBeenCalledTimes(2);
+    } finally { watched.watcher.close(); }
+  });
+
   it("canonicalizes shared parents once per pass and rechecks them on every refresh", async () => {
     const runtime = fixture();
     const watched = await watchConfigFiles({ workspacePath: "/workspace",

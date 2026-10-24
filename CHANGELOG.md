@@ -7,6 +7,10 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Rebind file watches when an intermediate directory or directory symlink is
+  replaced. Watch logical and canonical ancestor components within the workspace,
+  retaining the 128-handle maximum and bounding path resolution to 192 requests
+  per selection pass; rejected retargets preserve the last good configuration.
 - Validate parsed JSON values in one iterative pass for mappings and coercion,
   eliminating the duplicate generic object-graph traversal and its cycle-detection
   sets while preserving unsafe-key precedence and finite-number checks.

@@ -123,4 +123,47 @@ describe("disposable bounded file watch", () => {
       } finally { watched.watcher.close(); }
     });
   });
+
+  it("automatically rebinds after a parent directory link is replaced", async () => {
+    await workspace(async root => {
+      const first = join(root, "first"), second = join(root, "second"), current = join(root, "current");
+      await mkdir(first); await mkdir(second);
+      await writeFile(join(first, "config.json"), '{"port":1000}');
+      await writeFile(join(second, "config.json"), '{"port":2000}');
+      await symlink(first, current, "junction");
+      let notify: (() => void) | undefined;
+      const descriptor = { id: "file", kind: "json-file", priority: 0, displayName: "file" } as const;
+      const watched = await watchConfigFiles({ workspacePath: root, paths: ["current/config.json"],
+        load: () => runConfigPipeline({ context: undefined, loaders: [{ descriptor,
+          load: () => loadJsonFileSource({ descriptor, filePath: join(current, "config.json"), allowedRootPath: root }) }] }),
+        onChange: () => { notify?.(); }
+      });
+      expect(watched.ok).toBe(true); if (!watched.ok) return;
+      const watcher = watched.watcher;
+      async function expectPort(update: () => Promise<unknown>, port: number) {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          const changed = new Promise<void>((resolve, reject) => {
+            notify = () => {
+              const config = watcher.getSnapshot()?.result.config;
+              if (config !== undefined && getConfigValueAtPath(config, ["port"]) === port) resolve();
+            };
+            timer = setTimeout(() => reject(new Error("parent directory watch timeout")), 3000);
+          });
+          await update(); await changed;
+        } finally { if (timer !== undefined) clearTimeout(timer); notify = undefined; }
+      }
+      try {
+        expect(watched.watcher.getSnapshot()?.result.config).toEqual({ port: 1000 });
+        await expectPort(async () => {
+          const next = join(root, "next");
+          await symlink(second, next, "junction");
+          // POSIX replaces the link atomically; Windows needs the old junction removed.
+          if (process.platform === "win32") await unlink(current);
+          await rename(next, current);
+        }, 2000);
+        await expectPort(() => writeFile(join(second, "config.json"), '{"port":3000}'), 3000);
+      } finally { watched.watcher.close(); }
+    });
+  });
 });

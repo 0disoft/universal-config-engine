@@ -56,14 +56,23 @@ returns `{ ok: true, watcher, initial }` or a sanitized setup failure. `watcher`
 has the same methods as a reloader. At most 64 explicit paths are accepted;
 the bounded selection is copied and validated before asynchronous filesystem work,
 so later changes to the caller's array do not change this watcher's inputs.
-Relative paths use the workspace. Parent directories and existing targets are
+Relative paths use the workspace; explicit selections must also be lexically inside
+that workspace. Parent directories and existing targets are
 canonicalized and checked inside that boundary. Actual file loaders must still
 enforce the workspace when opening each file, including after replacement.
 
-In-workspace file symlinks watch both the link and the canonical target. Before
+In-workspace file and directory symlinks watch both the logical path components
+and the canonical target's components. Each component is selected by basename
+in its canonical parent, so replacing an intermediate directory or directory
+link also requests a refresh. Before
 each load, target boundaries are rechecked and directory watches are rebound;
 retargeting outside the workspace rejects the refresh without calling `load`.
-Selections are deduplicated and use at most two directory handles per input path.
+Directory selections are deduplicated across all paths. The global maximum remains
+128 handles, with at most 192 cached `realpath` requests per selection pass. These
+budgets include ancestor directories; deeply nested selections or many distinct
+aliases may exhaust them even with fewer than 64 files. Initial budget exhaustion
+returns `watch_setup_failed` before installing handles or calling `load`; during
+refresh it rejects that load and retains the previous watches and last good config.
 
 Watching starts before the initial refresh. Parent directories are watched with
 basename filtering so atomic file replacement keeps working. A null filename
