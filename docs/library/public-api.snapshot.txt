@@ -1244,6 +1244,11 @@ export interface WatchConfigInput extends LoadConfigInput, Pick<CreateConfigRelo
 /** Automatically follows the selected declaration graph using the shared app loader. */
 export declare function watchConfig(input: WatchConfigInput, dependencies?: ConfigWatchDependencies): Promise<WatchConfigFilesResult>;
 
+### watch-setup.d.ts
+import type { CreateConfigReloaderInput } from "./reload.js";
+/** Bound metadata-only setup; late I/O must not start another step or acquire handles. */
+export declare function runWatchSetup<T>(input: Pick<CreateConfigReloaderInput, "signal" | "loadTimeoutMs">, operation: (assertActive: () => void) => Promise<T>): Promise<T>;
+
 ### watch.d.ts
 import type { ConfigOperationOptions, RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
 import { type ConfigReloader, type ConfigReloadOutcome, type CreateConfigReloaderInput } from "./reload.js";

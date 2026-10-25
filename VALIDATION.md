@@ -60,6 +60,9 @@ profiles, missing-directory recovery, last-good/repair subscriptions, obsolete
 handle release, workspace escapes/aliases, path budgets and cancellation. Native
 file events and injected event/handle ownership are checked separately. The packed
 adoption example uses `watchConfig` without a manually maintained file list.
+Initial watch metadata tests inject stalled root/stat/ancestor lookups, cancellation
+and late completion, checking a shared setup deadline, timer/listener cleanup and
+absence of subsequent I/O or handle acquisition.
 
 CI builds once, runs `check:built`, then `smoke:packages:built` to reuse that fresh
 build without changing test coverage. `check:built` leaves artifacts intact;

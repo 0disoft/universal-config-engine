@@ -3,6 +3,7 @@ import { realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import type { ConfigOperationOptions, RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
 import { createReloadState, type ConfigReloader, type ConfigReloadOutcome, type CreateConfigReloaderInput } from "./reload.js";
+import { runWatchSetup } from "./watch-setup.js";
 
 export interface ConfigWatchHandle {
   close(): void;
@@ -58,11 +59,21 @@ export async function watchConfigPathSet(input: Omit<WatchConfigFilesInput, "loa
   let root: string;
   let groups: Map<string, Set<string>>;
   try {
-    root = await dependencies.realpath(input.workspacePath);
-    if (!(await dependencies.stat(root)).isDirectory()) return { ok: false, code: "watch_setup_failed" };
-    const selected = await resolveWatchGroups(root, paths, dependencies, policy.keepUnavailable);
-    if (selected === undefined) return { ok: false, code: "watch_path_outside_workspace" };
-    groups = selected;
+    const setup = await runWatchSetup(input, async assertActive => {
+      const root = await dependencies.realpath(input.workspacePath);
+      assertActive();
+      const stats = await dependencies.stat(root);
+      assertActive();
+      if (!stats.isDirectory()) throw new Error("Watch root is not a directory.");
+      const groups = await resolveWatchGroups(root, paths!, { realpath(path) {
+        assertActive();
+        return dependencies.realpath(path);
+      } }, policy.keepUnavailable);
+      return { root, groups };
+    });
+    if (setup.groups === undefined) return { ok: false, code: "watch_path_outside_workspace" };
+    root = setup.root;
+    groups = setup.groups;
   } catch { return { ok: false, code: "watch_setup_failed" }; }
   const handles = new Map<string, { handle: ConfigWatchHandle; filter: { names: Set<string> } }>();
   let timer: (() => void) | undefined;
@@ -170,7 +181,7 @@ export async function watchConfigPathSet(input: Omit<WatchConfigFilesInput, "loa
 }
 
 /** Watch path components as well as targets, within fixed handle/I/O budgets. */
-async function resolveWatchGroups(root: string, paths: readonly string[], dependencies: ConfigWatchDependencies, keepUnavailable = false): Promise<Map<string, Set<string>> | undefined> {
+async function resolveWatchGroups(root: string, paths: readonly string[], dependencies: Pick<ConfigWatchDependencies, "realpath">, keepUnavailable = false): Promise<Map<string, Set<string>> | undefined> {
   const groups = new Map<string, Set<string>>();
   const canonicalPaths = new Map<string, Promise<string>>();
   function canonicalize(path: string): Promise<string> {

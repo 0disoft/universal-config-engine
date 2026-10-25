@@ -7,6 +7,10 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Bound initial watcher root/stat/path-selection I/O with cancellation and the
+  existing load timeout, including automatic workspace-alias canonicalization.
+  Release setup timers/listeners and prevent late I/O from installing watches or
+  starting more metadata requests after the setup has ended.
 - Capture atomic array values during structural admission instead of retaining live
   source references. Avoid repeated accessor reads during merge counting/cloning,
   uncaught second-read failures and changes to already validated array entries.

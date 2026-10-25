@@ -109,6 +109,16 @@ explicit/custom loaders with its original 64-path bound.
 
 ### Explicit file selections
 
+Initial watcher metadata setup is bounded by `loadTimeoutMs` (default 30 seconds)
+and the lifetime `signal`, before any watch handle is acquired. One setup pass
+shares its deadline across root `realpath`, directory `stat` and the complete
+ancestor/target selection; the deadline does not restart per filesystem request.
+`watchConfig` additionally bounds its preceding workspace-alias canonicalization
+as a separate pass with the same limit. Initial loading retains its own existing
+load deadline. Cancellation/timeout returns `watch_setup_failed` and releases
+the setup timer/listener. Already-started OS I/O may finish later, but it cannot
+start another metadata request, acquire subscriptions or invoke the loader.
+
 `await watchConfigFiles({ workspacePath, paths, load, onChange?, debounceMs? })`
 returns `{ ok: true, watcher, initial }` or a sanitized setup failure. `watcher`
 has the same methods as a reloader. At most 64 explicit paths are accepted;

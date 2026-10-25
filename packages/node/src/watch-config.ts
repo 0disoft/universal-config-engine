@@ -4,6 +4,7 @@ import { loadConfig, type LoadConfigInput } from "./load-config.js";
 import type { CreateConfigReloaderInput } from "./reload.js";
 import { isInsideOrEqualPath } from "./pipeline/source-paths.js";
 import { watchConfigPathSet, type ConfigWatchDependencies, type WatchConfigFilesResult } from "./watch.js";
+import { runWatchSetup } from "./watch-setup.js";
 
 // Two ordinary graphs (16 declarations + 64 file sources each) fit during recovery.
 const MAX_TRACKED_PATHS = 160;
@@ -25,7 +26,7 @@ export async function watchConfig(input: WatchConfigInput, dependencies?: Config
   } catch { return { ok: false, code: "watch_input_invalid" }; }
   if (!isInsideOrEqualPath(workspacePath, configPath)) return { ok: false, code: "watch_path_outside_workspace" };
   try {
-    const root = await (dependencies?.realpath ?? realpath)(workspacePath);
+    const root = await runWatchSetup(input, () => (dependencies?.realpath ?? realpath)(workspacePath));
     configPath = resolve(root, relative(workspacePath, configPath));
     workspacePath = root;
   } catch { return { ok: false, code: "watch_setup_failed" }; }
