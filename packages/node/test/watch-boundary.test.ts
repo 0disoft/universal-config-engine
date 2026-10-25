@@ -29,6 +29,14 @@ function fixture() {
 const load = () => runConfigPipeline({ context: undefined, loaders: [] });
 
 describe("injected watch scheduling", () => {
+  it("preserves the explicit loader's single argument without exposing the internal path setter", async () => {
+    const runtime = fixture(), read = vi.fn(load);
+    const watched = await watchConfigFiles({ workspacePath: "/workspace", paths: ["config.json"], load: read }, runtime.dependencies);
+    expect(watched.ok).toBe(true); if (!watched.ok) return;
+    try { expect(read.mock.calls[0]).toHaveLength(1); }
+    finally { watched.watcher.close(); }
+  });
+
   it.each([127, 128])("bounds ancestor directory handles at depth %s before installing watches", async depth => {
     const runtime = fixture();
     const read = vi.fn(load);

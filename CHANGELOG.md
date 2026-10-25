@@ -7,6 +7,10 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Add Node `watchConfig` to discover and watch declaration/inheritance/file-source
+  dependencies before reads, refresh changing dependency sets, retain repair
+  subscriptions on failure and release obsolete watches after success. Share the
+  existing reloader/cancellation engine with fixed path, handle and I/O budgets.
 - Discover declaration, inherited declaration and selected file-source dependencies
   before I/O through an awaited Node `onDependencies` hook, including missing
   inherited files needed for recovery and sanitized observer failures.

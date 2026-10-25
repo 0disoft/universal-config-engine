@@ -1,7 +1,7 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPublicDiagnosticReport, createStandardSchemaValidator } from "@0disoft/universal-config-engine-core";
-import { createConfigReloader, watchConfigFiles, loadConfig, loadValidatedConfig } from "@0disoft/universal-config-engine-node";
+import { createConfigReloader, watchConfig, loadConfig, loadValidatedConfig } from "@0disoft/universal-config-engine-node";
 import { createAjvValidator } from "@0disoft/universal-config-engine-validator-ajv";
 
 const workspace = dirname(fileURLToPath(import.meta.url));
@@ -19,8 +19,8 @@ try {
   if (!(await reloader.refresh()).ok) throw new Error("Example reload failed.");
 } finally { reloader.close(); }
 
-const watched = await watchConfigFiles({ workspacePath: workspace,
-  paths: ["uce.json", "common/base.json", "common/settings.yaml", "common/production.toml"], load });
+// Declaration, inheritance and selected file sources are tracked automatically.
+const watched = await watchConfig(options);
 if (!watched.ok) throw new Error("Example watcher setup failed.");
 try {
   if (!watched.initial.ok) throw new Error("Example initial snapshot failed.");

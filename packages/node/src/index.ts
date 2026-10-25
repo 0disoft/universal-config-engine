@@ -57,3 +57,5 @@ export { createDeclaredValidators } from "./declaration-validators.js";
 export type { CreateDeclaredValidatorsResult, DeclaredValidatorFactory } from "./declaration-validators.js";
 export { loadConfig, loadValidatedConfig } from "./load-config.js";
 export type { LoadConfigInput } from "./load-config.js";
+export { watchConfig } from "./watch-config.js";
+export type { WatchConfigInput } from "./watch-config.js";

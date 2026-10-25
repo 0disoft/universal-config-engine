@@ -42,6 +42,9 @@ or another release.
    file-relative base without weakening the workspace boundary.
 5. Safe reload and file watching in the Node layer. Serialize refreshes, coalesce
    bursts, retain the last successful snapshot when loading/validation fails,
+   automatically track declarations, inheritance and selected file sources through
+   `watchConfig`, and update bounded subscriptions before reads. Preserve repair
+   subscriptions on failure and drop obsolete dependencies after a valid load;
    expose safe change metadata and support explicit close/disposal. Do not mutate
    a published snapshot or place filesystem/process APIs in core. A failed refresh
    is observable and must not appear as a successful configuration change.

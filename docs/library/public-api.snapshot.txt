@@ -966,6 +966,8 @@ export { createDeclaredValidators } from "./declaration-validators.js";
 export type { CreateDeclaredValidatorsResult, DeclaredValidatorFactory } from "./declaration-validators.js";
 export { loadConfig, loadValidatedConfig } from "./load-config.js";
 export type { LoadConfigInput } from "./load-config.js";
+export { watchConfig } from "./watch-config.js";
+export type { WatchConfigInput } from "./watch-config.js";
 
 ### input-policy.d.ts
 import type { ConfigIssueSeverity } from "@0disoft/universal-config-engine-core";
@@ -1225,7 +1227,19 @@ export declare function createReloadState(input: CreateConfigReloaderInput): {
     watchFailed: () => void;
 };
 
+### watch-config.d.ts
+import { type LoadConfigInput } from "./load-config.js";
+import type { CreateConfigReloaderInput } from "./reload.js";
+import { type ConfigWatchDependencies, type WatchConfigFilesResult } from "./watch.js";
+export interface WatchConfigInput extends LoadConfigInput, Pick<CreateConfigReloaderInput, "onChange" | "loadTimeoutMs" | "observerTimeoutMs"> {
+    readonly workspacePath: string;
+    readonly debounceMs?: number;
+}
+/** Automatically follows the selected declaration graph using the shared app loader. */
+export declare function watchConfig(input: WatchConfigInput, dependencies?: ConfigWatchDependencies): Promise<WatchConfigFilesResult>;
+
 ### watch.d.ts
+import type { ConfigOperationOptions, RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
 import { type ConfigReloader, type ConfigReloadOutcome, type CreateConfigReloaderInput } from "./reload.js";
 export interface ConfigWatchHandle {
     close(): void;
@@ -1257,6 +1271,13 @@ export type WatchConfigFilesResult = {
 };
 /** Watches selected basenames in their parent directories, including atomic replacements. */
 export declare function watchConfigFiles(input: WatchConfigFilesInput, dependencies?: ConfigWatchDependencies): Promise<WatchConfigFilesResult>;
+/** Internal shared engine: dependency discovery can subscribe before reading new files. */
+export declare function watchConfigPathSet(input: Omit<WatchConfigFilesInput, "load"> & {
+    readonly load: (options: ConfigOperationOptions, select: (paths: readonly string[]) => Promise<void>) => Promise<RunConfigPipelineResult>;
+}, dependencies?: ConfigWatchDependencies, policy?: {
+    readonly maxPaths?: number;
+    readonly keepUnavailable?: boolean;
+}): Promise<WatchConfigFilesResult>;
 
 ## @0disoft/universal-config-engine-cli
 

@@ -202,6 +202,14 @@ Paths are local operational metadata, never public-share report content. Consume
 must enforce their workspace and resource budgets before subscribing. Callback
 failures abort loading and are sanitized by `loadConfig`; `onError` retains cause.
 
+Node `watchConfig` / `WatchConfigInput` add automatic declaration-graph watching
+within an explicit workspace. Root/inherited declarations and selected-profile
+file sources are subscribed before reads and updated on serialized reloads. The
+same reloader result/close/cancellation contracts and last-good snapshots apply;
+failed attempts retain repair subscriptions. Its bounded 160-path selection is
+separate from the explicit watcher's 64 paths. See [reload lifecycle](../adapters/reload.md)
+for handle/resolution budgets, missing-file recovery and remaining watch limits.
+
 ## Package Boundary Direction
 
 Published package ownership is layered:

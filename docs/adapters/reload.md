@@ -51,6 +51,64 @@ another refresh from inside `load`.
 
 ## Selected file watching
 
+### Automatic declaration graphs (unreleased)
+
+`watchConfig` loads through the same Node `loadConfig` facade and owns its file
+dependency set. No separate loader callback or manually maintained file list is
+required:
+
+```ts
+import { watchConfig } from "@0disoft/universal-config-engine-node";
+import { createAjvValidator } from "@0disoft/universal-config-engine-validator-ajv";
+
+const watched = await watchConfig({
+  configPath: "uce.json", cwd: process.cwd(), workspacePath: process.cwd(),
+  profile: "production", validatorFactory: createAjvValidator,
+  onChange(event) { console.log(event.status, event.revision); }
+});
+if (!watched.ok) throw new Error(watched.code);
+// Read private application config via watched.watcher.getSnapshot().
+// Retain the handle, and call watched.watcher.close() at shutdown.
+```
+
+`WatchConfigInput` accepts the normal loading/profile/validation options plus
+reloader deadlines, `onChange`, cancellation and debounce options. `workspacePath`
+is required and is canonicalized once for the session. Replacing that workspace
+alias does not move the session to a different workspace. Return values and
+reloader methods are the same as `watchConfigFiles`, including an initial failed
+load that leaves a live watcher for repair.
+
+The root declaration is watched before its first read. Inherited declarations
+(including missing files) are subscribed before their reads. Selected-profile
+JSON, dotenv and official adapter file sources are subscribed as one batch before
+source I/O. Each serialized reload rediscovers the graph once; it does not reparse
+declarations in a separate discovery pass. An unchanged selection is canonicalized
+once per refresh, rather than again for each discovery callback. New files are subscribed while loading,
+so their changes join the existing single queued refresh. A valid new load drops
+obsolete dependencies; failed loads keep the last-good dependency set and the
+current attempt's repair files. The last-good config remains immutable.
+
+Missing directories retain their nearest existing ancestor subscription, enabling
+repair by creating a missing directory/declaration/source. An escaping symlink
+retains only safe ancestor subscriptions; the normal loader still rejects opening
+outside the workspace. No watcher is installed outside that boundary. A failed
+load can be repaired by editing its declaration or a discovered in-workspace file.
+
+Automatic selection has a fixed 160-path budget shared by the last-good and pending
+graphs (two ordinary graphs of 16 declarations and 64 file sources). It still uses
+at most 128 directory handles and 192 canonicalization requests per selection pass.
+The limits may reject large/deep/alias-heavy graphs even if a custom core limit
+allows more sources. Budget failures reject the refresh without publishing partial
+config or losing the last good snapshot. Closing, cancellation and timeouts own all
+subscriptions/timers through the shared watcher/reloader lifecycle.
+
+Environment/argv changes still need `refresh()`. Files opened privately by a custom
+validator/factory are not inferred. Filesystem notifications remain best effort,
+not a transactional snapshot. Existing `watchConfigFiles` stays available for
+explicit/custom loaders with its original 64-path bound.
+
+### Explicit file selections
+
 `await watchConfigFiles({ workspacePath, paths, load, onChange?, debounceMs? })`
 returns `{ ok: true, watcher, initial }` or a sanitized setup failure. `watcher`
 has the same methods as a reloader. At most 64 explicit paths are accepted;

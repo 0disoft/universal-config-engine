@@ -78,6 +78,16 @@ rejected; all values must fit the normalized JSON object contract. Parser errors
 never include raw exception text. These additions are not in published `1.2.0`.
 See the [format contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/adapters/official-files.md).
 
+## Automatic Config Watching (Unreleased)
+
+`watchConfig({ configPath, workspacePath, ...loadingOptions })` automatically
+tracks declarations, inherited declarations and selected-profile file sources.
+It updates bounded subscriptions on reload, retains the last good config and
+repair subscriptions after failure, and releases obsolete watches after success.
+Call `watched.watcher.close()` during shutdown. Environment/argv updates require
+manual refresh. This API is not in published `1.2.0`.
+See the [reload contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/adapters/reload.md).
+
 ## License
 
 MIT

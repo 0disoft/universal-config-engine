@@ -1,6 +1,7 @@
 import { watch } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
+import type { ConfigOperationOptions, RunConfigPipelineResult } from "@0disoft/universal-config-engine-core";
 import { createReloadState, type ConfigReloader, type ConfigReloadOutcome, type CreateConfigReloaderInput } from "./reload.js";
 
 export interface ConfigWatchHandle {
@@ -40,23 +41,26 @@ export type WatchConfigFilesResult =
 
 /** Watches selected basenames in their parent directories, including atomic replacements. */
 export async function watchConfigFiles(input: WatchConfigFilesInput, dependencies: ConfigWatchDependencies = nativeDependencies): Promise<WatchConfigFilesResult> {
+  return watchConfigPathSet({ ...input, load: options => input.load(options) }, dependencies);
+}
+
+/** Internal shared engine: dependency discovery can subscribe before reading new files. */
+export async function watchConfigPathSet(input: Omit<WatchConfigFilesInput, "load"> & {
+  readonly load: (options: ConfigOperationOptions, select: (paths: readonly string[]) => Promise<void>) => Promise<RunConfigPipelineResult>;
+}, dependencies: ConfigWatchDependencies = nativeDependencies, policy: {
+  readonly maxPaths?: number; readonly keepUnavailable?: boolean;
+} = {}): Promise<WatchConfigFilesResult> {
   if (input.signal?.aborted) return { ok: false, code: "watch_setup_failed" };
   const delay = input.debounceMs ?? WATCH_LIMITS.defaultDebounceMs;
-  if (!Array.isArray(input.paths) || input.paths.length === 0 || input.paths.length > WATCH_LIMITS.maxPaths ||
-      !Number.isSafeInteger(delay) || delay < 0 || delay > WATCH_LIMITS.maxDebounceMs) return { ok: false, code: "watch_input_invalid" };
-  const count = input.paths.length;
-  const paths: string[] = [];
-  for (let index = 0; index < count; index++) {
-    const path = input.paths[index];
-    if (typeof path !== "string" || path.length === 0 || path.length > WATCH_LIMITS.maxPathChars) return { ok: false, code: "watch_input_invalid" };
-    paths.push(path);
-  }
+  const maximum = policy.maxPaths ?? WATCH_LIMITS.maxPaths;
+  let paths = copyPaths(input.paths, maximum);
+  if (paths === undefined || !Number.isSafeInteger(delay) || delay < 0 || delay > WATCH_LIMITS.maxDebounceMs) return { ok: false, code: "watch_input_invalid" };
   let root: string;
   let groups: Map<string, Set<string>>;
   try {
     root = await dependencies.realpath(input.workspacePath);
     if (!(await dependencies.stat(root)).isDirectory()) return { ok: false, code: "watch_setup_failed" };
-    const selected = await resolveWatchGroups(root, paths, dependencies);
+    const selected = await resolveWatchGroups(root, paths, dependencies, policy.keepUnavailable);
     if (selected === undefined) return { ok: false, code: "watch_path_outside_workspace" };
     groups = selected;
   } catch { return { ok: false, code: "watch_setup_failed" }; }
@@ -69,13 +73,21 @@ export async function watchConfigFiles(input: WatchConfigFilesInput, dependencie
   let watchFailed = false;
   const state = createReloadState({ ...input, async load(options) {
     // Refresh is serialized by the reload state, including watch rebinding.
-    const selected = await resolveWatchGroups(root, paths, dependencies);
+    await select(paths!, true);
+    return input.load(options ?? {}, select);
+  } });
+  async function select(next: readonly string[], force = false) {
+    if (closed) throw new Error("Watcher is closed.");
+    const owned = copyPaths(next, maximum);
+    if (owned === undefined) throw new Error("Watch path selection exceeds its input budget.");
+    if (!force && owned.length === paths!.length && owned.every((path, index) => path === paths![index])) return;
+    const selected = await resolveWatchGroups(root, owned, dependencies, policy.keepUnavailable);
     if (closed) throw new Error("Watcher is closed.");
     if (selected === undefined) throw new Error("Watch target left the workspace.");
     try { reconcile(selected); }
     catch (error) { watchFailed = true; state.watchFailed(); close(); throw error; }
-    return input.load(options);
-  } });
+    paths = owned;
+  }
   function close() {
     closed = true;
     if (disposing) return;
@@ -158,7 +170,7 @@ export async function watchConfigFiles(input: WatchConfigFilesInput, dependencie
 }
 
 /** Watch path components as well as targets, within fixed handle/I/O budgets. */
-async function resolveWatchGroups(root: string, paths: readonly string[], dependencies: ConfigWatchDependencies): Promise<Map<string, Set<string>> | undefined> {
+async function resolveWatchGroups(root: string, paths: readonly string[], dependencies: ConfigWatchDependencies, keepUnavailable = false): Promise<Map<string, Set<string>> | undefined> {
   const groups = new Map<string, Set<string>>();
   const canonicalPaths = new Map<string, Promise<string>>();
   function canonicalize(path: string): Promise<string> {
@@ -184,8 +196,10 @@ async function resolveWatchGroups(root: string, paths: readonly string[], depend
     if (child === "" || !inside(root, path)) return false;
     let parent = root;
     for (const name of child.split(sep)) {
-      const directory = await canonicalize(parent);
-      if (!inside(root, directory)) return false;
+      let directory: string;
+      try { directory = await canonicalize(parent); }
+      catch (error) { if (keepUnavailable && unavailable(error)) return true; throw error; }
+      if (!inside(root, directory)) return keepUnavailable;
       add(directory, name);
       parent = resolve(parent, name);
     }
@@ -198,12 +212,30 @@ async function resolveWatchGroups(root: string, paths: readonly string[], depend
     if (!await addAncestors(absolute)) return undefined;
     try {
       const target = await canonicalize(absolute);
-      if (!await addAncestors(target)) return undefined;
+      if (!await addAncestors(target) && !keepUnavailable) return undefined;
     } catch (error) {
-      if (error === null || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") throw error;
+      if (error === null || typeof error !== "object" || !("code" in error) ||
+          error.code !== "ENOENT" && !(keepUnavailable && unavailable(error))) throw error;
     }
   }
   return groups;
+}
+
+function unavailable(error: unknown): boolean {
+  return error !== null && typeof error === "object" && "code" in error &&
+    ["ENOENT", "ENOTDIR", "ELOOP"].includes(String(error.code));
+}
+
+function copyPaths(input: readonly string[], maximum: number): string[] | undefined {
+  if (!Array.isArray(input) || input.length === 0 || input.length > maximum) return undefined;
+  const count = input.length;
+  const paths: string[] = [];
+  for (let index = 0; index < count; index++) {
+    const path = input[index];
+    if (typeof path !== "string" || path.length === 0 || path.length > WATCH_LIMITS.maxPathChars) return undefined;
+    paths.push(path);
+  }
+  return paths;
 }
 
 function inside(root: string, target: string): boolean {
