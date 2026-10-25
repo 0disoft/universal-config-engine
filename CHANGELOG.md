@@ -5,6 +5,15 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+## 1.3.0-rc.1 - 2026-10-25
+
+### Security
+
+- Require Zod >=4.6.6 within major 4 and validate with 4.6.7 to exclude the
+  oversized-collection memory-exhaustion vulnerability GHSA-mrhx-c7xc-m3w5.
+- Refresh the locked Ajv fast-uri dependency to patched 3.1.9, addressing its
+  URI normalization advisories without a major dependency upgrade.
+
 ### Fixed
 
 - Reject sources with reported errors before reading or flattening their payloads.

@@ -12,7 +12,7 @@ npm install @0disoft/universal-config-engine-core @0disoft/universal-config-engi
 
 Node.js `>=24` and ESM are required.
 
-## Application Declaration API (Unreleased)
+## Application Declaration API (1.3)
 
 `loadConfig({ configPath, validatorFactory? })` applies declaration profiles,
 source loading, coercion, resource limits and validation through the same execution
@@ -68,7 +68,7 @@ Strict unmapped-input diagnostics are opt-in.
 See the [compatibility contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/library/compatibility.md)
 and [public API contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/library/public-api.md).
 
-## Additional File Formats (Unreleased)
+## Additional File Formats (1.3)
 
 `loadConfigFileSource({ descriptor, filePath, format })` adds explicit `jsonc`,
 `yaml`, `toml` and `json5` loading through the existing bounded file boundary.
@@ -77,17 +77,17 @@ Use descriptor kind `adapter` for dialect sources. JSONC trailing commas require
 rejected; all values must fit the normalized JSON object contract. Parser errors
 never include raw exception text. YAML/TOML/JSON5 failures include a fixed reason
 and one-based line/column when available, without source snippets or key names.
-These additions are not in published `1.2.0`.
+These additions require version `1.3` or later.
 See the [format contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/adapters/official-files.md).
 
-## Automatic Config Watching (Unreleased)
+## Automatic Config Watching (1.3)
 
 `watchConfig({ configPath, workspacePath, ...loadingOptions })` automatically
 tracks declarations, inherited declarations and selected-profile file sources.
 It updates bounded subscriptions on reload, retains the last good config and
 repair subscriptions after failure, and releases obsolete watches after success.
 Call `watched.watcher.close()` during shutdown. Environment/argv updates require
-manual refresh. This API is not in published `1.2.0`.
+manual refresh. This API requires version `1.3` or later.
 See the [reload contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/adapters/reload.md).
 
 ## License

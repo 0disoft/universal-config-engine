@@ -11,8 +11,8 @@ npm install --save-dev @0disoft/universal-config-engine-cli
 ```
 
 Node.js `>=24` and ESM are required.
-The stable baseline is **1.2.0**. Normal installation selects the stable `latest`
-tag; the historical `1.2.0-rc.1` candidate is not needed.
+Normal installation selects the stable `latest` tag. Candidate releases require
+an explicit prerelease version or the `next` tag; keep all engine packages aligned.
 
 ## Use
 
@@ -60,17 +60,17 @@ These features are in stable 1.2.0. Legacy commands keep schema
 remain hidden and secret comparisons require explicit opt-in. See the
 [inspection and diff guide](https://github.com/0disoft/universal-config-engine/blob/main/docs/cli/inspection-and-diff.md).
 
-## Unreleased on main
+## Local Adoption and Policies (1.3)
 
 Optional `--compare` and policy-owned comparison settings separate value/type,
 ownership and location changes. Mappings can explicitly choose strict decimal or
 safe-integer syntax and empty-value behavior; existing defaults remain compatible.
 See [operational policies](https://github.com/0disoft/universal-config-engine/blob/main/docs/library/operational-policies.md).
 
-The source checkout additionally contains init/doctor, public-share reports,
+Version 1.3 additionally contains init/doctor, public-share reports,
 file-format adapters, discovery, profiles/inheritance and reload/watch examples.
-These additions are not part of the published 1.2.0 API. Follow the
-[source-checkout adoption example](https://github.com/0disoft/universal-config-engine/blob/main/examples/adoption/README.md)
+These additions require version 1.3 or later. Follow the
+[adoption example](https://github.com/0disoft/universal-config-engine/blob/main/examples/adoption/README.md)
 to try them; install instructions above target the stable release.
 
 ## License

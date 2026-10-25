@@ -11,11 +11,11 @@ npm install @0disoft/universal-config-engine-core \
   @0disoft/universal-config-engine-validator-zod zod
 ```
 
-Node.js `>=24`, ESM, and Zod `^4.4.3` are required.
+Node.js `>=24`, ESM, and patched Zod `^4.6.6` are required.
 
 ## Use
 
-Unreleased: `includeConstraints: true` retains explicitly public types and
+Since 1.3, `includeConstraints: true` retains explicitly public types and
 number/string/array bounds. It defaults to false; provider prose and received data
 remain private. Core removes constraints from secret-associated reports.
 See the [constraint contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/adapters/validator-constraints.md).
