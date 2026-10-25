@@ -87,11 +87,14 @@ export function resolveConfig(input: ResolveConfigInput): ConfigResult {
   const locationBudget = { count: 0, bytes: 0, exhausted: false };
   sourceLoop: for (const source of sources) {
     const sourceIssues = source.issues ?? [];
-    const flattened = flattenSourceValue(source, limits);
+    // A failed adapter's payload is unusable; do not inspect it or obscure its
+    // original error with redundant structure diagnostics.
+    const sourceHasErrors = sourceIssues.some(issue => issue.severity === "error");
+    const flattened = sourceHasErrors ? { entries: [], issues: [] } : flattenSourceValue(source, limits);
     appendBoundedIssues(issues, sourceIssues, limits.maxDiagnostics);
     appendBoundedIssues(issues, flattened.issues, limits.maxDiagnostics);
 
-    if (sourceIssues.some((issue) => issue.severity === "error") ||
+    if (sourceHasErrors ||
         flattened.issues.some((issue) => issue.severity === "error")) {
       const event: ProvenanceEvent = {
         path: [],

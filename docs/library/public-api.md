@@ -295,7 +295,14 @@ declaration order for failure metadata, without reading source priorities or
 values. This replaces the former globally priority-selected failure subset.
 Accepted inputs still use stable priority ordering and unchanged merge semantics.
 
-`resolveConfig` checks source values early and rechecks the final config after merge
+`resolveConfig` checks each source's reported errors before reading its value.
+A source that already has an error is rejected without structural traversal or
+additional payload diagnostics; its original issues and rejection provenance are
+retained within the existing budgets. An error beyond the retained issue prefix
+still rejects the source. Warning-only sources still receive full value checks,
+and subsequent healthy sources continue through resolution.
+
+`resolveConfig` checks admitted source values early and rechecks the final config after merge
 and coercion. A final aggregate or coercion-expanded structure that exceeds depth,
 key-count, or path-length limits returns a `resource-limit` issue with source id
 `core:resolved-config` and cannot produce `ok: true`.

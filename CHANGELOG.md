@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Reject sources with reported errors before reading or flattening their payloads.
+  Avoid unnecessary accessor/traversal work and preserve original failures instead
+  of overflowing the diagnostic budget with redundant payload errors.
 - Bound initial watcher root/stat/path-selection I/O with cancellation and the
   existing load timeout, including automatic workspace-alias canonicalization.
   Release setup timers/listeners and prevent late I/O from installing watches or

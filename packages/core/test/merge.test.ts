@@ -11,6 +11,53 @@ import { source } from "./helpers/source.js";
 import type { ConfigIssue } from "../src/index.js";
 
 describe("resolveConfig", () => {
+  it("does not inspect values of sources that already reported a fatal issue", () => {
+    let reads = 0;
+    const issue: ConfigIssue = { category: "source-load", code: "source_unavailable", severity: "error",
+      sourceId: "failed", message: "Source unavailable." };
+    const failed = Object.defineProperty({ ...source("failed", 0, undefined), issues: [issue] }, "value", { get() {
+      reads++;
+      throw new Error("UCE_REJECTED_SOURCE_PRIVATE");
+    } });
+    const result = resolveConfig({ sources: [failed] });
+    expect(reads).toBe(0);
+    expect(result.issues).toEqual([issue]);
+    expect(result.config).toEqual({});
+    expect(result.provenance).toEqual([expect.objectContaining({ action: "rejected", sourceId: "failed" })]);
+    expect(JSON.stringify(result)).not.toContain("UCE_REJECTED_SOURCE_PRIVATE");
+  });
+
+  it("preserves the original fatal issue at an exact diagnostic budget without inspecting its invalid payload", () => {
+    const issue: ConfigIssue = { category: "source-load", code: "source_unavailable", severity: "error",
+      sourceId: "failed", message: "Source unavailable." };
+    const result = resolveConfig({ sources: [{ ...source("failed", 0, undefined), issues: [issue] }],
+      limits: { maxDiagnostics: 1 } });
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual([issue]);
+    expect(result.config).toEqual({});
+  });
+
+  it("isolates failed loader payloads while still merging subsequent healthy sources", async () => {
+    let reads = 0;
+    const failed = source("failed", 0, Object.defineProperty({}, "partial", { enumerable: true, get() {
+      reads++;
+      throw new Error("UCE_REJECTED_SOURCE_PRIVATE");
+    } }));
+    const healthy = source("healthy", 1, { port: 8080 });
+    const issue: ConfigIssue = { category: "source-load", code: "source_unavailable", severity: "error",
+      sourceId: "failed", message: "Source unavailable." };
+    const run = await runConfigPipeline({ context: undefined, loaders: [
+      { descriptor: failed.descriptor, load: () => ({ value: failed.value, issues: [issue] }) },
+      { descriptor: healthy.descriptor, load: () => ({ value: healthy.value }) }
+    ] });
+    expect(run.result.ok).toBe(false);
+    expect(run.result.config).toEqual({ port: 8080 });
+    expect(run.result.issues).toEqual([issue]);
+    expect(reads).toBe(0);
+    expect(run.result.provenance.map(event => event.action)).toEqual(["rejected", "defined"]);
+    expect(JSON.stringify(run)).not.toContain("UCE_REJECTED_SOURCE_PRIVATE");
+  });
+
   it("bounds retained location fanout after JSON coercion projects a parent history", () => {
     const bag = Object.fromEntries(Array.from({ length: 300 }, (_, i) => [`k${i}`, i]));
     const result = resolveConfig({ sources: [
