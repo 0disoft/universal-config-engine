@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Discover declaration, inherited declaration and selected file-source dependencies
+  before I/O through an awaited Node `onDependencies` hook, including missing
+  inherited files needed for recovery and sanitized observer failures.
 - Reuse each CI/runtime job's workspace build for checks and packed smoke while
   retaining all eight OS/Node jobs, existing check names and packaging lifecycle
   hooks. Reduce explicit whole-workspace builds per push/PR from 14 to 8.

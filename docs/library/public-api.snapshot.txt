@@ -1058,6 +1058,8 @@ export interface PipelineDeclarationReadPolicy extends ConfigOperationOptions {
     readonly allowedRootPath?: string;
     readonly workspacePath?: string;
     readonly profile?: string;
+    /** Awaited before declaration/source reads; paths are prospective local dependencies. */
+    readonly onDependencies?: (paths: readonly string[]) => void | Promise<void>;
 }
 export declare function loadPipelineDeclaration(configPath: string, cwd?: string, policy?: PipelineDeclarationReadPolicy): Promise<PipelineDeclaration>;
 export declare function loadPipelineDeclarationContext(configPath: string, cwd?: string, policy?: PipelineDeclarationReadPolicy): Promise<LoadedPipelineDeclaration>;

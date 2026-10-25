@@ -1,3 +1,4 @@
+import { dirname, resolve } from "node:path";
 import {
   buildDiagnosticReport, combineConfigIssues, reportConfigOperationError, runConfigPipeline,
   runValidators, validateConfigOutput, type ConfigIssue, type ConfigLoader, type ConfigResult,
@@ -27,6 +28,10 @@ export async function loadConfig(input: LoadConfigInput): Promise<RunConfigPipel
     const cwd = input.cwd ?? process.cwd();
     const context = await loadPipelineDeclarationContext(input.configPath, cwd, input);
     const declaration = context.declaration;
+    const files = declaration.sources.flatMap(source =>
+      source.kind === "json-file" || source.kind === "dotenv-file" || source.kind === "adapter"
+        ? [resolve(dirname(context.sourceConfigPaths?.get(source.id) ?? context.canonicalConfigPath), source.path)] : []);
+    if (files.length > 0) await input.onDependencies?.(files);
     const sources = await loadDeclaredSources({ declaration, configPath: context.canonicalConfigPath,
       cwd, env: input.env ?? process.env, argv: input.argv ?? [],
       ...(context.sourceConfigPaths === undefined ? {} : { sourceConfigPaths: context.sourceConfigPaths }),

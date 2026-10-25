@@ -194,6 +194,14 @@ reloading sources. Ajv remains an explicitly supplied optional Node factory.
 See [application loading](../adapters/load-config.md) for failure and cancellation
 behavior. No runtime dependencies were added to core or Node.
 
+Node declaration policies and `loadConfig` accept an optional awaited
+`onDependencies(paths)` callback. It receives prospective absolute declaration
+paths before reads/canonicalization (including missing or invalid inherited files),
+then the selected profile's file-source paths as one batch before source I/O.
+Paths are local operational metadata, never public-share report content. Consumers
+must enforce their workspace and resource budgets before subscribing. Callback
+failures abort loading and are sanitized by `loadConfig`; `onError` retains cause.
+
 ## Package Boundary Direction
 
 Published package ownership is layered:

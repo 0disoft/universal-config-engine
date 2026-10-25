@@ -20,6 +20,8 @@ export interface PipelineDeclarationReadPolicy extends ConfigOperationOptions {
   readonly allowedRootPath?: string;
   readonly workspacePath?: string;
   readonly profile?: string;
+  /** Awaited before declaration/source reads; paths are prospective local dependencies. */
+  readonly onDependencies?: (paths: readonly string[]) => void | Promise<void>;
 }
 
 export async function loadPipelineDeclaration(configPath: string, cwd = process.cwd(), policy: PipelineDeclarationReadPolicy = {}): Promise<PipelineDeclaration> {
@@ -34,7 +36,9 @@ export async function loadPipelineDeclarationContext(
   const resolvedPolicy = { ...policy,
     ...(policy.allowedRootPath === undefined ? {} : { allowedRootPath: resolveInputPath(policy.allowedRootPath, cwd) }),
     ...(policy.workspacePath === undefined ? {} : { workspacePath: resolveInputPath(policy.workspacePath, cwd) }) };
-  const document = await readSingleDeclaration(resolveInputPath(configPath, cwd),
+  const initialPath = resolveInputPath(configPath, cwd);
+  await policy.onDependencies?.([initialPath]);
+  const document = await readSingleDeclaration(initialPath,
     resolvedPolicy.allowedRootPath ?? resolvedPolicy.workspacePath, DEFAULT_MAX_FILE_BYTES, policy);
   if ((document.declaration.extends?.length ?? 0) > 0 || resolvedPolicy.workspacePath !== undefined) {
     return loadDeclarationInheritance(document, resolvedPolicy, (path, workspace, maximum) => readSingleDeclaration(path, workspace, maximum, policy));

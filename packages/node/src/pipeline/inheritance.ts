@@ -30,7 +30,11 @@ export async function loadDeclarationInheritance(
   let bytes = initial.byteLength;
   async function visit(document: ParsedPipelineDocument): Promise<void> {
     active.add(document.canonicalConfigPath);
-    for (const parent of document.declaration.extends ?? []) {
+    const parents = document.declaration.extends ?? [];
+    if (parents.length > 0) {
+      await policy.onDependencies?.(parents.map(parent => resolve(dirname(document.canonicalConfigPath), parent)));
+    }
+    for (const parent of parents) {
       const path = await realpath(resolve(dirname(document.canonicalConfigPath), parent));
       if (!isInsideOrEqualPath(workspacePath, path)) throw failure("pipeline_inheritance_outside_workspace");
       if (active.has(path)) throw failure("pipeline_inheritance_cycle");

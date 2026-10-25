@@ -23,6 +23,51 @@ const validatorFactory: DeclaredValidatorFactory = declaration => ({ id: declara
   validate: input => ({ ok: typeof getConfigValueAtPath(input.config, ["port"]) === "number", issues: [] }) });
 
 describe("application declaration facade", () => {
+  it("awaits dependency discovery before inherited declarations and selected source reads", async () => {
+    await withDeclaration(async cwd => {
+      await writeFile(join(cwd, "uce.json"), JSON.stringify({ sources: [], extends: ["base.json"], profiles: {
+        production: { sources: [{ id: "production", kind: "json-file", path: "prod.json", priority: 1 }] }
+      } }));
+      const batches: string[][] = [];
+      const loaded = await loadConfig({ cwd, configPath: "uce.json", workspacePath: cwd, profile: "production",
+        async onDependencies(paths) {
+          batches.push([...paths]);
+          if (paths.includes(join(cwd, "base.json"))) await writeFile(join(cwd, "base.json"), JSON.stringify({
+            sources: [{ id: "base", kind: "json-file", path: "settings.json", priority: 0 }]
+          }));
+          if (paths.includes(join(cwd, "settings.json"))) await writeFile(join(cwd, "settings.json"), '{"port":80}');
+          if (paths.includes(join(cwd, "prod.json"))) await writeFile(join(cwd, "prod.json"), '{"port":443}');
+        }
+      });
+      expect(loaded.result.ok).toBe(true);
+      expect(loaded.result.config).toEqual({ port: 443 });
+      expect(batches).toEqual([[join(cwd, "uce.json")], [join(cwd, "base.json")],
+        [join(cwd, "settings.json"), join(cwd, "prod.json")]]);
+    });
+  });
+
+  it("discovers missing inherited files before canonicalization fails", async () => {
+    await withDeclaration(async cwd => {
+      await writeFile(join(cwd, "uce.json"), '{"sources":[],"extends":["missing.json"]}');
+      const observe = vi.fn();
+      const loaded = await loadConfig({ cwd, configPath: "uce.json", onDependencies: observe });
+      expect(loaded.result.ok).toBe(false);
+      expect(observe.mock.calls).toEqual([[[join(cwd, "uce.json")]], [[join(cwd, "missing.json")]]]);
+    });
+  });
+
+  it("sanitizes dependency observer failures and preserves the original cause for the owner", async () => {
+    await withDeclaration(async cwd => {
+      const onError = vi.fn();
+      const loaded = await loadConfig({ cwd, configPath: "uce.json", onError,
+        onDependencies() { throw new Error("UCE_DEPENDENCY_PRIVATE"); } });
+      expect(loaded.result.ok).toBe(false);
+      expect(JSON.stringify(loaded.report)).not.toContain("UCE_DEPENDENCY_PRIVATE");
+      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ error: expect.objectContaining({
+        cause: expect.objectContaining({ message: "UCE_DEPENDENCY_PRIVATE" }) }) }));
+    });
+  });
+
   it.each([
     { env: { APP_PORT: " " }, argv: [], expected: 3000 },
     { env: { APP_PORT: "8080" }, argv: [], expected: 8080 },
