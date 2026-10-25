@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -6,8 +6,11 @@ import { getConfigValueAtPath } from "@0disoft/universal-config-engine-core";
 import { loadConfig, loadValidatedConfig, type DeclaredValidatorFactory } from "../src/index.js";
 
 async function withDeclaration(run: (cwd: string) => Promise<void>) {
-  const cwd = await mkdtemp(join(tmpdir(), "uce-load-config-"));
+  const directory = await mkdtemp(join(tmpdir(), "uce-load-config-"));
   try {
+    // onDependencies may canonicalize parents; never compare long paths with
+    // the Windows runner's short temp-directory alias.
+    const cwd = await realpath(directory);
     await writeFile(join(cwd, "uce.json"), JSON.stringify({ sources: [
       { id: "settings", kind: "object", priority: 0, value: { port: 3000 } },
       { id: "environment", kind: "process-env", priority: 10, mappings: [
@@ -16,7 +19,7 @@ async function withDeclaration(run: (cwd: string) => Promise<void>) {
     ], coercionRules: [{ path: ["port"], from: "string", to: "number", onFailure: "issue" }],
     limits: { maxKeyCount: 10 }, validators: [{ id: "schema", kind: "json-schema-ajv", schema: { type: "object" } }] }));
     await run(cwd);
-  } finally { await rm(cwd, { recursive: true, force: true }); }
+  } finally { await rm(directory, { recursive: true, force: true }); }
 }
 
 const validatorFactory: DeclaredValidatorFactory = declaration => ({ id: declaration.id,

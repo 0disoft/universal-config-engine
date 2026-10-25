@@ -7,7 +7,9 @@ import { watchConfig, type ConfigWatchDependencies, type WatchConfigInput } from
 
 async function workspace(run: (root: string) => Promise<void>) {
   const root = await mkdtemp(join(tmpdir(), "uce-auto-watch-"));
-  try { await run(root); } finally { await rm(root, { recursive: true, force: true }); }
+  // Windows runner temp roots can use an 8.3 alias; injected watch handles use
+  // canonical directories, just like native handles and dependency callbacks.
+  try { await run(await realpath(root)); } finally { await rm(root, { recursive: true, force: true }); }
 }
 const file = (path: string, id = "settings", priority = 0) => ({ id, kind: "json-file", path, priority });
 const json = (path: string, value: unknown) => writeFile(path, JSON.stringify(value));

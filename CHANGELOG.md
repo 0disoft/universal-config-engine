@@ -16,6 +16,8 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Canonicalize dependency/watch test workspaces before matching callback paths,
+  supporting Windows runners whose temporary root uses an 8.3 directory alias.
 - Reject sources with reported errors before reading or flattening their payloads.
   Avoid unnecessary accessor/traversal work and preserve original failures instead
   of overflowing the diagnostic budget with redundant payload errors.
