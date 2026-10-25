@@ -185,7 +185,7 @@ verification, public-registry feature consumers and npm signature checks. Stable
 These are separate implementation units. Default diagnostic schema `0.2` and
 legacy command output remain unchanged. Publication was separately authorized.
 
-## Local Adoption Delivery (ADR 0018, Unreleased)
+## Local Adoption Delivery (ADR 0018, 1.3.0)
 
 - [x] Official JSONC/YAML/TOML/JSON5 loaders and CLI source integration.
 - [x] Bounded, explicit workspace discovery.

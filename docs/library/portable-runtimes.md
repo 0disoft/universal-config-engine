@@ -1,7 +1,7 @@
 # Portable Core Consumers
 
-Status: Verified locally for unreleased ADR 0018 development, Windows x64,
-2026-10-21. This does not change the published 1.2.0 package or its engine policy.
+Status: Historical local ADR 0018 verification, Windows x64, 2026-10-21.
+This evidence predates 1.3.0 publication and does not widen its Node engine policy.
 
 | Runtime | Actual version tested | Scope |
 | --- | --- | --- |

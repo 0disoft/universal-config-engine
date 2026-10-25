@@ -24,7 +24,7 @@ CLI inputs:
 - explicit env mapping;
 - CLI override mapping;
 - inline Ajv JSON Schema validators for `validate`;
-- unreleased optional strict `numberFormat` / `emptyValue` mapping policies;
+- optional strict `numberFormat` / `emptyValue` mapping policies (1.3);
 - output mode selection.
 
 JSON file and dotenv file paths are resolved from the pipeline declaration
@@ -60,7 +60,7 @@ full grammar implemented by shell-aware dotenv tools:
 Use a separate adapter when a project needs a broader dotenv dialect. Expanding
 this built-in grammar is a compatibility decision, not an implicit parser upgrade.
 
-### Official File Adapters (Unreleased)
+### Official File Adapters (1.3)
 
 ADR 0018 adds explicit file adapters without changing existing source declarations:
 
@@ -169,7 +169,7 @@ JSON Schema validation, validation provenance, and JSON validate output.
 
 ## Validator Declarations
 
-Unreleased validator declarations may opt in to `includeConstraints: true` to
+Since 1.3, validator declarations may opt in to `includeConstraints: true` to
 show public type/bound metadata in sanitized diagnostics. The default is false;
 secret paths and public-share reports omit constraints. See
 [public constraints](../adapters/validator-constraints.md) before enabling this.

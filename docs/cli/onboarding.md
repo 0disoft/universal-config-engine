@@ -1,6 +1,6 @@
 # Local Onboarding
 
-Status: Unreleased, ADR 0018.
+Status: Available in 1.3.0, ADR 0018.
 
 `uce init [--directory <existing-directory>] [--json]` creates `uce.json` with a
 defaults port 3000, an explicit APP_PORT environment mapping and a JSON Schema

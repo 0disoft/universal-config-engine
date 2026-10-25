@@ -5,6 +5,15 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ## Unreleased
 
+## 1.3.0 - 2026-10-26
+
+Promote verified candidate `1.3.0-rc.1` at
+`6ebaa707aff611a8552886bee63fad11d7fee68b` with package version and release
+documentation changes only. Includes local application loading, official file
+dialects, typed validation, profiles/inheritance, automatic dependency watching,
+onboarding/public reports, bounded execution and patched Zod/fast-uri dependencies.
+See the candidate section below and `docs/releases/v1.3.0.md` for details.
+
 ## 1.3.0-rc.1 - 2026-10-25
 
 ### Security

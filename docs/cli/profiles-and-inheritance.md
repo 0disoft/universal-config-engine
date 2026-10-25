@@ -1,6 +1,6 @@
 # Profiles and Local Inheritance
 
-Status: Implemented, unreleased (ADR 0018). Published `1.2.0` is unchanged.
+Status: Available in 1.3.0 (ADR 0018).
 
 Pipeline declarations may contain at most 64 named `profiles`. Each profile may
 add `sources`, `validators`, `coercionRules` and override individual `limits`.

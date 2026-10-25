@@ -1,6 +1,11 @@
 {
   "schemaVersion": "0.2",
   "stableReleases": {
+    "1.3.0": {
+      "candidateVersion": "1.3.0-rc.1",
+      "candidateCommitSha": "6ebaa707aff611a8552886bee63fad11d7fee68b",
+      "previousStableVersion": "1.2.0"
+    },
     "1.2.0": {
       "candidateVersion": "1.2.0-rc.1",
       "candidateCommitSha": "5377ad94fce6ee416922ff7f6925a41b5db0b6fd",

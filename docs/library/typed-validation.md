@@ -1,7 +1,6 @@
 # Standard Schema and Typed Validation
 
-Status: Implemented, unreleased (ADR 0018). These exports are not in published
-`1.2.0`. Existing pipeline behavior is unchanged.
+Status: Available in 1.3.0 (ADR 0018). Existing pipeline behavior is unchanged.
 
 Core exports `createStandardSchemaValidator` and a minimal structural
 `StandardConfigSchema<TOutput>` compatible with

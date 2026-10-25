@@ -1,6 +1,6 @@
 # universal-config-engine
 
-Status: Stable 1.2.0 baseline, with unreleased additions on main
+Status: Stable 1.3.0 baseline
 Scope: backend
 Repository Type: library
 Addons: cli-tool
@@ -66,16 +66,16 @@ local files, build outputs, caches, and secret files under control.
 
 ## Install
 
-The stable installation baseline is **1.2.0**, promoted from `1.2.0-rc.1`.
+The stable installation baseline is **1.3.0**, promoted from `1.3.0-rc.1`.
 Normal package installation uses the stable `latest` tag. Historical release
 candidates are not required; `next` is reserved for intentionally testing a candidate.
 
-Unreleased local-adoption work (ADR 0018) adds official file dialects, bounded
+Version 1.3 local-adoption work (ADR 0018) adds official file dialects, bounded
 discovery, typed validation output, profiles/inheritance, disposable reload/watch,
-init/doctor and public-share reports. Published 1.2.0 already includes safe value
+init/doctor and public-share reports, alongside safe value
 inspection, config diff and CI change policies. Try the
-[copyable adoption example](examples/adoption/README.md) from this checkout; its
-new APIs are not yet available from the published 1.2.0 packages. Actual core
+[copyable adoption example](examples/adoption/README.md) with aligned 1.3.0
+packages. The Zod adapter requires patched Zod >=4.6.6 within major 4. Actual core
 artifact checks for additional runtimes are described in
 [portable runtimes](docs/library/portable-runtimes.md).
 
@@ -200,9 +200,10 @@ the `@0disoft` npm scope, and a manual validation-gated release baseline. ADR 00
 supersedes routine manual publication with tag-driven Trusted Publisher
 automation. The `v0.1.0` GitHub release carries pre-publication inspection assets;
 `v0.1.1` is the
-first npm publication baseline. The stable workspace release is `1.2.0`, promoted from `1.2.0-rc.1`
-with safe value inspection, typed path explanations, source-aware configuration
-comparison and bounded CI change policies (ADR 0017).
+first npm publication baseline. The stable workspace release is `1.3.0`, promoted from `1.3.0-rc.1`
+with safe value inspection, configuration comparison and bounded CI policies
+(ADR 0017), plus local application loading and automatic dependency watching
+(ADR 0018).
 Stable installations use npm `latest`; candidates use npm `next`. CLI
 golden fixtures cover local precedence, opt-in coercion, declared Ajv validation,
 validation failure, source-load failure, mapping policy failure, JSON usage errors,

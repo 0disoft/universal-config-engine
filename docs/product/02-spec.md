@@ -111,7 +111,7 @@ of why each final value exists.
 
 ## Decision Index
 
-- Unreleased local adoption: official Node file adapters, bounded workspace
+- Local adoption (1.3): official Node file adapters, bounded workspace
   discovery/inheritance, explicit profiles, Standard Schema and separate typed
   output, reload/watch lifecycle, init/doctor and public-share projection follow
   ADR 0018. Runtime checks are scoped per package; no hosted service is added.

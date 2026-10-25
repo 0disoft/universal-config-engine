@@ -1,7 +1,7 @@
 # Official Configuration File Loaders
 
-Status: Implemented, unreleased (ADR 0018). These additions are not in published
-`1.2.0`. Strict `loadJsonFileSource` retains its existing behavior.
+Status: Available in 1.3.0 (ADR 0018).
+Strict `loadJsonFileSource` retains its existing behavior.
 
 `@0disoft/universal-config-engine-node` exports `loadConfigFileSource` for explicit
 `json`, `jsonc`, `yaml`, `toml` and `json5` formats. Core remains format-agnostic.

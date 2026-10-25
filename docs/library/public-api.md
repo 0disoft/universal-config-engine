@@ -143,7 +143,7 @@ small byte limits. Neither inspection nor comparison stores historical raw value
 
 ## CI Change Policies
 
-Unreleased [operational policies](operational-policies.md) add independent
+Version 1.3 [operational policies](operational-policies.md) add independent
 value/type, source and location comparison selectors and strict numeric/empty-input
 mapping policies. Defaults remain compatible; CI comparison settings belong to
 the policy and cannot be overridden by caller options.
@@ -159,7 +159,7 @@ unknown fields, unsafe paths, duplicate ids and bounded rule/path/source-id limi
 are enforced at runtime. See `docs/cli/inspection-and-diff.md` for exact bounds,
 semantics and examples. The combined report obeys the smaller report-byte budget.
 
-## Ajv Execution Budget (Unreleased)
+## Ajv Execution Budget (1.3)
 
 The Ajv adapter defaults to first-error execution (`allErrors: false`). Explicit
 `options.allErrors` and caller-provided Ajv instances retain their chosen behavior.
@@ -168,7 +168,7 @@ The Ajv adapter defaults to first-error execution (`allErrors: false`). Explicit
 Complete-error collection remains opt-in and can allocate more errors inside Ajv;
 the adapter does not impose an execution deadline or a schema-complexity sandbox.
 
-## Standard Schema Validation (ADR 0018, Unreleased)
+## Standard Schema Validation (ADR 0018, 1.3)
 
 Optional [public validator constraints](../adapters/validator-constraints.md)
 preserve allowlisted rule/type/bound metadata without retaining raw error prose.
@@ -388,7 +388,7 @@ replaced subtrees before allocation; overflow leaves a bounded partial result an
 skips later source values. A later replacement cannot rescue an oversized
 intermediate tree. `maxResolvedPaths` continues to cap only the public result.
 
-Node `loadConfigFileSource` (ADR 0018, unreleased) accepts an explicit
+Node `loadConfigFileSource` (ADR 0018, 1.3) accepts an explicit
 `ConfigFileFormat`: `json`, `jsonc`, `yaml`, `toml` or `json5`. Additional parsers
 remain in the Node package and load on demand. New dialects reject unsafe keys,
 non-JSON values and structural overflow before returning source values; JSONC

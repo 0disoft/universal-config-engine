@@ -1,6 +1,6 @@
 # Local Adoption Example
 
-Status: Unreleased ADR 0018 example. These APIs are not in published 1.2.0 yet.
+Status: Available in 1.3.0 (ADR 0018).
 Use the source checkout below; after a later release this folder can be copied to
 a project that installs the matching core, node and Ajv packages (and CLI for
 command-line examples).

@@ -12,14 +12,14 @@ Repository Type: cli-tool
 
 ## Commands
 
-Unreleased `uce --help` / `-h`, `uce help [command]` and `uce <command> --help`
+Since 1.3, `uce --help` / `-h`, `uce help [command]` and `uce <command> --help`
 show command guidance without reading configuration. `uce --version` / `-v`
 reports the installed package version. These standalone forms exit 0.
 
 Diagnostic report byte-budget failures return exit code `3`, including ordinary
 `explain` and `validate` output when config resolution itself succeeded.
 
-Unreleased local onboarding adds `uce init` and `uce doctor` (ADR 0018), with
+Version 1.3 local onboarding adds `uce init` and `uce doctor` (ADR 0018), with
 separate opt-in envelopes; see [onboarding](onboarding.md). Profile/workspace
 selection is documented in [profiles and inheritance](profiles-and-inheritance.md).
 
@@ -47,7 +47,7 @@ Candidate responsibilities:
 - report source-aware error paths;
 - emit redacted text and JSON reports.
 
-## Opt-in Workspace Discovery (ADR 0018, Unreleased)
+## Opt-in Workspace Discovery (ADR 0018, 1.3)
 
 `uce explain --discover <workspace>` and `uce validate --discover <workspace>`
 select a nearby JSON pipeline declaration within the explicit workspace. This
@@ -59,7 +59,7 @@ remain unchanged. See [the discovery contract](discovery.md).
 
 ## Opt-in Inspection
 
-Unreleased diff `--compare values,sources,locations` selects one or more comparison
+Since 1.3, diff `--compare values,sources,locations` selects one or more comparison
 dimensions. For CI use a policy's `comparison` object; `--compare` with `--policy`
 is rejected. See [operational policies](../library/operational-policies.md).
 

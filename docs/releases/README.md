@@ -15,7 +15,7 @@ before current evidence exists. Preparation notes may describe the checks that t
 workflow will run.
 
 The current candidate publication copy is `docs/releases/v1.3.0-rc.1.md`; the
-stable publication copy is `docs/releases/v1.2.0.md`. Release operations and SBOM
+stable publication copy is `docs/releases/v1.3.0.md`. Release operations and SBOM
 evidence are defined in `docs/ops/release.md`; exact candidate authorization is
 maintained in `release-policy.json`. The historical `1.0.0` preparation checklist
 is `docs/ops/stable-1.0-release-checklist.md`.

@@ -1,7 +1,7 @@
 # Explicit Workspace Discovery
 
-Status: Implemented, unreleased (ADR 0018). Existing explicit configuration paths
-retain their behavior, and published `1.2.0` does not include these additions.
+Status: Available in 1.3.0 (ADR 0018). Existing explicit configuration paths
+retain their behavior.
 
 ```sh
 uce explain --discover . --values --json

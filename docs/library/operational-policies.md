@@ -1,6 +1,6 @@
 # Optional input and comparison policies
 
-Status: Unreleased. Existing defaults are unchanged.
+Status: Available in 1.3.0. Existing defaults are unchanged.
 
 ## Numeric and empty-input mapping
 

@@ -1,6 +1,6 @@
 # Public validation constraints
 
-Status: Unreleased.
+Status: Available in 1.3.0.
 
 Ajv and Zod adapters accept `includeConstraints: true` when the application's
 schema metadata is explicitly safe to disclose. The default is false. Pipeline

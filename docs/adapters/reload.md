@@ -1,6 +1,6 @@
 # Reload and File Watching
 
-Status: Unreleased, ADR 0018. Existing pipelines never start background work.
+Status: Available in 1.3.0, ADR 0018. Existing pipelines never start background work.
 
 `createConfigReloader({ load, onChange? })` returns `refresh()`, `getSnapshot()`
 and `close()`. The callback runs the application's existing pipeline. Refreshes
@@ -51,7 +51,7 @@ another refresh from inside `load`.
 
 ## Selected file watching
 
-### Automatic declaration graphs (unreleased)
+### Automatic declaration graphs (1.3)
 
 `watchConfig` loads through the same Node `loadConfig` facade and owns its file
 dependency set. No separate loader callback or manually maintained file list is

@@ -1,6 +1,6 @@
 # Public-Share Diagnostic Reports
 
-Status: Unreleased, ADR 0018. The legacy `0.2` report is secret-safe but contains
+Status: Available in 1.3.0, ADR 0018. The legacy `0.2` report is secret-safe but contains
 private metadata and is not a public-share format.
 
 `buildPublicDiagnosticReport(diagnosticReport)` returns `public-diagnostic-1`.

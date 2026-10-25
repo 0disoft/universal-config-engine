@@ -27,7 +27,7 @@ one parser, one validator, one framework, or one remote service.
   `24.0.0` and the latest stable Node.js release; the latter guards the open upper
   range claimed by package metadata.
 - Package module format is ESM.
-- Unreleased core-only Node/Bun/Deno/workerd artifact consumers are documented in
+- Optional core-only Node/Bun/Deno/workerd artifact consumers are documented in
   [portable runtimes](portable-runtimes.md). They do not widen the Node adapter or
   CLI engine contract, nor certify every API on those alternate runtimes.
 - CLI JSON output compatibility is governed by `docs/cli/output-and-exit-codes.md`.

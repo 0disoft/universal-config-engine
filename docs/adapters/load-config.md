@@ -1,6 +1,6 @@
 # Application declaration loading
 
-Status: Unreleased.
+Status: Available in 1.3.0.
 
 Applications and CLI commands use the Node package's `loadConfig` implementation
 for declaration reading, profiles/inheritance, source loading, coercion, limits
