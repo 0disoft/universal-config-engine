@@ -39,6 +39,11 @@ backend validation routes must stay stack-neutral unless a runner file explicitl
 
 ## Package Test Layout
 
+Dialect diagnostics cover YAML duplicate keys, aliases, tags and multiple documents;
+TOML/JSON5 syntax positions; CRLF/Unicode/EOF and unavailable/invalid metadata;
+and omission of raw values in ordinary, secret-source and public-share reports.
+Packed consumers verify the installed library and CLI text/JSON error output.
+
 Core tests separate merge precedence, coercion, loader boundaries, validation, and
 redacted reports. CLI tests separate output/golden reports, declaration checks,
 canonical paths, source adapters, and validator setup. Tests remain beside their

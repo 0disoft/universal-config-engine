@@ -27,6 +27,18 @@ const result = resolveConfig({ sources: [source] });
   byte limit. Missing/unreadable inputs produce `config_file_read_failed`; parser
   failures produce `config_file_parse_failed`. Raw input and exception text are
   omitted. Existing file-policy issue codes remain unchanged.
+- YAML/TOML/JSON5 parse failures add safe `details`: `format`, a fixed `reason`
+  (`syntax`, `duplicate-key`, `unsupported-tag`, `unsupported-key`,
+  `unsupported-alias` or `multiple-documents`), and one-based `line`/`column` when
+  the parser supplies valid coordinates. YAML uses UTF-16 source offsets;
+  TOML/JSON5 use native parser coordinates (JSON5 column zero is normalized to 1).
+  The same numeric position appears in the fixed message for text CLI output.
+  Unknown/missing positions are omitted rather than guessed. Unrecognized internal
+  failures retain generic `parse-failed` classification. No parser prose,
+  key names, tokens, source snippets, file paths or arbitrary error codes are
+  copied. The optional private `onError` hook retains the error/cause chain;
+  public diagnostics never include it. Secret-source masking and public-share
+  projection still remove diagnostic messages/details according to their policy.
 - New dialects require a plain JSON-compatible object. Structural validation uses
   the existing default resource limits or the provided `limits`. Unsafe own keys,
   non-finite numbers, dates and other non-JSON runtime values reject the whole
@@ -61,7 +73,8 @@ to the loader and the pipeline when overriding structural budgets.
 
 Parser and loader boundaries are covered by executable Node package tests,
 including hostile syntax, unsafe keys, malformed comments, aliases, resource
-budgets and JSONC coordinates. CLI declarations use `kind: "adapter"`, an explicit
+budgets, JSONC value coordinates and safe dialect error positions (including
+CRLF, Unicode and end-of-file). CLI declarations use `kind: "adapter"`, an explicit
 `format` and `path`; see [CLI configuration](../cli/configuration.md). Packed
 consumers exercise all four dialects through both the installed Node library and
 the actual installed CLI executable. Discovery remains a separate unit.

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { discoverPipelineDeclaration, loadConfigFileSource } from "@0disoft/universal-config-engine-node";
@@ -29,6 +29,25 @@ for (const [format, text] of [
   assert.equal(report.status, "ok");
   assert(report.entries.some(entry => entry.path[0] === "port" && entry.value === 80));
   assert(!output.includes("UCE_FILE_CONSUMER_PRIVATE"));
+}
+for (const [format, text, line, column, reason] of [
+  ["yaml", "UCE_PRIVATE_KEY: UCE_PRIVATE_VALUE\nUCE_PRIVATE_KEY: other\n", 2, 1, "duplicate-key"],
+  ["toml", 'password = "UCE_PRIVATE_VALUE"\nvalue = @\n', 2, 9, "syntax"],
+  ["json5", "{\n password:'UCE_PRIVATE_VALUE',\n value:@\n}", 3, 8, "syntax"]
+]) {
+  writeFileSync(join(process.cwd(), `settings.${format}`), text);
+  const loaded = await loadConfigFileSource({ descriptor: { id: "file", kind: "adapter", priority: 1, displayName: "file" },
+    filePath: join(process.cwd(), `settings.${format}`), format });
+  assert.deepEqual(loaded.issues[0].details, { format, reason, line, column });
+  for (const flags of [[], ["--json"]]) {
+    const result = spawnSync(process.execPath, [join(packageRoot, manifest.bin.uce),
+      "validate", "--config", `pipeline-${format}.json`, ...flags], { encoding: "utf8", timeout: 30000 });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 2);
+    assert(!`${result.stdout}${result.stderr}`.includes("UCE_PRIVATE"));
+    if (flags.length === 0) assert(result.stdout.includes(`line ${line}, column ${column}`));
+    else assert.deepEqual(JSON.parse(result.stdout).issues[0].details, { format, reason, line, column });
+  }
 }
 const workspace = join(process.cwd(), "discovery-project");
 mkdirSync(workspace);

@@ -725,6 +725,12 @@ export interface CreateArgvSourceInput {
 }
 export declare function createArgvSource(input: CreateArgvSourceInput): LoadedSource;
 
+### config-file-diagnostics.d.ts
+import type { ConfigIssue } from "@0disoft/universal-config-engine-core";
+import type { ConfigFileFormat } from "./config-file-loader.js";
+/** Never copy parser messages, tokens, codeblocks, paths or arbitrary error codes. */
+export declare function configFileParseDiagnostic(format: ConfigFileFormat, raw: string, error: unknown): Pick<ConfigIssue, "category" | "code" | "message" | "details">;
+
 ### config-file-loader.d.ts
 import { type LoadedSource, type ResourceLimitPolicy } from "@0disoft/universal-config-engine-core";
 import { type LoadJsonFileSourceInput } from "./json-file-loader.js";
@@ -871,10 +877,10 @@ interface FileSourceInput extends FileReadPolicy {
     readonly descriptor: ConfigSourceDescriptor;
     readonly filePath: string;
 }
-type FailureDiagnostic = Pick<ConfigIssue, "category" | "code" | "message">;
+type FailureDiagnostic = Pick<ConfigIssue, "category" | "code" | "message" | "details">;
 interface FileSourceOptions {
     readonly readFailure: FailureDiagnostic;
-    readonly parseFailure?: FailureDiagnostic;
+    readonly parseFailure?: FailureDiagnostic | ((error: unknown, raw: string) => FailureDiagnostic);
     readonly parse: (raw: string, canonicalPath: string) => LoadedSource | Promise<LoadedSource>;
 }
 /** Shared I/O boundary; format-specific parsing and diagnostic codes stay with the adapter. */

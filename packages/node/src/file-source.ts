@@ -6,11 +6,11 @@ interface FileSourceInput extends FileReadPolicy {
   readonly filePath: string;
 }
 
-type FailureDiagnostic = Pick<ConfigIssue, "category" | "code" | "message">;
+type FailureDiagnostic = Pick<ConfigIssue, "category" | "code" | "message" | "details">;
 
 interface FileSourceOptions {
   readonly readFailure: FailureDiagnostic;
-  readonly parseFailure?: FailureDiagnostic;
+  readonly parseFailure?: FailureDiagnostic | ((error: unknown, raw: string) => FailureDiagnostic);
   readonly parse: (raw: string, canonicalPath: string) => LoadedSource | Promise<LoadedSource>;
 }
 
@@ -41,9 +41,11 @@ export async function loadTextFileSource(input: FileSourceInput, options: FileSo
     const parsed = await options.parse(readResult.raw, readResult.canonicalPath);
     return input.signal?.aborted ? cancelledSource(input.descriptor) : parsed;
   } catch (error) {
-    reportConfigOperationError(input, (options.parseFailure ?? options.readFailure).code, error, input.descriptor.id);
+    const diagnostic = typeof options.parseFailure === "function"
+      ? options.parseFailure(error, readResult.raw) : options.parseFailure ?? options.readFailure;
+    reportConfigOperationError(input, diagnostic.code, error, input.descriptor.id);
     return input.signal?.aborted ? cancelledSource(input.descriptor)
-      : failureSource(input.descriptor, options.parseFailure ?? options.readFailure);
+      : failureSource(input.descriptor, diagnostic);
   }
 }
 
@@ -56,7 +58,8 @@ function failureSource(descriptor: ConfigSourceDescriptor, diagnostic: FailureDi
       code: diagnostic.code,
       severity: "error",
       sourceId: descriptor.id,
-      message: diagnostic.message
+      message: diagnostic.message,
+      ...(diagnostic.details === undefined ? {} : { details: diagnostic.details })
     }]
   };
 }

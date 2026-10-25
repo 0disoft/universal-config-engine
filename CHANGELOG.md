@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Report YAML/TOML/JSON5 parse positions and fixed diagnostic reasons without
+  parser prose, source snippets, tokens or key names. Retain existing error codes,
+  secret-source/public-share masking, bounded parsing and private error causes.
 - Add Node `watchConfig` to discover and watch declaration/inheritance/file-source
   dependencies before reads, refresh changing dependency sets, retain repair
   subscriptions on failure and release obsolete watches after success. Share the

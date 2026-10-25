@@ -75,7 +75,9 @@ and [public API contract](https://github.com/0disoft/universal-config-engine/blo
 Use descriptor kind `adapter` for dialect sources. JSONC trailing commas require
 `allowTrailingComma: true`. YAML aliases/custom tags and TOML date/time objects are
 rejected; all values must fit the normalized JSON object contract. Parser errors
-never include raw exception text. These additions are not in published `1.2.0`.
+never include raw exception text. YAML/TOML/JSON5 failures include a fixed reason
+and one-based line/column when available, without source snippets or key names.
+These additions are not in published `1.2.0`.
 See the [format contract](https://github.com/0disoft/universal-config-engine/blob/main/docs/adapters/official-files.md).
 
 ## Automatic Config Watching (Unreleased)

@@ -7,6 +7,7 @@ import { loadJsonFileSource, type LoadJsonFileSourceInput } from "./json-file-lo
 import { JSON_TOKEN, JSON_SCAN_ERROR_NONE } from "./jsonc-tokens.js";
 import { collectJsonLocations, DEFAULT_MAX_LOCATION_BYTES } from "./json-locations.js";
 import { positiveSafeIntegerLimit } from "./limits.js";
+import { configFileParseDiagnostic } from "./config-file-diagnostics.js";
 
 export type ConfigFileFormat = "json" | "jsonc" | "yaml" | "toml" | "json5";
 
@@ -27,8 +28,7 @@ export async function loadConfigFileSource(input: LoadConfigFileSourceInput): Pr
   return loadTextFileSource(input, {
     readFailure: { category: "source-load", code: "config_file_read_failed",
       message: "Failed to read configuration file. Exception details were omitted." },
-    parseFailure: { category: "parse", code: "config_file_parse_failed",
-      message: "Failed to parse configuration file. Exception details were omitted." },
+    parseFailure: (error, raw) => configFileParseDiagnostic(input.format, raw, error),
     async parse(raw, canonicalPath) {
       // The recursive dialect parsers must not consume unbounded nesting before
       // core can validate their output. JSON uses its existing iterative boundary.
@@ -115,7 +115,7 @@ async function parseDialect(raw: string, input: LoadConfigFileSourceInput): Prom
 async function parseBoundedYaml(raw: string, maximum: number): Promise<
   { readonly ok: false } | { readonly ok: true; readonly value: unknown }
 > {
-  const { Composer, Lexer, Parser } = await import("yaml");
+  const { Composer, Lexer, Parser, YAMLParseError, visit } = await import("yaml");
   const parser = new Parser();
   let exceeded = false;
   function* tokens() {
@@ -139,14 +139,24 @@ async function parseBoundedYaml(raw: string, maximum: number): Promise<
   let document: import("yaml").Document.Parsed | undefined;
   for (const next of composer.compose(tokens(), true, raw.length)) {
     if (exceeded) return { ok: false };
-    if (document !== undefined) throw new Error("Invalid YAML.");
+    if (document !== undefined) throw new YAMLParseError([next.range[0], next.range[0]], "MULTIPLE_DOCS", "Multiple YAML documents are not supported.");
     document = next;
   }
   if (exceeded) return { ok: false };
-  if (document === undefined || document.errors.length > 0 || document.warnings.length > 0) {
-    throw new Error("Invalid YAML.");
+  if (document === undefined) throw new Error("Invalid YAML.");
+  const diagnostic = document.errors[0] ?? document.warnings[0];
+  if (diagnostic !== undefined) throw diagnostic;
+  try {
+    return { ok: true, value: document.toJS({ maxAliasCount: 0 }) };
+  } catch (cause) {
+    // Only inspect the AST on conversion failure; valid files get no extra traversal.
+    let aliasOffset: number | undefined;
+    visit(document, { Alias(_key, node) { aliasOffset = node.range?.[0]; return visit.BREAK; } });
+    if (aliasOffset === undefined) throw cause;
+    const error = new YAMLParseError([aliasOffset, aliasOffset], "BAD_ALIAS", "YAML aliases are not supported.");
+    Object.defineProperty(error, "cause", { value: cause, configurable: true, writable: true });
+    throw error;
   }
-  return { ok: true, value: document.toJS({ maxAliasCount: 0 }) };
 }
 
 function failure(input: LoadConfigFileSourceInput, issue: Pick<ConfigIssue, "category" | "code" | "message">): LoadedSource {
