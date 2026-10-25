@@ -102,12 +102,20 @@ function walk(
     readonly source: object;
     readonly keys: Iterator<string | number>;
     readonly array: boolean;
+    readonly snapshot: ConfigValue | undefined;
     readonly emitEntries: boolean;
     readonly initialIssueCount: number;
   }[] = [];
 
   function issue(category: ConfigIssue["category"], code: string, message: string): void {
     state.issues.push({ category, code, severity: "error", sourceId, path: [...path], message });
+  }
+
+  function capture(key: string | number | undefined, child: ConfigValue): void {
+    const snapshot = stack[stack.length - 1]?.snapshot;
+    if (key !== undefined && snapshot !== undefined) {
+      (snapshot as Record<string | number, ConfigValue>)[key] = child;
+    }
   }
 
   function enter(input: unknown, emitEntries: boolean, key?: string | number): boolean {
@@ -138,19 +146,25 @@ function walk(
         return false;
       }
       const keys = array ? undefined : Object.keys(child);
+      // Own atomic arrays and their descendants during the admitted read. A later
+      // count/clone must never evaluate caller accessors again after validation.
+      const snapshot: ConfigValue | undefined = array && emitEntries || stack[stack.length - 1]?.snapshot !== undefined
+        ? array ? [] : Object.create(null) as Record<string, ConfigValue> : undefined;
+      if (snapshot !== undefined) capture(key, snapshot);
       if (keys?.length === 0) {
         if (path.length > 0 && emitEntries) state.entries.push({ path: [...path], value: {} });
         return false;
       }
       ancestors.add(child);
-      stack.push({ source: child, array, emitEntries, initialIssueCount: state.issues.length,
+      stack.push({ source: child, array, snapshot, emitEntries, initialIssueCount: state.issues.length,
         keys: array ? Array.prototype.keys.call(child) : keys!.values() });
       return true;
     }
     if (!isConfigValue(child)) {
       issue("parse", "invalid_value", `Config value at ${formatPath(path)} is not JSON-compatible.`);
-    } else if (emitEntries) {
-      state.entries.push({ path: [...path], value: child });
+    } else {
+      capture(key, child);
+      if (emitEntries) state.entries.push({ path: [...path], value: child });
     }
     return false;
   }
@@ -158,7 +172,7 @@ function walk(
   function leave(complete: boolean): void {
     const frame = stack.pop()!;
     if (complete && frame.array && frame.emitEntries && state.issues.length === frame.initialIssueCount) {
-      state.entries.push({ path: [...path], value: frame.source as readonly ConfigValue[] });
+      state.entries.push({ path: [...path], value: frame.snapshot! });
     }
     ancestors.delete(frame.source);
     if (stack.length > 0) path.pop();

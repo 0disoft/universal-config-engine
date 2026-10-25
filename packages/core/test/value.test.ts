@@ -141,6 +141,51 @@ describe("config leaf resource limits", () => {
 });
 
 describe("flattenConfigObject array validation", () => {
+  it.each(["index", "nested-object"])("merges %s array accessors from their single validated read", kind => {
+    let reads = 0;
+    const get = () => {
+      if (++reads > 1) throw new Error("Array value was read again after validation.");
+      return 7;
+    };
+    const items = kind === "index" ? Object.defineProperty([0], 0, { get })
+      : [Object.defineProperty({}, "port", { enumerable: true, get })];
+    const result = resolveConfig({ sources: [source("input", 0, { items })] });
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({ items: kind === "index" ? [7] : [{ port: 7 }] });
+    expect(reads).toBe(1);
+  });
+
+  it("captures shared references per expanded path without re-reading them during merge", () => {
+    let reads = 0;
+    const shared = Object.defineProperty({}, "sequence", { enumerable: true, get() { return ++reads; } });
+    const result = resolveConfig({ sources: [source("input", 0, { items: [shared, shared] })] });
+    expect(result.ok).toBe(true);
+    expect(result.config).toEqual({ items: [{ sequence: 1 }, { sequence: 2 }] });
+    expect(reads).toBe(2);
+  });
+
+  it("owns nested array entries so later source mutation cannot bypass validation", () => {
+    let reads = 0;
+    const nested = Object.defineProperty({}, "enabled", { enumerable: true, get() { reads++; return true; } });
+    const items = [[nested, {}], []];
+    const flattened = flattenConfigObject("input", { items }, DEFAULT_RESOURCE_LIMITS);
+    expect(flattened.issues).toEqual([]);
+    expect(reads).toBe(1);
+    Object.defineProperty(nested, "constructor", { enumerable: true, value: "blocked" });
+    items.push([false]);
+    expect(flattened.entries).toEqual([{ path: ["items"], value: [[{ enabled: true }, {}], []] }]);
+    expect(reads).toBe(1);
+  });
+
+  it("contains first-read accessor failures and rejects the whole source", () => {
+    const items = Object.defineProperty([0], 0, { get() { throw new Error("UCE_ACCESSOR_PRIVATE"); } });
+    const result = resolveConfig({ sources: [source("input", 0, { items, other: true })] });
+    expect(result.ok).toBe(false);
+    expect(result.config).toEqual({});
+    expect(result.issues[0]?.code).toBe("source_value_inspection_failed");
+    expect(JSON.stringify(result)).not.toContain("UCE_ACCESSOR_PRIVATE");
+  });
+
   it("counts scalar array slots and accepts the exact key/index budget", () => {
     const value = { items: [1, 2, 3] };
     expect(flattenConfigObject("input", value, { ...DEFAULT_RESOURCE_LIMITS, maxKeyCount: 4 })).toMatchObject({

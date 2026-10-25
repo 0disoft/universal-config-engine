@@ -7,6 +7,9 @@ semantic versioning and keeps package versions aligned across the workspace.
 
 ### Fixed
 
+- Capture atomic array values during structural admission instead of retaining live
+  source references. Avoid repeated accessor reads during merge counting/cloning,
+  uncaught second-read failures and changes to already validated array entries.
 - Report YAML/TOML/JSON5 parse positions and fixed diagnostic reasons without
   parser prose, source snippets, tokens or key names. Retain existing error codes,
   secret-source/public-share masking, bounded parsing and private error causes.

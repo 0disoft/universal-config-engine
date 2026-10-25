@@ -82,6 +82,11 @@ Repository Type: library
   Values are fetched only after key/index, diagnostic, depth/path and unsafe-key
   admission checks, so discarded accessors cannot replace a limit diagnostic with
   an inspection exception. Object key enumeration still requires O(N) storage.
+  Atomic array entries own snapshots of the admitted values, including nested
+  objects/arrays. Each expanded path reads a caller accessor once during validation;
+  merge key counting and cloning use that snapshot. Later source mutation cannot
+  alter already validated entries. Snapshot storage is O(K), bounded by the same
+  expanded key/index budget; invalid/incomplete arrays still emit no entry.
 - `ConfigIssue`: bounded issue taxonomy for CLI usage, load, parse, mapping,
   merge, coercion, validation, redaction, and resource-limit failures.
 
